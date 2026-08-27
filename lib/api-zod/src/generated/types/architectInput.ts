@@ -8,4 +8,6 @@
 
 export interface ArchitectInput {
   additionalContext?: string;
+  patternId?: string | null;
+  recipeId?: string | null;
 }

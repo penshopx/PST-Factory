@@ -7,9 +7,11 @@ import {
   pstBlueprintsTable,
   pstFactoryEventsTable,
   pstPatternsTable,
+  pstProjectPatternsTable,
   pstProjectMembersTable,
   pstProjectComponentsTable,
   pstProjectsTable,
+  pstProjectRecipesTable,
   pstQaRunsTable,
   pstRecipesTable,
   pstSimulationsTable,
@@ -139,6 +141,44 @@ const defaultDna = (problem: string, user: string, outcome: string) => ({
   outcome,
 });
 
+function workflowFromStructure(
+  labels: string[],
+  source: { type: "pattern" | "recipe"; id: string; name: string },
+): WorkflowStep[] {
+  const steps = labels.length ? labels : ["Start", "Work", "Result"];
+  return steps.map((label, index) => {
+    const normalized = label.toLowerCase();
+    const type = index === 0
+      ? "INPUT"
+      : index === steps.length - 1
+        ? "OUTPUT"
+        : /assess|question|criteria|score/i.test(normalized)
+          ? "ASSESSMENT"
+          : /analy|extract|gap|current/i.test(normalized)
+            ? "ANALYSIS"
+            : /recommend|plan|action/i.test(normalized)
+              ? "ACTION"
+              : "STEP";
+    const previousId = index > 0 ? `${slugify(steps[index - 1])}-${index - 1}` : undefined;
+    return {
+      id: `${slugify(label)}-${index}`,
+      type,
+      title: label,
+      description: `${label} step from the ${source.type} "${source.name}".`,
+      inputs: previousId ? [`${slugify(steps[index - 1])}_result`] : ["user_context"],
+      outputs: [`${slugify(label)}_result`],
+      dependencies: previousId ? [previousId] : [],
+      nextStep: index < steps.length - 1 ? `${slugify(steps[index + 1])}-${index + 1}` : "",
+      configuration: {
+        sourceType: source.type,
+        sourceId: source.id,
+        sourceName: source.name,
+        sourceIndex: index,
+      },
+    };
+  });
+}
+
 const makeBlueprint = (
   projectId: string,
   problem: string,
@@ -164,13 +204,46 @@ const makeBlueprint = (
 
 let seedPromise: Promise<void> | undefined;
 
+async function ensureSeedReferences() {
+  const [project] = await db
+    .select({ id: pstProjectsTable.id })
+    .from(pstProjectsTable)
+    .where(eq(pstProjectsTable.id, "pst-cashflow-check"));
+  if (!project) return;
+  const [pattern] = await db
+    .select({ id: pstPatternsTable.id })
+    .from(pstPatternsTable)
+    .where(eq(pstPatternsTable.id, "pattern-assessment"));
+  const [recipe] = await db
+    .select({ id: pstRecipesTable.id })
+    .from(pstRecipesTable)
+    .where(eq(pstRecipesTable.id, "recipe-assessment"));
+  if (pattern) {
+    await db.insert(pstProjectPatternsTable).values({
+      id: "project-pattern-cashflow-assessment",
+      projectId: project.id,
+      patternId: pattern.id,
+    }).onConflictDoNothing();
+  }
+  if (recipe) {
+    await db.insert(pstProjectRecipesTable).values({
+      id: "project-recipe-cashflow-assessment",
+      projectId: project.id,
+      recipeId: recipe.id,
+    }).onConflictDoNothing();
+  }
+}
+
 async function ensureSeed(userId = "system") {
   if (!seedPromise) {
     seedPromise = (async () => {
       const [{ count }] = await db
         .select({ count: sql<number>`count(*)` })
         .from(pstAssetsTable);
-      if (Number(count) > 0) return;
+      if (Number(count) > 0) {
+        await ensureSeedReferences();
+        return;
+      }
 
       const now = new Date();
       await db.insert(pstAssetsTable).values([
@@ -366,6 +439,7 @@ async function ensureSeed(userId = "system") {
           projectId,
         },
       ]);
+      await ensureSeedReferences();
     })();
   }
   await seedPromise;
@@ -417,7 +491,113 @@ async function projectAggregate(projectId: string) {
     })
     .from(pstProjectComponentsTable)
     .where(eq(pstProjectComponentsTable.projectId, projectId));
-  return { ...project, blueprint: blueprint ?? makeBlueprint(projectId, project.problemStatement, project.targetUser, project.desiredOutcome), components };
+  const { selectedPatterns, selectedRecipes } = await getProjectReferences(projectId);
+  return {
+    ...project,
+    blueprint: blueprint ?? makeBlueprint(projectId, project.problemStatement, project.targetUser, project.desiredOutcome),
+    components,
+    selectedPatterns,
+    selectedRecipes,
+  };
+}
+
+async function getPatternUsage(patternId: string) {
+  const projects = await db
+    .select({ id: pstProjectsTable.id, name: pstProjectsTable.name })
+    .from(pstProjectPatternsTable)
+    .innerJoin(pstProjectsTable, eq(pstProjectsTable.id, pstProjectPatternsTable.projectId))
+    .where(eq(pstProjectPatternsTable.patternId, patternId));
+  return {
+    usageCount: projects.length,
+    projectIds: projects.map((project) => project.id),
+    projects,
+  };
+}
+
+async function getRecipeUsage(recipeId: string) {
+  const projects = await db
+    .select({ id: pstProjectsTable.id, name: pstProjectsTable.name })
+    .from(pstProjectRecipesTable)
+    .innerJoin(pstProjectsTable, eq(pstProjectsTable.id, pstProjectRecipesTable.projectId))
+    .where(eq(pstProjectRecipesTable.recipeId, recipeId));
+  return {
+    usageCount: projects.length,
+    projectIds: projects.map((project) => project.id),
+    projects,
+  };
+}
+
+async function getProjectReferences(projectId: string) {
+  const [patternReferences, recipeReferences] = await Promise.all([
+    db.select({ patternId: pstProjectPatternsTable.patternId })
+      .from(pstProjectPatternsTable)
+      .where(eq(pstProjectPatternsTable.projectId, projectId)),
+    db.select({ recipeId: pstProjectRecipesTable.recipeId })
+      .from(pstProjectRecipesTable)
+      .where(eq(pstProjectRecipesTable.projectId, projectId)),
+  ]);
+  const patternIds = patternReferences.map(({ patternId }) => patternId);
+  const recipeIds = recipeReferences.map(({ recipeId }) => recipeId);
+  const [patterns, recipes] = await Promise.all([
+    patternIds.length
+      ? db.select().from(pstPatternsTable).where(inArray(pstPatternsTable.id, patternIds))
+      : Promise.resolve([]),
+    recipeIds.length
+      ? db.select().from(pstRecipesTable).where(inArray(pstRecipesTable.id, recipeIds))
+      : Promise.resolve([]),
+  ]);
+  return {
+    selectedPatterns: await Promise.all(patterns.map(async (pattern) => ({
+      ...pattern,
+      ...(await getPatternUsage(pattern.id)),
+    }))),
+    selectedRecipes: await Promise.all(recipes.map(async (recipe) => ({
+      ...recipe,
+      ...(await getRecipeUsage(recipe.id)),
+    }))),
+  };
+}
+
+type ReferenceSelectionInput = {
+  patternId?: string | null;
+  recipeId?: string | null;
+};
+
+async function applyProjectReferences(projectId: string, input: ReferenceSelectionInput) {
+  const pattern = input.patternId ? (await db.select().from(pstPatternsTable).where(eq(pstPatternsTable.id, input.patternId)))[0] : undefined;
+  const recipe = input.recipeId ? (await db.select().from(pstRecipesTable).where(eq(pstRecipesTable.id, input.recipeId)))[0] : undefined;
+  if (input.patternId && !pattern) return { error: "Selected PST pattern was not found." };
+  if (input.recipeId && !recipe) return { error: "Selected PST recipe was not found." };
+
+  if (input.patternId !== undefined) {
+    await db.delete(pstProjectPatternsTable).where(eq(pstProjectPatternsTable.projectId, projectId));
+    if (pattern) {
+      await db.insert(pstProjectPatternsTable).values({
+        id: randomUUID(),
+        projectId,
+        patternId: pattern.id,
+      });
+    }
+  }
+  if (input.recipeId !== undefined) {
+    await db.delete(pstProjectRecipesTable).where(eq(pstProjectRecipesTable.projectId, projectId));
+    if (recipe) {
+      await db.insert(pstProjectRecipesTable).values({
+        id: randomUUID(),
+        projectId,
+        recipeId: recipe.id,
+      });
+    }
+  }
+  return { pattern, recipe };
+}
+
+async function currentProjectReferences(projectId: string) {
+  const references = await getProjectReferences(projectId);
+  return {
+    pattern: references.selectedPatterns[0],
+    recipe: references.selectedRecipes[0],
+  };
 }
 
 async function addEvent(type: string, message: string, projectId?: string) {
@@ -782,13 +962,45 @@ router.post("/pst/projects/:projectId/architect", async (req, res): Promise<void
     return;
   }
   const project = access.project;
+  const appliedReferences = await applyProjectReferences(project.id, {
+    patternId: body.data.patternId,
+    recipeId: body.data.recipeId,
+  });
+  if (appliedReferences.error) {
+    res.status(400).json({ error: appliedReferences.error });
+    return;
+  }
+  const references = await currentProjectReferences(project.id);
   const proposal = await aiProvider.proposeBlueprint({
     problem: project.problemStatement,
     targetUser: project.targetUser,
     desiredOutcome: project.desiredOutcome,
-    additionalContext: body.data.additionalContext,
+    additionalContext: [
+      body.data.additionalContext,
+      references.pattern ? `Use the "${references.pattern.name}" pattern as the journey structure.` : undefined,
+      references.recipe ? `Use the "${references.recipe.name}" recipe as the component structure.` : undefined,
+    ].filter(Boolean).join(" "),
+    pattern: references.pattern
+      ? { name: references.pattern.name, steps: references.pattern.steps }
+      : undefined,
+    recipe: references.recipe
+      ? { name: references.recipe.name, components: references.recipe.components }
+      : undefined,
   });
-  const [updated] = await db.update(pstBlueprintsTable).set({ ...proposal, workflow: defaultWorkflow, updatedAt: new Date() }).where(eq(pstBlueprintsTable.projectId, project.id)).returning();
+  const workflowSource = references.pattern
+    ? { type: "pattern" as const, id: references.pattern.id, name: references.pattern.name }
+    : references.recipe
+      ? { type: "recipe" as const, id: references.recipe.id, name: references.recipe.name }
+      : undefined;
+  const blueprintProposal = {
+    ...proposal,
+    journey: references.pattern?.steps ?? proposal.journey,
+    componentRequirements: references.recipe?.components ?? proposal.componentRequirements,
+    workflow: workflowSource
+      ? workflowFromStructure(references.pattern?.steps ?? references.recipe?.components ?? [], workflowSource)
+      : defaultWorkflow,
+  };
+  const [updated] = await db.update(pstBlueprintsTable).set({ ...blueprintProposal, updatedAt: new Date() }).where(eq(pstBlueprintsTable.projectId, project.id)).returning();
   await db.update(pstProjectsTable).set({ status: "ARCHITECTED", updatedAt: new Date() }).where(eq(pstProjectsTable.id, project.id));
   await addEvent("BLUEPRINT_GENERATED", `${project.name} received a blueprint proposal from MOCK AI.`, project.id);
   res.json(RunPstArchitectResponse.parse(updated));
@@ -849,13 +1061,34 @@ router.get("/pst/assets", async (req, res): Promise<void> => {
 
 router.get("/pst/patterns", async (_req, res): Promise<void> => {
   await ensureSeed();
-  res.json(ListPstPatternsResponse.parse(await db.select().from(pstPatternsTable).orderBy(pstPatternsTable.name)));
+  const patterns = await db.select().from(pstPatternsTable).orderBy(pstPatternsTable.name);
+  const enrichedPatterns = await Promise.all(patterns.map(async (pattern) => ({
+    ...pattern,
+    ...(await getPatternUsage(pattern.id)),
+  })));
+  res.json(ListPstPatternsResponse.parse(enrichedPatterns));
 });
 
 router.get("/pst/recipes", async (_req, res): Promise<void> => {
   await ensureSeed();
-  res.json(ListPstRecipesResponse.parse(await db.select().from(pstRecipesTable).orderBy(pstRecipesTable.name)));
+  const recipes = await db.select().from(pstRecipesTable).orderBy(pstRecipesTable.name);
+  const enrichedRecipes = await Promise.all(recipes.map(async (recipe) => ({
+    ...recipe,
+    ...(await getRecipeUsage(recipe.id)),
+  })));
+  res.json(ListPstRecipesResponse.parse(enrichedRecipes));
 });
+
+function assetMatchesRequirement(requirement: string, asset: typeof pstAssetsTable.$inferSelect) {
+  const requirementWords = requirement.toLowerCase().split(/[^a-z0-9]+/).filter((word) => word.length > 3);
+  const assetText = [
+    asset.name,
+    asset.description,
+    ...asset.tags,
+    ...asset.compatibility,
+  ].join(" ").toLowerCase();
+  return requirementWords.some((word) => assetText.includes(word));
+}
 
 router.post("/pst/projects/:projectId/builder", async (req, res): Promise<void> => {
   const params = BuildPstProjectParams.safeParse(req.params);
@@ -874,19 +1107,63 @@ router.post("/pst/projects/:projectId/builder", async (req, res): Promise<void> 
     return;
   }
   await ensureSeed();
+  const appliedReferences = await applyProjectReferences(access.project.id, {
+    patternId: body.data.patternId,
+    recipeId: body.data.recipeId,
+  });
+  if (appliedReferences.error) {
+    res.status(400).json({ error: appliedReferences.error });
+    return;
+  }
+  const references = await currentProjectReferences(access.project.id);
+  const recipeRequirements = references.recipe?.components ?? blueprint.componentRequirements;
+  const structure = references.pattern?.steps ?? references.recipe?.components;
+  const workflowSource = references.pattern
+    ? { type: "pattern" as const, id: references.pattern.id, name: references.pattern.name }
+    : references.recipe
+      ? { type: "recipe" as const, id: references.recipe.id, name: references.recipe.name }
+      : undefined;
+  const workflow = workflowSource
+    ? workflowFromStructure(structure ?? [], workflowSource)
+    : blueprint.workflow;
+  if (workflowSource) {
+    await db.update(pstBlueprintsTable).set({
+      journey: references.pattern?.steps ?? blueprint.journey,
+      componentRequirements: recipeRequirements,
+      workflow,
+      updatedAt: new Date(),
+    }).where(eq(pstBlueprintsTable.projectId, access.project.id));
+  }
   const selectedAssets = body.data.assetIds?.length
-    ? await db.select().from(pstAssetsTable).where(sql`${pstAssetsTable.id} in (${sql.join(body.data.assetIds.map((id) => sql`${id}`), sql`, `)})`)
+    ? await db.select().from(pstAssetsTable).where(inArray(pstAssetsTable.id, body.data.assetIds))
     : await db.select().from(pstAssetsTable).where(eq(pstAssetsTable.status, "ACTIVE")).limit(5);
-  const ready = selectedAssets.map((asset) => asset.name);
-  const missing = blueprint.componentRequirements.filter((requirement) => !ready.some((name) => name.toLowerCase().includes(requirement.split(" ")[0].toLowerCase())));
-  const components = selectedAssets.map((asset) => ({
-    id: randomUUID(),
-    name: asset.name,
-    type: asset.type,
-    source: "Asset Library",
-    status: "READY" as const,
-  }));
-  for (const component of selectedAssets) {
+  const readyAssets = new Map<string, typeof selectedAssets[number]>();
+  const missing = references.recipe
+    ? recipeRequirements.filter((requirement) => {
+        const match = selectedAssets.find((asset) => assetMatchesRequirement(requirement, asset));
+        if (match) readyAssets.set(match.id, match);
+        return !match;
+      })
+    : blueprint.componentRequirements.filter((requirement) => !selectedAssets.some((asset) => asset.name.toLowerCase().includes(requirement.split(" ")[0].toLowerCase())));
+  if (!references.recipe) {
+    selectedAssets.forEach((asset) => readyAssets.set(asset.id, asset));
+  }
+  const components = references.recipe
+    ? recipeRequirements.map((requirement) => {
+        const asset = [...readyAssets.values()].find((candidate) => assetMatchesRequirement(requirement, candidate));
+        return asset
+          ? { id: randomUUID(), name: asset.name, type: asset.type, source: "Asset Library", status: "READY" as const }
+          : { id: `recipe-${slugify(requirement)}`, name: requirement, type: "RECIPE_COMPONENT", source: `Recipe: ${references.recipe?.name ?? "selected"}`, status: "MISSING" as const };
+      })
+    : selectedAssets.map((asset) => ({
+        id: randomUUID(),
+        name: asset.name,
+        type: asset.type,
+        source: "Asset Library",
+        status: "READY" as const,
+      }));
+  await db.delete(pstProjectComponentsTable).where(eq(pstProjectComponentsTable.projectId, access.project.id));
+  for (const component of readyAssets.values()) {
     await db.insert(pstProjectComponentsTable).values({
       id: randomUUID(),
       projectId: access.project.id,
@@ -901,7 +1178,17 @@ router.post("/pst/projects/:projectId/builder", async (req, res): Promise<void> 
   const status = missing.length ? "BLOCKED" : "READY";
   await db.update(pstProjectsTable).set({ status: missing.length ? "BUILDING" : "PREVIEW", updatedAt: new Date() }).where(eq(pstProjectsTable.id, access.project.id));
   await addEvent("BUILD_COMPLETED", `Builder finished with ${status.toLowerCase()} status.`, access.project.id);
-  res.json(BuildPstProjectResponse.parse({ status, ready, missing, warnings: [], errors: missing.length ? ["Some blueprint requirements still need a compatible asset."] : [], components }));
+  res.json(BuildPstProjectResponse.parse({
+    status,
+    ready: [...readyAssets.values()].map((asset) => asset.name),
+    missing,
+    warnings: [
+      references.pattern ? `Workflow derived from pattern: ${references.pattern.name}.` : undefined,
+      references.recipe ? `Components derived from recipe: ${references.recipe.name}.` : undefined,
+    ].filter((warning): warning is string => Boolean(warning)),
+    errors: missing.length ? ["Some blueprint requirements still need a compatible asset."] : [],
+    components,
+  }));
 });
 
 router.post("/pst/projects/:projectId/simulate", async (req, res): Promise<void> => {

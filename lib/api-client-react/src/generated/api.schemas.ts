@@ -92,6 +92,31 @@ export interface ComponentSelection {
   status: ComponentSelectionStatus;
 }
 
+export interface ReferenceProject {
+  id: string;
+  name: string;
+}
+
+export interface PstPattern {
+  id: string;
+  name: string;
+  description: string;
+  steps: string[];
+  usageCount: number;
+  projectIds: string[];
+  projects: ReferenceProject[];
+}
+
+export interface PstRecipe {
+  id: string;
+  name: string;
+  description: string;
+  components: string[];
+  usageCount: number;
+  projectIds: string[];
+  projects: ReferenceProject[];
+}
+
 export type QaStatus = typeof QaStatus[keyof typeof QaStatus];
 
 
@@ -118,6 +143,10 @@ export interface PstProject {
   productDna: ProductDna;
   blueprint: PstBlueprint;
   components: ComponentSelection[];
+  /** Pattern library records resolved through project reference relations. */
+  selectedPatterns: PstPattern[];
+  /** Recipe library records resolved through project reference relations. */
+  selectedRecipes: PstRecipe[];
   qaStatus: QaStatus;
   publicationStatus: PstProjectPublicationStatus;
   createdAt: string;
@@ -199,6 +228,8 @@ export interface BlueprintUpdate {
 
 export interface ArchitectInput {
   additionalContext?: string;
+  patternId?: string | null;
+  recipeId?: string | null;
 }
 
 export type AssetType = typeof AssetType[keyof typeof AssetType];
@@ -235,25 +266,10 @@ export interface PstAsset {
   updatedAt: string;
 }
 
-export interface PstPattern {
-  id: string;
-  name: string;
-  description: string;
-  steps: string[];
-  usageCount: number;
-}
-
-export interface PstRecipe {
-  id: string;
-  name: string;
-  description: string;
-  components: string[];
-  usageCount: number;
-}
-
 export interface BuildInput {
   assetIds?: string[];
-  recipeId?: string;
+  patternId?: string | null;
+  recipeId?: string | null;
 }
 
 export type BuildResultStatus = typeof BuildResultStatus[keyof typeof BuildResultStatus];

@@ -8,5 +8,6 @@
 
 export interface BuildInput {
   assetIds?: string[];
-  recipeId?: string;
+  patternId?: string | null;
+  recipeId?: string | null;
 }

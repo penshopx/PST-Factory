@@ -455,7 +455,7 @@ components:
       enum: [DRAFT, ARCHITECTED, BLUEPRINT_READY, BUILDING, PREVIEW, QA, APPROVED, PUBLISHED, ARCHIVED]
     PstProject:
       type: object
-      required: [id, name, slug, description, status, version, domain, family, series, problemStatement, targetUser, desiredOutcome, productDna, blueprint, components, qaStatus, publicationStatus, createdAt, updatedAt]
+      required: [id, name, slug, description, status, version, domain, family, series, problemStatement, targetUser, desiredOutcome, productDna, blueprint, components, selectedPatterns, selectedRecipes, qaStatus, publicationStatus, createdAt, updatedAt]
       properties:
         id: { type: string }
         name: { type: string }
@@ -474,6 +474,14 @@ components:
         components:
           type: array
           items: { $ref: "#/components/schemas/ComponentSelection" }
+        selectedPatterns:
+          type: array
+          description: Pattern library records resolved through project reference relations.
+          items: { $ref: "#/components/schemas/PstPattern" }
+        selectedRecipes:
+          type: array
+          description: Recipe library records resolved through project reference relations.
+          items: { $ref: "#/components/schemas/PstRecipe" }
         qaStatus: { $ref: "#/components/schemas/QaStatus" }
         publicationStatus: { type: string, enum: [UNPUBLISHED, PUBLISHED, ARCHIVED] }
         createdAt: { type: string, format: date-time }
@@ -564,6 +572,8 @@ components:
       type: object
       properties:
         additionalContext: { type: string }
+        patternId: { type: string, nullable: true }
+        recipeId: { type: string, nullable: true }
     WorkflowStep:
       type: object
       required: [id, type, title, description, inputs, outputs, dependencies, nextStep]
@@ -597,22 +607,36 @@ components:
         updatedAt: { type: string, format: date-time }
     PstPattern:
       type: object
-      required: [id, name, description, steps, usageCount]
+      required: [id, name, description, steps, usageCount, projectIds, projects]
       properties:
         id: { type: string }
         name: { type: string }
         description: { type: string }
         steps: { type: array, items: { type: string } }
         usageCount: { type: number }
+        projectIds: { type: array, items: { type: string } }
+        projects:
+          type: array
+          items: { $ref: "#/components/schemas/ReferenceProject" }
     PstRecipe:
       type: object
-      required: [id, name, description, components, usageCount]
+      required: [id, name, description, components, usageCount, projectIds, projects]
       properties:
         id: { type: string }
         name: { type: string }
         description: { type: string }
         components: { type: array, items: { type: string } }
         usageCount: { type: number }
+        projectIds: { type: array, items: { type: string } }
+        projects:
+          type: array
+          items: { $ref: "#/components/schemas/ReferenceProject" }
+    ReferenceProject:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string }
+        name: { type: string }
     ComponentSelection:
       type: object
       required: [id, name, type, source, status]
@@ -626,7 +650,8 @@ components:
       type: object
       properties:
         assetIds: { type: array, items: { type: string } }
-        recipeId: { type: string }
+        patternId: { type: string, nullable: true }
+        recipeId: { type: string, nullable: true }
     BuildResult:
       type: object
       required: [status, ready, missing, warnings, errors, components]

@@ -3,6 +3,8 @@ export type ArchitectContext = {
   targetUser: string;
   desiredOutcome: string;
   additionalContext?: string;
+  pattern?: { name: string; steps: string[] };
+  recipe?: { name: string; components: string[] };
 };
 
 export type ArchitectProposal = {

@@ -41,6 +41,7 @@ export * from './qaResult';
 export * from './qaResultStatus';
 export * from './qaRun';
 export * from './qaStatus';
+export * from './referenceProject';
 export * from './simulationInput';
 export * from './simulationInputMode';
 export * from './simulationReport';

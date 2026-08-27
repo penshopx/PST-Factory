@@ -5,6 +5,7 @@
  * PST Factory product manufacturing platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { ReferenceProject } from './referenceProject';
 
 export interface PstPattern {
   id: string;
@@ -12,4 +13,6 @@ export interface PstPattern {
   description: string;
   steps: string[];
   usageCount: number;
+  projectIds: string[];
+  projects: ReferenceProject[];
 }

@@ -107,6 +107,30 @@ export const ListPstProjectsResponseItem = zod.object({
   "source": zod.string(),
   "status": zod.enum(['READY', 'MISSING', 'WARNING'])
 })),
+  "selectedPatterns": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "steps": zod.array(zod.string()),
+  "usageCount": zod.number(),
+  "projectIds": zod.array(zod.string()),
+  "projects": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}))
+})).describe('Pattern library records resolved through project reference relations.'),
+  "selectedRecipes": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "components": zod.array(zod.string()),
+  "usageCount": zod.number(),
+  "projectIds": zod.array(zod.string()),
+  "projects": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}))
+})).describe('Recipe library records resolved through project reference relations.'),
   "qaStatus": zod.enum(['NOT_RUN', 'PASS', 'WARNING', 'ERROR']),
   "publicationStatus": zod.enum(['UNPUBLISHED', 'PUBLISHED', 'ARCHIVED']),
   "createdAt": zod.coerce.date(),
@@ -191,6 +215,30 @@ export const CreatePstProjectResponse = zod.object({
   "source": zod.string(),
   "status": zod.enum(['READY', 'MISSING', 'WARNING'])
 })),
+  "selectedPatterns": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "steps": zod.array(zod.string()),
+  "usageCount": zod.number(),
+  "projectIds": zod.array(zod.string()),
+  "projects": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}))
+})).describe('Pattern library records resolved through project reference relations.'),
+  "selectedRecipes": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "components": zod.array(zod.string()),
+  "usageCount": zod.number(),
+  "projectIds": zod.array(zod.string()),
+  "projects": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}))
+})).describe('Recipe library records resolved through project reference relations.'),
   "qaStatus": zod.enum(['NOT_RUN', 'PASS', 'WARNING', 'ERROR']),
   "publicationStatus": zod.enum(['UNPUBLISHED', 'PUBLISHED', 'ARCHIVED']),
   "createdAt": zod.coerce.date(),
@@ -261,6 +309,30 @@ export const GetPstProjectResponse = zod.object({
   "source": zod.string(),
   "status": zod.enum(['READY', 'MISSING', 'WARNING'])
 })),
+  "selectedPatterns": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "steps": zod.array(zod.string()),
+  "usageCount": zod.number(),
+  "projectIds": zod.array(zod.string()),
+  "projects": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}))
+})).describe('Pattern library records resolved through project reference relations.'),
+  "selectedRecipes": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "components": zod.array(zod.string()),
+  "usageCount": zod.number(),
+  "projectIds": zod.array(zod.string()),
+  "projects": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}))
+})).describe('Recipe library records resolved through project reference relations.'),
   "qaStatus": zod.enum(['NOT_RUN', 'PASS', 'WARNING', 'ERROR']),
   "publicationStatus": zod.enum(['UNPUBLISHED', 'PUBLISHED', 'ARCHIVED']),
   "createdAt": zod.coerce.date(),
@@ -345,6 +417,30 @@ export const UpdatePstProjectResponse = zod.object({
   "source": zod.string(),
   "status": zod.enum(['READY', 'MISSING', 'WARNING'])
 })),
+  "selectedPatterns": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "steps": zod.array(zod.string()),
+  "usageCount": zod.number(),
+  "projectIds": zod.array(zod.string()),
+  "projects": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}))
+})).describe('Pattern library records resolved through project reference relations.'),
+  "selectedRecipes": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "components": zod.array(zod.string()),
+  "usageCount": zod.number(),
+  "projectIds": zod.array(zod.string()),
+  "projects": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}))
+})).describe('Recipe library records resolved through project reference relations.'),
   "qaStatus": zod.enum(['NOT_RUN', 'PASS', 'WARNING', 'ERROR']),
   "publicationStatus": zod.enum(['UNPUBLISHED', 'PUBLISHED', 'ARCHIVED']),
   "createdAt": zod.coerce.date(),
@@ -415,6 +511,30 @@ export const DuplicatePstProjectResponse = zod.object({
   "source": zod.string(),
   "status": zod.enum(['READY', 'MISSING', 'WARNING'])
 })),
+  "selectedPatterns": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "steps": zod.array(zod.string()),
+  "usageCount": zod.number(),
+  "projectIds": zod.array(zod.string()),
+  "projects": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}))
+})).describe('Pattern library records resolved through project reference relations.'),
+  "selectedRecipes": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "components": zod.array(zod.string()),
+  "usageCount": zod.number(),
+  "projectIds": zod.array(zod.string()),
+  "projects": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}))
+})).describe('Recipe library records resolved through project reference relations.'),
   "qaStatus": zod.enum(['NOT_RUN', 'PASS', 'WARNING', 'ERROR']),
   "publicationStatus": zod.enum(['UNPUBLISHED', 'PUBLISHED', 'ARCHIVED']),
   "createdAt": zod.coerce.date(),
@@ -485,6 +605,30 @@ export const ArchivePstProjectResponse = zod.object({
   "source": zod.string(),
   "status": zod.enum(['READY', 'MISSING', 'WARNING'])
 })),
+  "selectedPatterns": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "steps": zod.array(zod.string()),
+  "usageCount": zod.number(),
+  "projectIds": zod.array(zod.string()),
+  "projects": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}))
+})).describe('Pattern library records resolved through project reference relations.'),
+  "selectedRecipes": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "components": zod.array(zod.string()),
+  "usageCount": zod.number(),
+  "projectIds": zod.array(zod.string()),
+  "projects": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}))
+})).describe('Recipe library records resolved through project reference relations.'),
   "qaStatus": zod.enum(['NOT_RUN', 'PASS', 'WARNING', 'ERROR']),
   "publicationStatus": zod.enum(['UNPUBLISHED', 'PUBLISHED', 'ARCHIVED']),
   "createdAt": zod.coerce.date(),
@@ -500,7 +644,9 @@ export const RunPstArchitectParams = zod.object({
 })
 
 export const RunPstArchitectBody = zod.object({
-  "additionalContext": zod.string().optional()
+  "additionalContext": zod.string().optional(),
+  "patternId": zod.string().nullish(),
+  "recipeId": zod.string().nullish()
 })
 
 export const RunPstArchitectResponse = zod.object({
@@ -653,7 +799,12 @@ export const ListPstPatternsResponseItem = zod.object({
   "name": zod.string(),
   "description": zod.string(),
   "steps": zod.array(zod.string()),
-  "usageCount": zod.number()
+  "usageCount": zod.number(),
+  "projectIds": zod.array(zod.string()),
+  "projects": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}))
 })
 export const ListPstPatternsResponse = zod.array(ListPstPatternsResponseItem)
 
@@ -666,7 +817,12 @@ export const ListPstRecipesResponseItem = zod.object({
   "name": zod.string(),
   "description": zod.string(),
   "components": zod.array(zod.string()),
-  "usageCount": zod.number()
+  "usageCount": zod.number(),
+  "projectIds": zod.array(zod.string()),
+  "projects": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}))
 })
 export const ListPstRecipesResponse = zod.array(ListPstRecipesResponseItem)
 
@@ -680,7 +836,8 @@ export const BuildPstProjectParams = zod.object({
 
 export const BuildPstProjectBody = zod.object({
   "assetIds": zod.array(zod.string()).optional(),
-  "recipeId": zod.string().optional()
+  "patternId": zod.string().nullish(),
+  "recipeId": zod.string().nullish()
 })
 
 export const BuildPstProjectResponse = zod.object({
@@ -801,6 +958,30 @@ export const ApprovePstProjectResponse = zod.object({
   "source": zod.string(),
   "status": zod.enum(['READY', 'MISSING', 'WARNING'])
 })),
+  "selectedPatterns": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "steps": zod.array(zod.string()),
+  "usageCount": zod.number(),
+  "projectIds": zod.array(zod.string()),
+  "projects": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}))
+})).describe('Pattern library records resolved through project reference relations.'),
+  "selectedRecipes": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "components": zod.array(zod.string()),
+  "usageCount": zod.number(),
+  "projectIds": zod.array(zod.string()),
+  "projects": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}))
+})).describe('Recipe library records resolved through project reference relations.'),
   "qaStatus": zod.enum(['NOT_RUN', 'PASS', 'WARNING', 'ERROR']),
   "publicationStatus": zod.enum(['UNPUBLISHED', 'PUBLISHED', 'ARCHIVED']),
   "createdAt": zod.coerce.date(),
@@ -871,6 +1052,30 @@ export const PublishPstProjectResponse = zod.object({
   "source": zod.string(),
   "status": zod.enum(['READY', 'MISSING', 'WARNING'])
 })),
+  "selectedPatterns": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "steps": zod.array(zod.string()),
+  "usageCount": zod.number(),
+  "projectIds": zod.array(zod.string()),
+  "projects": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}))
+})).describe('Pattern library records resolved through project reference relations.'),
+  "selectedRecipes": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "components": zod.array(zod.string()),
+  "usageCount": zod.number(),
+  "projectIds": zod.array(zod.string()),
+  "projects": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}))
+})).describe('Recipe library records resolved through project reference relations.'),
   "qaStatus": zod.enum(['NOT_RUN', 'PASS', 'WARNING', 'ERROR']),
   "publicationStatus": zod.enum(['UNPUBLISHED', 'PUBLISHED', 'ARCHIVED']),
   "createdAt": zod.coerce.date(),
@@ -942,6 +1147,30 @@ export const GetPstWorkspaceResponse = zod.object({
   "source": zod.string(),
   "status": zod.enum(['READY', 'MISSING', 'WARNING'])
 })),
+  "selectedPatterns": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "steps": zod.array(zod.string()),
+  "usageCount": zod.number(),
+  "projectIds": zod.array(zod.string()),
+  "projects": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}))
+})).describe('Pattern library records resolved through project reference relations.'),
+  "selectedRecipes": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "components": zod.array(zod.string()),
+  "usageCount": zod.number(),
+  "projectIds": zod.array(zod.string()),
+  "projects": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}))
+})).describe('Recipe library records resolved through project reference relations.'),
   "qaStatus": zod.enum(['NOT_RUN', 'PASS', 'WARNING', 'ERROR']),
   "publicationStatus": zod.enum(['UNPUBLISHED', 'PUBLISHED', 'ARCHIVED']),
   "createdAt": zod.coerce.date(),
@@ -1066,6 +1295,30 @@ export const GetPublicPstWorkspaceResponse = zod.object({
   "source": zod.string(),
   "status": zod.enum(['READY', 'MISSING', 'WARNING'])
 })),
+  "selectedPatterns": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "steps": zod.array(zod.string()),
+  "usageCount": zod.number(),
+  "projectIds": zod.array(zod.string()),
+  "projects": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}))
+})).describe('Pattern library records resolved through project reference relations.'),
+  "selectedRecipes": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "components": zod.array(zod.string()),
+  "usageCount": zod.number(),
+  "projectIds": zod.array(zod.string()),
+  "projects": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}))
+})).describe('Recipe library records resolved through project reference relations.'),
   "qaStatus": zod.enum(['NOT_RUN', 'PASS', 'WARNING', 'ERROR']),
   "publicationStatus": zod.enum(['UNPUBLISHED', 'PUBLISHED', 'ARCHIVED']),
   "createdAt": zod.coerce.date(),

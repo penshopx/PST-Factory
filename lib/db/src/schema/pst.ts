@@ -126,6 +126,50 @@ export const pstRecipesTable = pgTable("pst_recipes", {
   usageCount: integer("usage_count").notNull().default(0),
 });
 
+export const pstProjectPatternsTable = pgTable(
+  "pst_project_patterns",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => pstProjectsTable.id, { onDelete: "cascade" }),
+    patternId: text("pattern_id")
+      .notNull()
+      .references(() => pstPatternsTable.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    projectPatternUnique: uniqueIndex("pst_project_patterns_project_pattern_idx").on(
+      table.projectId,
+      table.patternId,
+    ),
+  }),
+);
+
+export const pstProjectRecipesTable = pgTable(
+  "pst_project_recipes",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => pstProjectsTable.id, { onDelete: "cascade" }),
+    recipeId: text("recipe_id")
+      .notNull()
+      .references(() => pstRecipesTable.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    projectRecipeUnique: uniqueIndex("pst_project_recipes_project_recipe_idx").on(
+      table.projectId,
+      table.recipeId,
+    ),
+  }),
+);
+
 export const pstProjectComponentsTable = pgTable("pst_project_components", {
   id: text("id").primaryKey(),
   projectId: text("project_id")
@@ -207,6 +251,8 @@ export type PstBlueprint = typeof pstBlueprintsTable.$inferSelect;
 export type PstAsset = typeof pstAssetsTable.$inferSelect;
 export type PstPattern = typeof pstPatternsTable.$inferSelect;
 export type PstRecipe = typeof pstRecipesTable.$inferSelect;
+export type PstProjectPattern = typeof pstProjectPatternsTable.$inferSelect;
+export type PstProjectRecipe = typeof pstProjectRecipesTable.$inferSelect;
 export type PstProjectComponent = typeof pstProjectComponentsTable.$inferSelect;
 export type PstFactoryEvent = typeof pstFactoryEventsTable.$inferSelect;
 export type PstQaRun = typeof pstQaRunsTable.$inferSelect;
