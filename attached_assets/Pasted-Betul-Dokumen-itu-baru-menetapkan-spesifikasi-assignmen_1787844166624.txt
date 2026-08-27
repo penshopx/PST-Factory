@@ -1,0 +1,231 @@
+Betul. Dokumen itu baru **menetapkan spesifikasi/assignment**, belum memberi perintah eksplisit kepada Replit untuk eksekusi.
+
+Kalau tujuan Anda sekarang adalah **langsung menyuruh Replit mengerjakannya**, saya sarankan jangan mengirim ulang seluruh prompt panjang. Kirim **execution command** yang merujuk pada assignment tersebut.
+
+Gunakan ini:
+
+```text
+EXECUTE PST MANUFACTURING ENGINE v1 — PHASE 1
+
+The previous PST Manufacturing Engine v1 specification is now
+APPROVED for implementation.
+
+You are authorized to modify the codebase now.
+
+Execute the specification exactly as defined.
+
+==================================================
+IMPLEMENTATION ORDER
+==================================================
+
+Implement in this order:
+
+1. Security Boundary
+2. Workspace / Ownership / Roles
+3. PST Schema
+4. Executable Pattern
+5. Executable Recipe
+6. Pattern + Recipe → Blueprint integration
+7. Configuration-driven acceptance tests
+
+==================================================
+NON-NEGOTIABLE RULES
+==================================================
+
+DO NOT:
+
+- rebuild the application;
+- replace the current architecture;
+- integrate real Gustafta;
+- build marketplace functionality;
+- add unrelated features;
+- remove working Factory MVP functionality;
+- create product-specific frontend logic;
+- create product-specific backend logic;
+- hard-code Cashflow Health Check behavior;
+- hard-code Decision Readiness Check behavior.
+
+The existing MVP must remain functional.
+
+Prefer incremental migrations and changes.
+
+==================================================
+MANUFACTURING PRINCIPLE
+==================================================
+
+The implementation must move the system toward:
+
+PROBLEM
+→ PATTERN
+→ RECIPE
+→ KNOWLEDGE
+→ BLUEPRINT
+→ EXECUTABLE CONFIGURATION
+
+The goal is manufacturing leverage.
+
+==================================================
+CRITICAL ACCEPTANCE TEST
+==================================================
+
+Create or adapt two substantially different PST configurations:
+
+A. Cashflow Health Check
+
+B. Decision Readiness Check
+
+They must differ in configuration for:
+
+- inputs
+- questions
+- pattern
+- recipe
+- scoring
+- workflow
+- outputs
+
+They must produce different runtime behavior WITHOUT:
+
+if product === "cashflow"
+
+or:
+
+if product === "decision"
+
+or equivalent product-specific logic.
+
+The application code must remain generic.
+
+==================================================
+DEFINITION OF DONE
+==================================================
+
+Phase 1 is complete only when:
+
+1. Authenticated users are isolated by workspace/resource ownership.
+2. Roles are enforced server-side.
+3. Customer access is separated from Factory access.
+4. PST Schema is machine-readable and configuration-driven.
+5. Pattern is executable/configurable rather than descriptive only.
+6. Recipe is executable/configurable rather than descriptive only.
+7. Architect can use Pattern and Recipe.
+8. Blueprint stores the resulting manufacturing configuration.
+9. Builder consumes the configuration.
+10. Existing MVP functionality still passes regression tests.
+11. Cashflow Health Check and Decision Readiness Check behave
+    differently through configuration.
+12. No product-specific application logic is introduced.
+
+==================================================
+SECURITY REQUIREMENT
+==================================================
+
+Do not consider frontend hiding sufficient.
+
+Every protected API must verify:
+
+authenticated actor
+→ workspace membership
+→ role
+→ resource access
+
+Customer runtime must only resolve an explicitly published/authorized
+customer experience.
+
+==================================================
+IMPLEMENTATION DISCIPLINE
+==================================================
+
+Before changing code:
+
+1. Inspect the existing architecture.
+2. Identify current relevant files.
+3. Identify existing database schema.
+4. Identify existing API routes.
+5. Identify existing tests.
+6. Produce a short implementation plan.
+
+Then implement incrementally.
+
+After each major section:
+
+- run TypeScript checks;
+- run relevant tests;
+- fix regressions before continuing.
+
+Do not make speculative architectural changes.
+
+==================================================
+FINAL VERIFICATION
+==================================================
+
+After implementation run the complete test suite.
+
+Then perform the actual manufacturing acceptance test:
+
+Cashflow Health Check
+→ configuration
+→ Blueprint
+→ Builder
+→ runtime
+
+Decision Readiness Check
+→ configuration
+→ Blueprint
+→ Builder
+→ runtime
+
+Verify that the resulting behavior is genuinely different.
+
+==================================================
+FINAL REPORT
+==================================================
+
+Return:
+
+1. Implementation summary
+2. Files changed
+3. Database migrations
+4. API changes
+5. Security changes
+6. PST Schema implementation
+7. Pattern implementation
+8. Recipe implementation
+9. Blueprint integration
+10. Acceptance test results
+11. Regression test results
+12. Remaining limitations
+13. What was intentionally NOT implemented
+14. Whether the Factory is ready for Compiler Phase
+
+Most important:
+
+Answer this explicitly:
+
+"Can the Factory now represent and manufacture two substantially
+different PSTs through configuration rather than product-specific
+code?"
+
+YES / PARTIALLY / NO
+
+Provide concrete evidence.
+
+Do not proceed to the PST Compiler after this phase unless explicitly
+authorized.
+```
+
+### Setelah ini, posisi kita berubah
+
+Kita tidak lagi berada di tahap **"merancang PST Factory"**.
+
+Kita masuk:
+
+**PST Manufacturing Engine v1 — Implementation.**
+
+Dan saya sarankan setelah Replit selesai, **jangan langsung kasih prompt Compiler**. Kirim hasil implementasinya ke sini dulu.
+
+Kita akan menguji satu pertanyaan yang sangat menentukan:
+
+> **Apakah Replit benar-benar membuat mesin manufaktur, atau hanya memindahkan hard-code dari satu tempat ke tempat lain?**
+
+Kalau jawabannya **YES**, baru kita kunci **PST Compiler v1**.
