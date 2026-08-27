@@ -122,6 +122,7 @@ assert.equal("configuration" in publicSteps[0], false);
 assert.deepEqual(publicSteps.map((step) => step.title), assessment.workflow.map((step) => step.title));
 
 const apiBaseUrl = (process.env.PST_API_URL ?? `http://127.0.0.1:${process.env.PORT ?? "8080"}/api`).replace(/\/$/, "");
+const directApiBaseUrl = apiBaseUrl.endsWith("/api") ? apiBaseUrl.slice(0, -4) : undefined;
 
 async function clerkRequest(path, init = {}) {
   if (!process.env.CLERK_SECRET_KEY) {
@@ -189,8 +190,70 @@ async function apiRequest(token, path, init = {}) {
   return { response, body };
 }
 
+async function directApiRequest(token, path, init = {}) {
+  if (!directApiBaseUrl) return undefined;
+  const response = await fetch(`${directApiBaseUrl}${path}`, {
+    ...init,
+    headers: {
+      ...(init.body ? { "Content-Type": "application/json" } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(init.headers ?? {}),
+    },
+  });
+  return { response, body: await response.text() };
+}
+
 function assertStatus(result, expected, label) {
   assert.equal(result.response.status, expected, `${label}: expected ${expected}, got ${result.response.status}`);
+}
+
+async function assertPrivateRouteAuthentication() {
+  const projectId = "private-route-auth-check";
+  const releaseId = "private-release-auth-check";
+  const requests = [
+    ["GET", "/pst/dashboard/summary"],
+    ["GET", "/pst/dashboard/activity"],
+    ["GET", "/pst/projects"],
+    ["POST", "/pst/projects", {
+      name: "Unauthenticated PST",
+      problemStatement: "Should be rejected",
+      targetUser: "Test user",
+      desiredOutcome: "No project",
+    }],
+    ["GET", `/pst/projects/${projectId}`],
+    ["PATCH", `/pst/projects/${projectId}`, { description: "Should be rejected" }],
+    ["POST", `/pst/projects/${projectId}/duplicate`, {}],
+    ["POST", `/pst/projects/${projectId}/archive`, {}],
+    ["POST", `/pst/projects/${projectId}/architect`, { patternId: "pattern-assessment", recipeId: "recipe-assessment" }],
+    ["GET", `/pst/projects/${projectId}/blueprint`],
+    ["PATCH", `/pst/projects/${projectId}/blueprint`, { nextStep: "Should be rejected" }],
+    ["GET", "/pst/assets"],
+    ["GET", "/pst/patterns"],
+    ["GET", "/pst/recipes"],
+    ["POST", `/pst/projects/${projectId}/builder`, { assetIds: ["asset-guided-assessment"] }],
+    ["POST", `/pst/projects/${projectId}/simulate`, { mode: "MANUAL" }],
+    ["POST", `/pst/projects/${projectId}/qa`, {}],
+    ["POST", `/pst/projects/${projectId}/approve`, {}],
+    ["POST", `/pst/projects/${projectId}/publish`, {}],
+    ["GET", `/pst/projects/${projectId}/releases`],
+    ["POST", `/pst/projects/${projectId}/releases/${releaseId}/restore`, {}],
+    ["GET", `/pst/projects/${projectId}/workspace`],
+    ["GET", `/pst/projects/${projectId}/members`],
+    ["POST", `/pst/projects/${projectId}/members`, { userId: "unauthenticated-user", role: "viewer" }],
+  ];
+
+  for (const [method, path, body] of requests) {
+    const result = await apiRequest(undefined, path, {
+      method,
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+    assertStatus(result, 401, `unauthenticated ${method} ${path}`);
+  }
+
+  const directRoute = await directApiRequest(undefined, `/pst/projects/${projectId}`);
+  if (directRoute) {
+    assertStatus(directRoute, 404, "router is not exposed outside /api");
+  }
 }
 
 async function assertCrossOwnerIsolation(outsider, projectId, releaseId) {
@@ -232,16 +295,7 @@ async function runAuthenticatedRouteAcceptance() {
     viewer = await createClerkTestSession("viewer");
     outsider = await createClerkTestSession("outsider");
 
-    const unauthenticatedCreate = await apiRequest(undefined, "/pst/projects", {
-      method: "POST",
-      body: JSON.stringify({
-        name: "Unauthenticated PST",
-        problemStatement: "Should be rejected",
-        targetUser: "Test user",
-        desiredOutcome: "No project",
-      }),
-    });
-    assertStatus(unauthenticatedCreate, 401, "unauthenticated create");
+    await assertPrivateRouteAuthentication();
 
     const projectName = `Authenticated lifecycle ${randomUUID().slice(0, 8)}`;
     const created = await apiRequest(owner.token, "/pst/projects", {
@@ -293,6 +347,7 @@ async function runAuthenticatedRouteAcceptance() {
 
     const referencesPersisted = await apiRequest(owner.token, `/pst/projects/${projectId}`);
     assertStatus(referencesPersisted, 200, "project after architect");
+    assert.equal(referencesPersisted.body.description, "Route-level lifecycle acceptance project");
     assert.deepEqual(referencesPersisted.body.selectedPatterns.map((pattern) => pattern.id), ["pattern-assessment"]);
     assert.deepEqual(referencesPersisted.body.selectedRecipes.map((recipe) => recipe.id), ["recipe-assessment"]);
     assert.equal(referencesPersisted.body.status, "ARCHITECTED");
@@ -383,6 +438,15 @@ async function runAuthenticatedRouteAcceptance() {
     assert.equal(afterPublish.body.project.slug, slug);
     assert.equal(afterPublish.body.project.status, "PUBLISHED");
     assert.ok(afterPublish.body.steps.length > 0);
+    for (const privateProjectField of ["ownerId", "qaStatus", "createdAt", "updatedAt", "selectedPatterns", "selectedRecipes", "components"]) {
+      assert.equal(privateProjectField in afterPublish.body.project, false, `public project must omit ${privateProjectField}`);
+    }
+    for (const privateDnaField of ["components", "intelligence"]) {
+      assert.equal(privateDnaField in afterPublish.body.project.productDna, false, `public product DNA must omit ${privateDnaField}`);
+    }
+    for (const privateBlueprintField of ["knowledgeRequirements", "componentRequirements", "aiRequirements"]) {
+      assert.equal(privateBlueprintField in afterPublish.body.project.blueprint, false, `public blueprint must omit ${privateBlueprintField}`);
+    }
     assert.equal("selectedPatterns" in afterPublish.body.project, false);
     assert.equal("qaStatus" in afterPublish.body.project, false);
     assert.equal("configuration" in afterPublish.body.steps[0], false);
@@ -421,6 +485,10 @@ async function runAuthenticatedRouteAcceptance() {
     assertStatus(afterRestore, 200, "public workspace after restore");
     assert.deepEqual(afterRestore.body, afterPublish.body);
 
+    const ownerMembers = await apiRequest(owner.token, `/pst/projects/${projectId}/members`);
+    assertStatus(ownerMembers, 200, "owner member list after outsider attempts");
+    assert.equal(ownerMembers.body.some((member) => member.userId === outsider.userId), false);
+
     return {
       projectId,
       slug,
@@ -444,6 +512,6 @@ console.log(JSON.stringify({
   blueprints: 2,
   assessmentSteps: assessment.workflow.map((step) => step.title),
   decisionSteps: decision.workflow.map((step) => step.title),
-  checks: ["configuration-driven build", "different customer journeys/outcomes", "QA failure", "missing dependency", "duplicate isolation", "publish gate", "customer access boundary", "cross-owner route isolation", "cross-owner access boundary", "scoped library usage", "authenticated create-to-publish route lifecycle", "concurrent publish version guard"],
+  checks: ["configuration-driven build", "different customer journeys/outcomes", "QA failure", "missing dependency", "duplicate isolation", "publish gate", "customer access boundary", "public metadata allowlist", "private route authentication sweep", "router isolation outside /api", "cross-owner route isolation", "cross-owner access boundary", "scoped library usage", "authenticated create-to-publish route lifecycle", "concurrent publish version guard"],
   authenticatedRoute: authenticatedRouteResult,
 }, null, 2));

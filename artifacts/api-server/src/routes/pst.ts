@@ -467,27 +467,26 @@ async function ensureSeed(userId = "system") {
   await ensureSeedAssetCompatibility();
 
   // Existing development databases were seeded before ownership existed.
-  // Claim only the legacy seed project, never another user's project.
+  // Claim only the legacy seed project, never another user's project. The
+  // conditional update is important: two first requests must not both add
+  // themselves as members while racing to migrate the legacy owner.
   if (userId !== "system") {
-    const [seedProject] = await db
-      .select({ id: pstProjectsTable.id, ownerId: pstProjectsTable.ownerId })
-      .from(pstProjectsTable)
-      .where(eq(pstProjectsTable.id, "pst-cashflow-check"));
-    if (seedProject?.ownerId === "system") {
-      await db
-        .update(pstProjectsTable)
-        .set({ ownerId: userId, updatedAt: new Date() })
-        .where(
-          and(
-            eq(pstProjectsTable.id, seedProject.id),
-            eq(pstProjectsTable.ownerId, "system"),
-          ),
-        );
+    const [claimedSeedProject] = await db
+      .update(pstProjectsTable)
+      .set({ ownerId: userId, updatedAt: new Date() })
+      .where(
+        and(
+          eq(pstProjectsTable.id, "pst-cashflow-check"),
+          eq(pstProjectsTable.ownerId, "system"),
+        ),
+      )
+      .returning({ id: pstProjectsTable.id });
+    if (claimedSeedProject) {
       await db
         .insert(pstProjectMembersTable)
         .values({
           id: randomUUID(),
-          projectId: seedProject.id,
+          projectId: claimedSeedProject.id,
           userId,
           role: "admin",
         })
