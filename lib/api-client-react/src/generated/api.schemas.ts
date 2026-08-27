@@ -124,6 +124,38 @@ export interface PstProject {
   updatedAt: string;
 }
 
+export type PstProjectMemberRole = typeof PstProjectMemberRole[keyof typeof PstProjectMemberRole];
+
+
+export const PstProjectMemberRole = {
+  admin: 'admin',
+  editor: 'editor',
+  viewer: 'viewer',
+} as const;
+
+export interface PstProjectMember {
+  id: string;
+  projectId: string;
+  userId: string;
+  role: PstProjectMemberRole;
+  createdAt: string;
+}
+
+export type PstProjectMemberInputRole = typeof PstProjectMemberInputRole[keyof typeof PstProjectMemberInputRole];
+
+
+export const PstProjectMemberInputRole = {
+  admin: 'admin',
+  editor: 'editor',
+  viewer: 'viewer',
+} as const;
+
+export interface PstProjectMemberInput {
+  /** @minLength 1 */
+  userId: string;
+  role: PstProjectMemberInputRole;
+}
+
 export interface PstProjectInput {
   /** @minLength 1 */
   name: string;

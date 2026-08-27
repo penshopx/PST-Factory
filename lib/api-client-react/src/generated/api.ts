@@ -35,6 +35,8 @@ import type {
   PstPattern,
   PstProject,
   PstProjectInput,
+  PstProjectMember,
+  PstProjectMemberInput,
   PstProjectUpdate,
   PstRecipe,
   PstWorkspace,
@@ -1629,6 +1631,232 @@ export function useGetPstWorkspace<TData = Awaited<ReturnType<typeof getPstWorks
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetPstWorkspaceQueryOptions(projectId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListPstProjectMembersUrl = (projectId: string,) => {
+
+
+
+
+  return `/api/pst/projects/${projectId}/members`
+}
+
+/**
+ * @summary List project access members
+ */
+export const listPstProjectMembers = async (projectId: string, options?: Parameters<typeof customFetch>[1]): Promise<PstProjectMember[]> => {
+
+  return customFetch<PstProjectMember[]>(getListPstProjectMembersUrl(projectId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPstProjectMembersQueryKey = (projectId: string,) => {
+    return [
+    `/api/pst/projects/${projectId}/members`
+    ] as const;
+    }
+
+
+export const getListPstProjectMembersQueryOptions = <TData = Awaited<ReturnType<typeof listPstProjectMembers>>, TError = ErrorType<unknown>>(projectId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPstProjectMembers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPstProjectMembersQueryKey(projectId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPstProjectMembers>>> = ({ signal }) => listPstProjectMembers(projectId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: projectId !== null && projectId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPstProjectMembers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPstProjectMembersQueryResult = NonNullable<Awaited<ReturnType<typeof listPstProjectMembers>>>
+export type ListPstProjectMembersQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List project access members
+ */
+
+export function useListPstProjectMembers<TData = Awaited<ReturnType<typeof listPstProjectMembers>>, TError = ErrorType<unknown>>(
+ projectId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPstProjectMembers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPstProjectMembersQueryOptions(projectId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpsertPstProjectMemberUrl = (projectId: string,) => {
+
+
+
+
+  return `/api/pst/projects/${projectId}/members`
+}
+
+/**
+ * @summary Add or update a project member role
+ */
+export const upsertPstProjectMember = async (projectId: string,
+    pstProjectMemberInput: PstProjectMemberInput, options?: Parameters<typeof customFetch>[1]): Promise<PstProjectMember> => {
+
+  return customFetch<PstProjectMember>(getUpsertPstProjectMemberUrl(projectId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pstProjectMemberInput)
+  }
+);}
+
+
+
+
+
+export const getUpsertPstProjectMemberMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertPstProjectMember>>, TError,{projectId: string;data: BodyType<PstProjectMemberInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof upsertPstProjectMember>>, TError,{projectId: string;data: BodyType<PstProjectMemberInput>}, TContext> => {
+
+const mutationKey = ['upsertPstProjectMember'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof upsertPstProjectMember>>, {projectId: string;data: BodyType<PstProjectMemberInput>}> = (props) => {
+          const {projectId,data} = props ?? {};
+
+          return  upsertPstProjectMember(projectId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpsertPstProjectMemberMutationResult = NonNullable<Awaited<ReturnType<typeof upsertPstProjectMember>>>
+    export type UpsertPstProjectMemberMutationBody = BodyType<PstProjectMemberInput>
+    export type UpsertPstProjectMemberMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Add or update a project member role
+ */
+export const useUpsertPstProjectMember = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertPstProjectMember>>, TError,{projectId: string;data: BodyType<PstProjectMemberInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof upsertPstProjectMember>>,
+        TError,
+        {projectId: string;data: BodyType<PstProjectMemberInput>},
+        TContext
+      > => {
+      return useMutation(getUpsertPstProjectMemberMutationOptions(options));
+    }
+
+export const getGetPublicPstWorkspaceUrl = (slug: string,) => {
+
+
+
+
+  return `/api/pst/public/workspaces/${slug}`
+}
+
+/**
+ * @summary Get a published customer workspace without factory authentication
+ */
+export const getPublicPstWorkspace = async (slug: string, options?: Parameters<typeof customFetch>[1]): Promise<PstWorkspace> => {
+
+  return customFetch<PstWorkspace>(getGetPublicPstWorkspaceUrl(slug),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPublicPstWorkspaceQueryKey = (slug: string,) => {
+    return [
+    `/api/pst/public/workspaces/${slug}`
+    ] as const;
+    }
+
+
+export const getGetPublicPstWorkspaceQueryOptions = <TData = Awaited<ReturnType<typeof getPublicPstWorkspace>>, TError = ErrorType<NotFoundResponse>>(slug: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPublicPstWorkspace>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPublicPstWorkspaceQueryKey(slug);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPublicPstWorkspace>>> = ({ signal }) => getPublicPstWorkspace(slug, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: slug !== null && slug !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPublicPstWorkspace>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPublicPstWorkspaceQueryResult = NonNullable<Awaited<ReturnType<typeof getPublicPstWorkspace>>>
+export type GetPublicPstWorkspaceQueryError = ErrorType<NotFoundResponse>
+
+
+/**
+ * @summary Get a published customer workspace without factory authentication
+ */
+
+export function useGetPublicPstWorkspace<TData = Awaited<ReturnType<typeof getPublicPstWorkspace>>, TError = ErrorType<NotFoundResponse>>(
+ slug: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPublicPstWorkspace>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPublicPstWorkspaceQueryOptions(slug,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

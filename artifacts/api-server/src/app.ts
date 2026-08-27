@@ -59,7 +59,7 @@ const requireAuth = (req: express.Request, res: express.Response, next: express.
 };
 
 app.use("/api", (req, res, next) => {
-  if (req.path === "/healthz") {
+  if (req.path === "/healthz" || req.path.startsWith("/pst/public/")) {
     next();
     return;
   }

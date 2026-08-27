@@ -7,6 +7,8 @@ info:
 servers:
   - url: /api
     description: Base API path
+security:
+  - clerkSession: []
 tags:
   - name: health
     description: Health operations
@@ -18,6 +20,7 @@ paths:
   /healthz:
     get:
       operationId: healthCheck
+      security: []
       tags: [health]
       summary: Health check
       description: Returns server health status
@@ -357,7 +360,74 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PstWorkspace"
+  /pst/projects/{projectId}/members:
+    get:
+      operationId: listPstProjectMembers
+      tags: [projects]
+      summary: List project access members
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Project members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PstProjectMember"
+    post:
+      operationId: upsertPstProjectMember
+      tags: [projects]
+      summary: Add or update a project member role
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PstProjectMemberInput"
+      responses:
+        "200":
+          description: Updated project member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PstProjectMember"
+        "201":
+          description: Added project member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PstProjectMember"
+  /pst/public/workspaces/{slug}:
+    get:
+      operationId: getPublicPstWorkspace
+      security: []
+      tags: [projects]
+      summary: Get a published customer workspace without factory authentication
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Published customer workspace
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PstWorkspace"
+        "404":
+          $ref: "#/components/responses/NotFound"
 components:
+  securitySchemes:
+    clerkSession:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   parameters:
     ProjectId:
       name: projectId
@@ -408,6 +478,21 @@ components:
         publicationStatus: { type: string, enum: [UNPUBLISHED, PUBLISHED, ARCHIVED] }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    PstProjectMember:
+      type: object
+      required: [id, projectId, userId, role, createdAt]
+      properties:
+        id: { type: string }
+        projectId: { type: string }
+        userId: { type: string }
+        role: { type: string, enum: [admin, editor, viewer] }
+        createdAt: { type: string, format: date-time }
+    PstProjectMemberInput:
+      type: object
+      required: [userId, role]
+      properties:
+        userId: { type: string, minLength: 1 }
+        role: { type: string, enum: [admin, editor, viewer] }
     PstProjectInput:
       type: object
       required: [name, problemStatement, targetUser, desiredOutcome]

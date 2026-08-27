@@ -5,12 +5,14 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
 export const pstProjectsTable = pgTable("pst_projects", {
   id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull().default("system"),
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
   description: text("description").notNull().default(""),
@@ -40,6 +42,30 @@ export const pstProjectsTable = pgTable("pst_projects", {
     .defaultNow()
     .$onUpdate(() => new Date()),
 });
+
+export const pstProjectRoleValues = ["admin", "editor", "viewer"] as const;
+export type PstProjectRole = (typeof pstProjectRoleValues)[number];
+
+export const pstProjectMembersTable = pgTable(
+  "pst_project_members",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => pstProjectsTable.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    role: text("role").$type<PstProjectRole>().notNull().default("viewer"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    projectUserUnique: uniqueIndex("pst_project_members_project_user_idx").on(
+      table.projectId,
+      table.userId,
+    ),
+  }),
+);
 
 export const pstBlueprintsTable = pgTable("pst_blueprints", {
   id: text("id").primaryKey(),
@@ -176,6 +202,7 @@ export const insertPstProjectSchema = createInsertSchema(pstProjectsTable).omit(
 });
 export type InsertPstProject = z.infer<typeof insertPstProjectSchema>;
 export type PstProject = typeof pstProjectsTable.$inferSelect;
+export type PstProjectMember = typeof pstProjectMembersTable.$inferSelect;
 export type PstBlueprint = typeof pstBlueprintsTable.$inferSelect;
 export type PstAsset = typeof pstAssetsTable.$inferSelect;
 export type PstPattern = typeof pstPatternsTable.$inferSelect;

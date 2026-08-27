@@ -13,12 +13,12 @@ import {
 } from 'lucide-react';
 import {
   getGetDashboardActivityQueryKey, getGetDashboardSummaryQueryKey,
-  getGetPstBlueprintQueryKey, getGetPstProjectQueryKey, getGetPstWorkspaceQueryKey,
+  getGetPstBlueprintQueryKey, getGetPstProjectQueryKey, getGetPublicPstWorkspaceQueryKey,
   getListPstAssetsQueryKey, getListPstPatternsQueryKey, getListPstProjectsQueryKey,
   getListPstRecipesQueryKey, useApprovePstProject, useArchivePstProject,
   useBuildPstProject, useCreatePstProject, useDuplicatePstProject,
   useGetDashboardActivity, useGetDashboardSummary, useGetPstBlueprint,
-  useGetPstProject, useGetPstWorkspace, useListPstAssets, useListPstPatterns,
+  useGetPstProject, useGetPublicPstWorkspace, useListPstAssets, useListPstPatterns,
   useListPstProjects, useListPstRecipes, usePublishPstProject, useRunPstArchitect,
   useRunPstQa, useSimulatePstProject, useUpdatePstBlueprint, useUpdatePstProject,
 } from '@workspace/api-client-react';
@@ -295,7 +295,7 @@ function ProjectWorkspace() {
     if (action === 'publish') publish.mutate({ projectId }, { onSuccess: invalidate });
   };
   const tabs = [{ key: 'overview', label: 'Overview' }, { key: 'problem', label: 'Problem' }, { key: 'architect', label: 'Architect' }, { key: 'blueprint', label: 'Blueprint' }, { key: 'assets', label: 'Assets' }, { key: 'workflow', label: 'Workflow' }, { key: 'ai', label: 'AI' }, { key: 'build', label: 'Assembly' }, { key: 'preview', label: 'Preview' }, { key: 'qa', label: 'QA' }, { key: 'publish', label: 'Publish' }, { key: 'versions', label: 'Versions' }];
-  return <div className="mx-auto max-w-[1440px]"><Link href="/projects" className="mb-5 inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-primary" data-testid="link-back-projects"><ArrowLeft size={14} /> All projects</Link><div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end"><div><div className="mb-2 flex items-center gap-2"><StatusBadge value={project.status} /><span className="font-mono text-[10px] text-muted-foreground">v{project.version} · {project.domain || 'general'}</span></div><h1 className="text-3xl font-extrabold tracking-[-.05em]" data-testid="heading-project-name">{project.name}</h1><p className="mt-2 max-w-2xl text-sm text-muted-foreground">{project.description || project.problemStatement}</p></div><div className="flex flex-wrap gap-2"><Link href={`/workspace/${project.id}`} className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs font-semibold hover:border-primary hover:text-primary" data-testid="link-customer-workspace"><ExternalLink size={14} /> Customer view</Link><Button variant="outline" size="sm" onClick={() => updateProject.mutate({ projectId, data: { description: project.description } }, { onSuccess: invalidate })} data-testid="button-save-project"><Check size={14} /> Sync brief</Button></div></div>
+  return <div className="mx-auto max-w-[1440px]"><Link href="/projects" className="mb-5 inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-primary" data-testid="link-back-projects"><ArrowLeft size={14} /> All projects</Link><div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end"><div><div className="mb-2 flex items-center gap-2"><StatusBadge value={project.status} /><span className="font-mono text-[10px] text-muted-foreground">v{project.version} · {project.domain || 'general'}</span></div><h1 className="text-3xl font-extrabold tracking-[-.05em]" data-testid="heading-project-name">{project.name}</h1><p className="mt-2 max-w-2xl text-sm text-muted-foreground">{project.description || project.problemStatement}</p></div><div className="flex flex-wrap gap-2"><Link href={`/workspace/${project.slug}`} className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs font-semibold hover:border-primary hover:text-primary" data-testid="link-customer-workspace"><ExternalLink size={14} /> Customer view</Link><Button variant="outline" size="sm" onClick={() => updateProject.mutate({ projectId, data: { description: project.description } }, { onSuccess: invalidate })} data-testid="button-save-project"><Check size={14} /> Sync brief</Button></div></div>
     <div className="mb-6 overflow-x-auto border-b border-border"><div className="flex min-w-max gap-1">{tabs.map((item) => <button onClick={() => setTab(item.key)} className={cn('border-b-2 px-3 py-3 text-xs font-semibold transition-colors', tab === item.key ? 'border-accent text-accent' : 'border-transparent text-muted-foreground hover:text-foreground')} key={item.key} data-testid={`tab-${item.key}`}>{item.label}</button>)}</div></div>
     {tab === 'overview' && <OverviewTab project={project} blueprint={blueprint} onArchitect={() => run('architect')} onBuild={() => run('build')} />}
     {tab === 'problem' && <ProblemTab project={project} onSave={(data) => updateProject.mutate({ projectId, data }, { onSuccess: invalidate })} />}
@@ -365,8 +365,8 @@ function PatternCard({ item }: { item: PstPattern }) { return <Card className="t
 function RecipeCard({ item }: { item: PstRecipe }) { return <Card className="transition-all hover:border-amber-500/50 hover:shadow-md" data-testid={`card-recipe-${item.id}`}><CardHeader><div className="flex justify-between"><div className="rounded-lg bg-amber-500/10 p-2 text-amber-500"><FlaskConical size={17} /></div><span className="font-mono text-[10px] uppercase text-muted-foreground">{item.usageCount} uses</span></div><CardTitle className="pt-2 text-base">{item.name}</CardTitle><CardDescription>{item.description}</CardDescription></CardHeader><CardContent><p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{item.components?.length ?? 0} components</p><div className="mt-2 flex flex-wrap gap-1.5">{item.components?.slice(0, 4).map((component) => <Badge variant="outline" className="text-[10px]" key={component}>{component}</Badge>)}</div></CardContent></Card>; }
 
 function CustomerWorkspace() {
-  const { projectId = '' } = useParams<{ projectId: string }>();
-  const workspace = useGetPstWorkspace(projectId, { query: { queryKey: getGetPstWorkspaceQueryKey(projectId) } });
+  const { slug = '' } = useParams<{ slug: string }>();
+  const workspace = useGetPublicPstWorkspace(slug, { query: { queryKey: getGetPublicPstWorkspaceQueryKey(slug) } });
   const [active, setActive] = useState(0);
   if (workspace.isLoading) return <Loading label="Preparing guided workspace" />;
   if (workspace.isError || !workspace.data) return <ErrorState onRetry={() => void workspace.refetch()} label="This customer workspace is not available" />;
@@ -383,7 +383,7 @@ function Settings() {
 }
 
 function AppRouter() {
-  return <Shell><Switch><Route path="/" component={Dashboard} /><Route path="/projects" component={Projects} /><Route path="/create" component={Create} /><Route path="/projects/:projectId" component={ProjectWorkspace} /><Route path="/libraries/assets"><LibraryPage kind="assets" /></Route><Route path="/libraries/patterns"><LibraryPage kind="patterns" /></Route><Route path="/libraries/recipes"><LibraryPage kind="recipes" /></Route><Route path="/workspace/:projectId"><CustomerWorkspace /></Route><Route path="/settings"><Settings /></Route><Route component={NotFound} /></Switch></Shell>;
+  return <Shell><Switch><Route path="/" component={Dashboard} /><Route path="/projects" component={Projects} /><Route path="/create" component={Create} /><Route path="/projects/:projectId" component={ProjectWorkspace} /><Route path="/libraries/assets"><LibraryPage kind="assets" /></Route><Route path="/libraries/patterns"><LibraryPage kind="patterns" /></Route><Route path="/libraries/recipes"><LibraryPage kind="recipes" /></Route><Route path="/settings"><Settings /></Route><Route component={NotFound} /></Switch></Shell>;
 }
 
 function NotFound() { return <EmptyState icon={X} title="Route not found" detail="This part of the factory does not exist." action={<Link href="/" className="mt-5 text-sm font-bold text-primary" data-testid="link-not-found-home">Return to factory</Link>} />; }
@@ -487,6 +487,7 @@ function AuthRoutes() {
         <Route path="/sign-in/*?" component={SignInPage} />
         <Route path="/sign-up/*?" component={SignUpPage} />
         <Route path="/" component={HomeRoute} />
+        <Route path="/workspace/:slug" component={CustomerWorkspace} />
         <Route path="/factory/*?" component={ProtectedApp} />
         <Route><Redirect to="/" /></Route>
       </Switch>

@@ -1,11 +1,13 @@
-import { Router, type IRouter } from "express";
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { Router, type IRouter, type Request, type Response } from "express";
+import { getAuth } from "@clerk/express";
+import { and, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   pstAssetsTable,
   pstBlueprintsTable,
   pstFactoryEventsTable,
   pstPatternsTable,
+  pstProjectMembersTable,
   pstProjectComponentsTable,
   pstProjectsTable,
   pstQaRunsTable,
@@ -13,6 +15,7 @@ import {
   pstSimulationsTable,
   type WorkflowStep,
   type QaResult,
+  type PstProjectRole,
 } from "@workspace/db";
 import {
   ArchivePstProjectParams,
@@ -56,6 +59,7 @@ import {
   UpdatePstProjectBody,
   UpdatePstProjectParams,
   UpdatePstProjectResponse,
+  UpsertPstProjectMemberBody,
 } from "@workspace/api-zod";
 import { aiProvider } from "../lib/services/ai/provider";
 import { gustaftaEngine } from "../lib/services/gustafta/engine";
@@ -160,7 +164,7 @@ const makeBlueprint = (
 
 let seedPromise: Promise<void> | undefined;
 
-async function ensureSeed() {
+async function ensureSeed(userId = "system") {
   if (!seedPromise) {
     seedPromise = (async () => {
       const [{ count }] = await db
@@ -299,6 +303,7 @@ async function ensureSeed() {
       );
       await db.insert(pstProjectsTable).values({
         id: projectId,
+        ownerId: userId,
         name: "Cashflow Health Check",
         slug: "cashflow-health-check",
         description: "A guided way to understand cashflow health and prioritize the next move.",
@@ -364,6 +369,35 @@ async function ensureSeed() {
     })();
   }
   await seedPromise;
+
+  // Existing development databases were seeded before ownership existed.
+  // Claim only the legacy seed project, never another user's project.
+  if (userId !== "system") {
+    const [seedProject] = await db
+      .select({ id: pstProjectsTable.id, ownerId: pstProjectsTable.ownerId })
+      .from(pstProjectsTable)
+      .where(eq(pstProjectsTable.id, "pst-cashflow-check"));
+    if (seedProject?.ownerId === "system") {
+      await db
+        .update(pstProjectsTable)
+        .set({ ownerId: userId, updatedAt: new Date() })
+        .where(
+          and(
+            eq(pstProjectsTable.id, seedProject.id),
+            eq(pstProjectsTable.ownerId, "system"),
+          ),
+        );
+      await db
+        .insert(pstProjectMembersTable)
+        .values({
+          id: randomUUID(),
+          projectId: seedProject.id,
+          userId,
+          role: "admin",
+        })
+        .onConflictDoNothing();
+    }
+  }
 }
 
 async function projectAggregate(projectId: string) {
@@ -399,28 +433,142 @@ function slugify(value: string) {
   return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "pst";
 }
 
-async function getProjectId(req: { params: Record<string, string | string[]> }) {
-  const raw = Array.isArray(req.params.projectId) ? req.params.projectId[0] : req.params.projectId;
-  return raw;
+function currentUserId(req: Request) {
+  const auth = getAuth(req) as {
+    sessionClaims?: { userId?: string };
+    userId?: string;
+  };
+  return auth.sessionClaims?.userId || auth.userId;
+}
+
+async function accessibleProjectIds(userId: string) {
+  const [owned, memberships] = await Promise.all([
+    db
+      .select({ id: pstProjectsTable.id })
+      .from(pstProjectsTable)
+      .where(eq(pstProjectsTable.ownerId, userId)),
+    db
+      .select({ id: pstProjectMembersTable.projectId })
+      .from(pstProjectMembersTable)
+      .where(eq(pstProjectMembersTable.userId, userId)),
+  ]);
+  return [...new Set([...owned.map(({ id }) => id), ...memberships.map(({ id }) => id)])];
+}
+
+type ProjectAccess = {
+  project: typeof pstProjectsTable.$inferSelect;
+  role: PstProjectRole;
+};
+
+async function authorizeProject(
+  req: Request,
+  res: Response,
+  projectId: string,
+  roles?: readonly PstProjectRole[],
+): Promise<ProjectAccess | undefined> {
+  const userId = currentUserId(req);
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  await ensureSeed(userId);
+  const [project] = await db
+    .select()
+    .from(pstProjectsTable)
+    .where(eq(pstProjectsTable.id, projectId));
+  if (!project) {
+    res.status(404).json({ error: "PST project not found" });
+    return;
+  }
+
+  let role: PstProjectRole | undefined =
+    project.ownerId === userId ? "admin" : undefined;
+  if (!role) {
+    const [membership] = await db
+      .select({ role: pstProjectMembersTable.role })
+      .from(pstProjectMembersTable)
+      .where(
+        and(
+          eq(pstProjectMembersTable.projectId, projectId),
+          eq(pstProjectMembersTable.userId, userId),
+        ),
+      );
+    role = membership?.role;
+  }
+  if (!role) {
+    // Do not disclose the existence of projects outside the user's boundary.
+    res.status(404).json({ error: "PST project not found" });
+    return;
+  }
+  if (roles && !roles.includes(role)) {
+    res.status(403).json({
+      error: `This action requires one of: ${roles.join(", ")}.`,
+      role,
+    });
+    return;
+  }
+  return { project, role };
+}
+
+const editorRoles: readonly PstProjectRole[] = ["admin", "editor"];
+const adminRoles: readonly PstProjectRole[] = ["admin"];
+
+async function publicWorkspace(slug: string) {
+  const [project] = await db
+    .select()
+    .from(pstProjectsTable)
+    .where(
+      and(
+        eq(pstProjectsTable.slug, slug),
+        eq(pstProjectsTable.publicationStatus, "PUBLISHED"),
+        eq(pstProjectsTable.status, "PUBLISHED"),
+      ),
+    );
+  if (!project) return undefined;
+  return projectAggregate(project.id);
 }
 
 router.get("/pst/dashboard/summary", async (_req, res): Promise<void> => {
-  await ensureSeed();
+  const userId = currentUserId(_req);
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  await ensureSeed(userId);
+  const projectIds = await accessibleProjectIds(userId);
+  if (!projectIds.length) {
+    res.json(GetDashboardSummaryResponse.parse({
+      totalProjects: 0,
+      activeProjects: 0,
+      publishedProjects: 0,
+      assets: 0,
+      reuseRate: 0,
+      qaPassRate: 0,
+    }));
+    return;
+  }
   const [projects] = await db
     .select({
       totalProjects: sql<number>`count(*)`,
       activeProjects: sql<number>`count(*) filter (where ${pstProjectsTable.status} not in ('ARCHIVED', 'PUBLISHED'))`,
       publishedProjects: sql<number>`count(*) filter (where ${pstProjectsTable.publicationStatus} = 'PUBLISHED')`,
     })
-    .from(pstProjectsTable);
+    .from(pstProjectsTable)
+    .where(inArray(pstProjectsTable.id, projectIds));
   const [assets] = await db.select({ count: sql<number>`count(*)` }).from(pstAssetsTable);
   const [reuse] = await db
     .select({ count: sql<number>`count(*)` })
     .from(pstProjectComponentsTable)
-    .where(eq(pstProjectComponentsTable.source, "Asset Library"));
+    .where(
+      and(
+        eq(pstProjectComponentsTable.source, "Asset Library"),
+        inArray(pstProjectComponentsTable.projectId, projectIds),
+      ),
+    );
   const [qa] = await db
     .select({ total: sql<number>`count(*)`, passed: sql<number>`count(*) filter (where ${pstQaRunsTable.status} = 'PASS')` })
-    .from(pstQaRunsTable);
+    .from(pstQaRunsTable)
+    .where(inArray(pstQaRunsTable.projectId, projectIds));
   res.json(GetDashboardSummaryResponse.parse({
     totalProjects: Number(projects.totalProjects),
     activeProjects: Number(projects.activeProjects),
@@ -431,24 +579,50 @@ router.get("/pst/dashboard/summary", async (_req, res): Promise<void> => {
   }));
 });
 
-router.get("/pst/dashboard/activity", async (_req, res): Promise<void> => {
-  await ensureSeed();
-  const events = await db.select().from(pstFactoryEventsTable).orderBy(desc(pstFactoryEventsTable.createdAt)).limit(12);
+router.get("/pst/dashboard/activity", async (req, res): Promise<void> => {
+  const userId = currentUserId(req);
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  await ensureSeed(userId);
+  const projectIds = await accessibleProjectIds(userId);
+  if (!projectIds.length) {
+    res.json([]);
+    return;
+  }
+  const events = await db.select().from(pstFactoryEventsTable)
+    .where(inArray(pstFactoryEventsTable.projectId, projectIds))
+    .orderBy(desc(pstFactoryEventsTable.createdAt)).limit(12);
   res.json(GetDashboardActivityResponse.parse(events));
 });
 
 router.get("/pst/projects", async (req, res): Promise<void> => {
-  await ensureSeed();
+  const userId = currentUserId(req);
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  await ensureSeed(userId);
+  const projectIds = await accessibleProjectIds(userId);
   const query = ListPstProjectsQueryParams.safeParse(req.query);
   if (!query.success) {
     res.status(400).json({ error: query.error.message });
     return;
   }
-  const filters = [];
+  if (!projectIds.length) {
+    res.json([]);
+    return;
+  }
+  const filters: SQL[] = [inArray(pstProjectsTable.id, projectIds)];
   if (query.data.status) filters.push(eq(pstProjectsTable.status, query.data.status));
   if (query.data.search) {
     const term = `%${query.data.search}%`;
-    filters.push(or(ilike(pstProjectsTable.name, term), ilike(pstProjectsTable.description, term)));
+    const searchFilter = or(
+      ilike(pstProjectsTable.name, term),
+      ilike(pstProjectsTable.description, term),
+    );
+    if (searchFilter) filters.push(searchFilter);
   }
   const projects = await db.select().from(pstProjectsTable)
     .where(filters.length ? and(...filters) : undefined)
@@ -458,6 +632,11 @@ router.get("/pst/projects", async (req, res): Promise<void> => {
 });
 
 router.post("/pst/projects", async (req, res): Promise<void> => {
+  const userId = currentUserId(req);
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
   const body = CreatePstProjectBody.safeParse(req.body);
   if (!body.success) {
     res.status(400).json({ error: body.error.message });
@@ -467,6 +646,7 @@ router.post("/pst/projects", async (req, res): Promise<void> => {
   const blueprint = makeBlueprint(id, body.data.problemStatement, body.data.targetUser, body.data.desiredOutcome);
   const project = {
     id,
+    ownerId: userId,
     name: body.data.name,
     slug: `${slugify(body.data.name)}-${id.slice(0, 5)}`,
     description: body.data.description ?? "",
@@ -483,6 +663,12 @@ router.post("/pst/projects", async (req, res): Promise<void> => {
     publicationStatus: "UNPUBLISHED",
   };
   await db.insert(pstProjectsTable).values(project);
+  await db.insert(pstProjectMembersTable).values({
+    id: randomUUID(),
+    projectId: id,
+    userId,
+    role: "admin",
+  });
   await db.insert(pstBlueprintsTable).values(blueprint);
   await addEvent("PST_CREATED", `${project.name} was created as a draft.`, id);
   const aggregate = await projectAggregate(id);
@@ -495,12 +681,11 @@ router.get("/pst/projects/:projectId", async (req, res): Promise<void> => {
     res.status(400).json({ error: params.error.message });
     return;
   }
-  await ensureSeed();
-  const aggregate = await projectAggregate(params.data.projectId);
-  if (!aggregate) {
-    res.status(404).json({ error: "PST project not found" });
+  const access = await authorizeProject(req, res, params.data.projectId);
+  if (!access) {
     return;
   }
+  const aggregate = await projectAggregate(access.project.id);
   res.json(GetPstProjectResponse.parse(aggregate));
 });
 
@@ -511,11 +696,11 @@ router.patch("/pst/projects/:projectId", async (req, res): Promise<void> => {
     res.status(400).json({ error: !params.success ? params.error.message : body.error?.message ?? "Invalid request body" });
     return;
   }
-  const [updated] = await db.update(pstProjectsTable).set({ ...body.data, updatedAt: new Date() }).where(eq(pstProjectsTable.id, params.data.projectId)).returning();
-  if (!updated) {
-    res.status(404).json({ error: "PST project not found" });
+  const access = await authorizeProject(req, res, params.data.projectId, editorRoles);
+  if (!access) {
     return;
   }
+  const [updated] = await db.update(pstProjectsTable).set({ ...body.data, updatedAt: new Date() }).where(eq(pstProjectsTable.id, access.project.id)).returning();
   await addEvent("BLUEPRINT_EDITED", `${updated.name} project details were edited.`, updated.id);
   res.json(UpdatePstProjectResponse.parse(await projectAggregate(updated.id)));
 });
@@ -526,7 +711,11 @@ router.post("/pst/projects/:projectId/duplicate", async (req, res): Promise<void
     res.status(400).json({ error: params.error.message });
     return;
   }
-  const source = await projectAggregate(params.data.projectId);
+  const access = await authorizeProject(req, res, params.data.projectId, editorRoles);
+  if (!access) {
+    return;
+  }
+  const source = await projectAggregate(access.project.id);
   if (!source) {
     res.status(404).json({ error: "PST project not found" });
     return;
@@ -534,6 +723,7 @@ router.post("/pst/projects/:projectId/duplicate", async (req, res): Promise<void
   const id = randomUUID();
   const duplicate = {
     id,
+    ownerId: currentUserId(req) ?? access.project.ownerId,
     name: `${source.name} — Copy`,
     slug: `${source.slug}-copy-${id.slice(0, 5)}`,
     description: source.description,
@@ -550,6 +740,12 @@ router.post("/pst/projects/:projectId/duplicate", async (req, res): Promise<void
     publicationStatus: "UNPUBLISHED",
   };
   await db.insert(pstProjectsTable).values(duplicate);
+  await db.insert(pstProjectMembersTable).values({
+    id: randomUUID(),
+    projectId: id,
+    userId: currentUserId(req) ?? access.project.ownerId,
+    role: "admin",
+  });
   await db.insert(pstBlueprintsTable).values({ ...source.blueprint, id: randomUUID(), projectId: id, version: "v0.1", updatedAt: new Date() });
   for (const component of source.components) {
     const [original] = await db.select().from(pstProjectComponentsTable).where(eq(pstProjectComponentsTable.id, component.id));
@@ -565,11 +761,11 @@ router.post("/pst/projects/:projectId/archive", async (req, res): Promise<void> 
     res.status(400).json({ error: params.error.message });
     return;
   }
-  const [updated] = await db.update(pstProjectsTable).set({ status: "ARCHIVED", publicationStatus: "ARCHIVED", updatedAt: new Date() }).where(eq(pstProjectsTable.id, params.data.projectId)).returning();
-  if (!updated) {
-    res.status(404).json({ error: "PST project not found" });
+  const access = await authorizeProject(req, res, params.data.projectId, adminRoles);
+  if (!access) {
     return;
   }
+  const [updated] = await db.update(pstProjectsTable).set({ status: "ARCHIVED", publicationStatus: "ARCHIVED", updatedAt: new Date() }).where(eq(pstProjectsTable.id, access.project.id)).returning();
   await addEvent("PST_ARCHIVED", `${updated.name} was archived.`, updated.id);
   res.json(ArchivePstProjectResponse.parse(await projectAggregate(updated.id)));
 });
@@ -581,11 +777,11 @@ router.post("/pst/projects/:projectId/architect", async (req, res): Promise<void
     res.status(400).json({ error: !params.success ? params.error.message : body.error?.message ?? "Invalid request body" });
     return;
   }
-  const [project] = await db.select().from(pstProjectsTable).where(eq(pstProjectsTable.id, params.data.projectId));
-  if (!project) {
-    res.status(404).json({ error: "PST project not found" });
+  const access = await authorizeProject(req, res, params.data.projectId, editorRoles);
+  if (!access) {
     return;
   }
+  const project = access.project;
   const proposal = await aiProvider.proposeBlueprint({
     problem: project.problemStatement,
     targetUser: project.targetUser,
@@ -604,7 +800,11 @@ router.get("/pst/projects/:projectId/blueprint", async (req, res): Promise<void>
     res.status(400).json({ error: params.error.message });
     return;
   }
-  const [blueprint] = await db.select().from(pstBlueprintsTable).where(eq(pstBlueprintsTable.projectId, params.data.projectId));
+  const access = await authorizeProject(req, res, params.data.projectId);
+  if (!access) {
+    return;
+  }
+  const [blueprint] = await db.select().from(pstBlueprintsTable).where(eq(pstBlueprintsTable.projectId, access.project.id));
   if (!blueprint) {
     res.status(404).json({ error: "PST blueprint not found" });
     return;
@@ -619,13 +819,17 @@ router.patch("/pst/projects/:projectId/blueprint", async (req, res): Promise<voi
     res.status(400).json({ error: !params.success ? params.error.message : body.error?.message ?? "Invalid request body" });
     return;
   }
-  const [updated] = await db.update(pstBlueprintsTable).set({ ...body.data, updatedAt: new Date() }).where(eq(pstBlueprintsTable.projectId, params.data.projectId)).returning();
+  const access = await authorizeProject(req, res, params.data.projectId, editorRoles);
+  if (!access) {
+    return;
+  }
+  const [updated] = await db.update(pstBlueprintsTable).set({ ...body.data, updatedAt: new Date() }).where(eq(pstBlueprintsTable.projectId, access.project.id)).returning();
   if (!updated) {
     res.status(404).json({ error: "PST blueprint not found" });
     return;
   }
-  await db.update(pstProjectsTable).set({ status: "BLUEPRINT_READY", updatedAt: new Date() }).where(eq(pstProjectsTable.id, params.data.projectId));
-  await addEvent("BLUEPRINT_EDITED", "Blueprint changes were saved for human review.", params.data.projectId);
+  await db.update(pstProjectsTable).set({ status: "BLUEPRINT_READY", updatedAt: new Date() }).where(eq(pstProjectsTable.id, access.project.id));
+  await addEvent("BLUEPRINT_EDITED", "Blueprint changes were saved for human review.", access.project.id);
   res.json(UpdatePstBlueprintResponse.parse(updated));
 });
 
@@ -660,7 +864,11 @@ router.post("/pst/projects/:projectId/builder", async (req, res): Promise<void> 
     res.status(400).json({ error: !params.success ? params.error.message : body.error?.message ?? "Invalid request body" });
     return;
   }
-  const [blueprint] = await db.select().from(pstBlueprintsTable).where(eq(pstBlueprintsTable.projectId, params.data.projectId));
+  const access = await authorizeProject(req, res, params.data.projectId, editorRoles);
+  if (!access) {
+    return;
+  }
+  const [blueprint] = await db.select().from(pstBlueprintsTable).where(eq(pstBlueprintsTable.projectId, access.project.id));
   if (!blueprint) {
     res.status(404).json({ error: "PST blueprint not found" });
     return;
@@ -681,7 +889,7 @@ router.post("/pst/projects/:projectId/builder", async (req, res): Promise<void> 
   for (const component of selectedAssets) {
     await db.insert(pstProjectComponentsTable).values({
       id: randomUUID(),
-      projectId: params.data.projectId,
+      projectId: access.project.id,
       assetId: component.id,
       name: component.name,
       type: component.type,
@@ -691,8 +899,8 @@ router.post("/pst/projects/:projectId/builder", async (req, res): Promise<void> 
     });
   }
   const status = missing.length ? "BLOCKED" : "READY";
-  await db.update(pstProjectsTable).set({ status: missing.length ? "BUILDING" : "PREVIEW", updatedAt: new Date() }).where(eq(pstProjectsTable.id, params.data.projectId));
-  await addEvent("BUILD_COMPLETED", `Builder finished with ${status.toLowerCase()} status.`, params.data.projectId);
+  await db.update(pstProjectsTable).set({ status: missing.length ? "BUILDING" : "PREVIEW", updatedAt: new Date() }).where(eq(pstProjectsTable.id, access.project.id));
+  await addEvent("BUILD_COMPLETED", `Builder finished with ${status.toLowerCase()} status.`, access.project.id);
   res.json(BuildPstProjectResponse.parse({ status, ready, missing, warnings: [], errors: missing.length ? ["Some blueprint requirements still need a compatible asset."] : [], components }));
 });
 
@@ -703,7 +911,11 @@ router.post("/pst/projects/:projectId/simulate", async (req, res): Promise<void>
     res.status(400).json({ error: !params.success ? params.error.message : body.error?.message ?? "Invalid request body" });
     return;
   }
-  const project = await projectAggregate(params.data.projectId);
+  const access = await authorizeProject(req, res, params.data.projectId, editorRoles);
+  if (!access) {
+    return;
+  }
+  const project = await projectAggregate(access.project.id);
   if (!project) {
     res.status(404).json({ error: "PST project not found" });
     return;
@@ -727,7 +939,11 @@ router.post("/pst/projects/:projectId/qa", async (req, res): Promise<void> => {
     res.status(400).json({ error: params.error.message });
     return;
   }
-  const project = await projectAggregate(params.data.projectId);
+  const access = await authorizeProject(req, res, params.data.projectId, editorRoles);
+  if (!access) {
+    return;
+  }
+  const project = await projectAggregate(access.project.id);
   if (!project) {
     res.status(404).json({ error: "PST project not found" });
     return;
@@ -754,11 +970,11 @@ router.post("/pst/projects/:projectId/approve", async (req, res): Promise<void> 
     res.status(400).json({ error: params.error.message });
     return;
   }
-  const [project] = await db.select().from(pstProjectsTable).where(eq(pstProjectsTable.id, params.data.projectId));
-  if (!project) {
-    res.status(404).json({ error: "PST project not found" });
+  const access = await authorizeProject(req, res, params.data.projectId, adminRoles);
+  if (!access) {
     return;
   }
+  const project = access.project;
   if (project.qaStatus === "ERROR" || project.qaStatus === "NOT_RUN") {
     res.status(409).json({ error: "Run a passing QA before approval." });
     return;
@@ -774,11 +990,11 @@ router.post("/pst/projects/:projectId/publish", async (req, res): Promise<void> 
     res.status(400).json({ error: params.error.message });
     return;
   }
-  const [project] = await db.select().from(pstProjectsTable).where(eq(pstProjectsTable.id, params.data.projectId));
-  if (!project) {
-    res.status(404).json({ error: "PST project not found" });
+  const access = await authorizeProject(req, res, params.data.projectId, adminRoles);
+  if (!access) {
     return;
   }
+  const project = access.project;
   if (project.status !== "APPROVED" || project.qaStatus === "ERROR") {
     res.status(409).json({ error: "Only an approved PST without blocking QA errors can be published." });
     return;
@@ -794,13 +1010,100 @@ router.get("/pst/projects/:projectId/workspace", async (req, res): Promise<void>
     res.status(400).json({ error: params.error.message });
     return;
   }
-  const project = await projectAggregate(params.data.projectId);
+  const access = await authorizeProject(req, res, params.data.projectId);
+  if (!access) {
+    return;
+  }
+  const project = await projectAggregate(access.project.id);
   if (!project) {
     res.status(404).json({ error: "PST workspace not found" });
     return;
   }
   const persona = await gustaftaEngine.getPersona();
   const steps = project.blueprint.workflow.map((step) => ({ ...step, configuration: { ...step.configuration, assistant: persona } }));
+  res.json(GetPstWorkspaceResponse.parse({ project, steps }));
+});
+
+router.get("/pst/projects/:projectId/members", async (req, res): Promise<void> => {
+  const params = GetPstProjectParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const access = await authorizeProject(req, res, params.data.projectId, adminRoles);
+  if (!access) return;
+  const members = await db
+    .select({
+      id: pstProjectMembersTable.id,
+      projectId: pstProjectMembersTable.projectId,
+      userId: pstProjectMembersTable.userId,
+      role: pstProjectMembersTable.role,
+      createdAt: pstProjectMembersTable.createdAt,
+    })
+    .from(pstProjectMembersTable)
+    .where(eq(pstProjectMembersTable.projectId, access.project.id));
+  res.json(members);
+});
+
+router.post("/pst/projects/:projectId/members", async (req, res): Promise<void> => {
+  const params = GetPstProjectParams.safeParse(req.params);
+  const body = UpsertPstProjectMemberBody.safeParse(req.body);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  if (!body.success) {
+    res.status(400).json({ error: body.error?.message ?? "Invalid request body" });
+    return;
+  }
+  const access = await authorizeProject(req, res, params.data.projectId, adminRoles);
+  if (!access) return;
+  const [existing] = await db
+    .select({ id: pstProjectMembersTable.id })
+    .from(pstProjectMembersTable)
+    .where(
+      and(
+        eq(pstProjectMembersTable.projectId, access.project.id),
+        eq(pstProjectMembersTable.userId, body.data.userId),
+      ),
+    );
+  if (existing) {
+    const [updated] = await db
+      .update(pstProjectMembersTable)
+      .set({ role: body.data.role })
+      .where(eq(pstProjectMembersTable.id, existing.id))
+      .returning();
+    res.json(updated);
+    return;
+  }
+  const [member] = await db
+    .insert(pstProjectMembersTable)
+    .values({
+      id: randomUUID(),
+      projectId: access.project.id,
+      userId: body.data.userId,
+      role: body.data.role,
+    })
+    .returning();
+  res.status(201).json(member);
+});
+
+router.get("/pst/public/workspaces/:slug", async (req, res): Promise<void> => {
+  const slug = typeof req.params.slug === "string" ? req.params.slug : req.params.slug?.[0];
+  if (!slug) {
+    res.status(400).json({ error: "Workspace slug is required" });
+    return;
+  }
+  const project = await publicWorkspace(slug);
+  if (!project) {
+    res.status(404).json({ error: "Published customer workspace not found" });
+    return;
+  }
+  const persona = await gustaftaEngine.getPersona();
+  const steps = project.blueprint.workflow.map((step) => ({
+    ...step,
+    configuration: { ...step.configuration, assistant: persona },
+  }));
   res.json(GetPstWorkspaceResponse.parse({ project, steps }));
 });
 

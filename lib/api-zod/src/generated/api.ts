@@ -961,3 +961,127 @@ export const GetPstWorkspaceResponse = zod.object({
 })
 
 
+/**
+ * @summary List project access members
+ */
+export const ListPstProjectMembersParams = zod.object({
+  "projectId": zod.coerce.string()
+})
+
+export const ListPstProjectMembersResponseItem = zod.object({
+  "id": zod.string(),
+  "projectId": zod.string(),
+  "userId": zod.string(),
+  "role": zod.enum(['admin', 'editor', 'viewer']),
+  "createdAt": zod.coerce.date()
+})
+export const ListPstProjectMembersResponse = zod.array(ListPstProjectMembersResponseItem)
+
+
+/**
+ * @summary Add or update a project member role
+ */
+export const UpsertPstProjectMemberParams = zod.object({
+  "projectId": zod.coerce.string()
+})
+
+
+
+
+export const UpsertPstProjectMemberBody = zod.object({
+  "userId": zod.string().min(1),
+  "role": zod.enum(['admin', 'editor', 'viewer'])
+})
+
+export const UpsertPstProjectMemberResponse = zod.object({
+  "id": zod.string(),
+  "projectId": zod.string(),
+  "userId": zod.string(),
+  "role": zod.enum(['admin', 'editor', 'viewer']),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Get a published customer workspace without factory authentication
+ */
+export const GetPublicPstWorkspaceParams = zod.object({
+  "slug": zod.coerce.string()
+})
+
+export const GetPublicPstWorkspaceResponse = zod.object({
+  "project": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "slug": zod.string(),
+  "description": zod.string(),
+  "status": zod.enum(['DRAFT', 'ARCHITECTED', 'BLUEPRINT_READY', 'BUILDING', 'PREVIEW', 'QA', 'APPROVED', 'PUBLISHED', 'ARCHIVED']),
+  "version": zod.string(),
+  "domain": zod.string(),
+  "family": zod.string(),
+  "series": zod.string(),
+  "problemStatement": zod.string(),
+  "targetUser": zod.string(),
+  "desiredOutcome": zod.string(),
+  "productDna": zod.object({
+  "problem": zod.string(),
+  "user": zod.string(),
+  "journey": zod.array(zod.string()),
+  "components": zod.array(zod.string()),
+  "intelligence": zod.string(),
+  "outcome": zod.string()
+}),
+  "blueprint": zod.object({
+  "id": zod.string(),
+  "projectId": zod.string(),
+  "problem": zod.string(),
+  "targetUser": zod.string(),
+  "desiredOutcome": zod.string(),
+  "problemType": zod.string(),
+  "journey": zod.array(zod.string()),
+  "knowledgeRequirements": zod.array(zod.string()),
+  "componentRequirements": zod.array(zod.string()),
+  "aiRequirements": zod.array(zod.string()),
+  "workflow": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "inputs": zod.array(zod.string()),
+  "outputs": zod.array(zod.string()),
+  "dependencies": zod.array(zod.string()),
+  "nextStep": zod.string(),
+  "configuration": zod.record(zod.string(), zod.unknown()).optional()
+})),
+  "expectedOutput": zod.array(zod.string()),
+  "actionPlan": zod.array(zod.string()),
+  "nextStep": zod.string(),
+  "version": zod.string(),
+  "updatedAt": zod.coerce.date()
+}),
+  "components": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "type": zod.string(),
+  "source": zod.string(),
+  "status": zod.enum(['READY', 'MISSING', 'WARNING'])
+})),
+  "qaStatus": zod.enum(['NOT_RUN', 'PASS', 'WARNING', 'ERROR']),
+  "publicationStatus": zod.enum(['UNPUBLISHED', 'PUBLISHED', 'ARCHIVED']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),
+  "steps": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "inputs": zod.array(zod.string()),
+  "outputs": zod.array(zod.string()),
+  "dependencies": zod.array(zod.string()),
+  "nextStep": zod.string(),
+  "configuration": zod.record(zod.string(), zod.unknown()).optional()
+}))
+})
+
+
