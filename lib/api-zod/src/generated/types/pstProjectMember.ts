@@ -13,4 +13,6 @@ export interface PstProjectMember {
   userId: string;
   role: PstProjectMemberRole;
   createdAt: Date;
+  /** Whether this member is the project owner. Present on member list responses. */
+  isOwner?: boolean;
 }

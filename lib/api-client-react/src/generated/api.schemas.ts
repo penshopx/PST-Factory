@@ -168,6 +168,8 @@ export interface PstProjectMember {
   userId: string;
   role: PstProjectMemberRole;
   createdAt: string;
+  /** Whether this member is the project owner. Present on member list responses. */
+  isOwner?: boolean;
 }
 
 export type PstProjectMemberInputRole = typeof PstProjectMemberInputRole[keyof typeof PstProjectMemberInputRole];

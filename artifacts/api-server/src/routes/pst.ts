@@ -1666,7 +1666,10 @@ router.get("/pst/projects/:projectId/members", async (req, res): Promise<void> =
     })
     .from(pstProjectMembersTable)
     .where(eq(pstProjectMembersTable.projectId, access.project.id));
-  res.json(members);
+  res.json(members.map((member) => ({
+    ...member,
+    isOwner: member.userId === access.project.ownerId,
+  })));
 });
 
 router.post("/pst/projects/:projectId/members", async (req, res): Promise<void> => {

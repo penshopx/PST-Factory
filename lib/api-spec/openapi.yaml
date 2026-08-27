@@ -458,10 +458,20 @@ paths:
       responses:
         "204":
           description: Project member removed
+        "403":
+          description: Only project owners and admins can remove members
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           $ref: "#/components/responses/NotFound"
         "409":
           description: The project owner cannot be removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /pst/public/workspaces/{slug}:
     get:
       operationId: getPublicPstWorkspace
@@ -556,6 +566,9 @@ components:
         userId: { type: string }
         role: { type: string, enum: [admin, editor, viewer] }
         createdAt: { type: string, format: date-time }
+        isOwner:
+          type: boolean
+          description: Whether this member is the project owner. Present on member list responses.
     PstProjectMemberInput:
       type: object
       required: [userId, role]

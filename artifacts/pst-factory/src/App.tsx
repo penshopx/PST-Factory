@@ -8,30 +8,35 @@ import {
   Activity, Archive, ArrowLeft, ArrowRight, Bot, Box, Check, CheckCircle2,
   ChevronRight, CircleDot, ClipboardCheck, Copy, Database, ExternalLink,
   FileCode2, FlaskConical, Gauge, Hammer, LayoutDashboard, Library, Menu,
-  MoreHorizontal, Package, Pencil, Plus, Rocket, Search, Settings2, Sparkles,
-  Target, TriangleAlert, UserRound, Workflow, X,
+  MoreHorizontal, Package, Pencil, Plus, Rocket, Search, Settings2, ShieldCheck, Sparkles,
+  Target, Trash2, TriangleAlert, UserRound, Users, Workflow, X,
 } from 'lucide-react';
 import {
   getGetDashboardActivityQueryKey, getGetDashboardSummaryQueryKey,
   getGetPstBlueprintQueryKey, getGetPstProjectQueryKey, getGetPublicPstWorkspaceQueryKey,
   getGetPstReleasesQueryKey,
+  getListPstProjectMembersQueryKey,
   getListPstAssetsQueryKey, getListPstPatternsQueryKey, getListPstProjectsQueryKey,
   getListPstRecipesQueryKey, useApprovePstProject, useArchivePstProject,
   useBuildPstProject, useCreatePstProject, useDuplicatePstProject,
   useGetDashboardActivity, useGetDashboardSummary, useGetPstBlueprint,
   useGetPstProject, useGetPstReleases, useGetPublicPstWorkspace, useListPstAssets, useListPstPatterns,
-  useListPstProjects, useListPstRecipes, usePublishPstProject, useRunPstArchitect,
+  useListPstProjectMembers, useListPstProjects, useListPstRecipes, usePublishPstProject, useRemovePstProjectMember, useRunPstArchitect,
   useRestorePstRelease, useRunPstQa, useSimulatePstProject, useUpdatePstBlueprint, useUpdatePstProject,
 } from '@workspace/api-client-react';
 import type {
   BuildResult, FactoryEvent, PstAsset, PstBlueprint, PstPattern, PstProject,
-  PstRecipe, PstRelease, QaRun, SimulationReport, WorkflowStep,
+  PstProjectMember, PstRecipe, PstRelease, QaRun, SimulationReport, WorkflowStep,
 } from '@workspace/api-client-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -146,6 +151,25 @@ function ErrorState({ onRetry, label = 'Could not load this workspace' }: { onRe
     <p className="mt-1 text-sm text-muted-foreground">The factory could not reach its latest server state.</p>
     {onRetry && <Button variant="outline" size="sm" onClick={onRetry} className="mt-4" data-testid="button-retry">Retry</Button>}
   </div>;
+}
+
+function apiErrorStatus(error: unknown) {
+  return typeof error === 'object' && error !== null && 'status' in error && typeof error.status === 'number'
+    ? error.status
+    : undefined;
+}
+
+function memberAccessError(error: unknown) {
+  switch (apiErrorStatus(error)) {
+    case 403:
+      return 'Only project owners and admins can manage member access.';
+    case 404:
+      return 'This project or member is no longer available. Refresh the list and try again.';
+    case 409:
+      return 'The project owner cannot be removed.';
+    default:
+      return 'We could not update project access. Refresh the list and try again.';
+  }
 }
 
 function EmptyState({ icon: Icon = Box, title, detail, action }: { icon?: typeof Box; title: string; detail: string; action?: ReactNode }) {
@@ -350,7 +374,7 @@ function ProjectWorkspace() {
       restoreRelease.mutate({ projectId, releaseId }, { onSuccess: invalidate });
     }
   };
-  const tabs = [{ key: 'overview', label: 'Overview' }, { key: 'problem', label: 'Problem' }, { key: 'architect', label: 'Architect' }, { key: 'blueprint', label: 'Blueprint' }, { key: 'assets', label: 'Assets' }, { key: 'workflow', label: 'Workflow' }, { key: 'ai', label: 'AI' }, { key: 'build', label: 'Assembly' }, { key: 'preview', label: 'Preview' }, { key: 'qa', label: 'QA' }, { key: 'publish', label: 'Publish' }, { key: 'versions', label: 'Versions' }];
+  const tabs = [{ key: 'overview', label: 'Overview' }, { key: 'problem', label: 'Problem' }, { key: 'architect', label: 'Architect' }, { key: 'blueprint', label: 'Blueprint' }, { key: 'assets', label: 'Assets' }, { key: 'workflow', label: 'Workflow' }, { key: 'ai', label: 'AI' }, { key: 'build', label: 'Assembly' }, { key: 'preview', label: 'Preview' }, { key: 'qa', label: 'QA' }, { key: 'publish', label: 'Publish' }, { key: 'versions', label: 'Versions' }, { key: 'access', label: 'Access' }];
   return <div className="mx-auto max-w-[1440px]"><Link href="/projects" className="mb-5 inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-primary" data-testid="link-back-projects"><ArrowLeft size={14} /> All projects</Link><div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end"><div><div className="mb-2 flex items-center gap-2"><StatusBadge value={project.status} /><span className="font-mono text-[10px] text-muted-foreground">v{project.version} · {project.domain || 'general'}</span></div><h1 className="text-3xl font-extrabold tracking-[-.05em]" data-testid="heading-project-name">{project.name}</h1><p className="mt-2 max-w-2xl text-sm text-muted-foreground">{project.description || project.problemStatement}</p></div><div className="flex flex-wrap gap-2"><Link href={`/workspace/${project.slug}`} className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs font-semibold hover:border-primary hover:text-primary" data-testid="link-customer-workspace"><ExternalLink size={14} /> Customer view</Link><Button variant="outline" size="sm" onClick={() => updateProject.mutate({ projectId, data: { description: project.description } }, { onSuccess: invalidate })} data-testid="button-save-project"><Check size={14} /> Sync brief</Button></div></div>
     <div className="mb-6 overflow-x-auto border-b border-border"><div className="flex min-w-max gap-1">{tabs.map((item) => <button onClick={() => setTab(item.key)} className={cn('border-b-2 px-3 py-3 text-xs font-semibold transition-colors', tab === item.key ? 'border-accent text-accent' : 'border-transparent text-muted-foreground hover:text-foreground')} key={item.key} data-testid={`tab-${item.key}`}>{item.label}</button>)}</div></div>
     {tab === 'overview' && <OverviewTab project={project} blueprint={blueprint} onArchitect={() => run('architect')} onBuild={() => run('build')} />}
@@ -364,6 +388,7 @@ function ProjectWorkspace() {
     {tab === 'qa' && <QaTab project={project} qa={qa} onRun={() => run('qa')} pending={runQa.isPending} />}
     {tab === 'publish' && <PublishTab project={project} onApprove={() => run('approve')} onPublish={() => run('publish')} onRefreshProject={refreshProject} publishNotice={publishNotice} approvePending={approve.isPending} publishPending={publish.isPending} />}
      {tab === 'versions' && <VersionsTab project={project} releases={releasesQuery.data ?? []} onRestore={restore} restorePending={restoreRelease.isPending} />}
+     {tab === 'access' && <MembersTab projectId={projectId} />}
     {tab === 'build' && (build ? <BuildTab build={build} /> : <EmptyState icon={Hammer} title="Assembly has not run" detail="Use Assemble from Overview to resolve the blueprint into selected components." />)}
     {tab !== 'build' && buildMutation.isPending && <div className="fixed bottom-5 right-5 flex items-center gap-3 rounded-lg border border-accent/30 bg-card px-4 py-3 text-sm shadow-lg"><span className="h-2 w-2 animate-pulse rounded-full bg-accent" /> Assembling components...</div>}
   </div>;
@@ -438,6 +463,74 @@ function VersionsTab({ project, releases, onRestore, restorePending }: { project
         <div className="rounded-lg border border-border p-4"><p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Latest / {current.version}</p><p className="mt-3 text-sm font-semibold">{current.snapshot.project.desiredOutcome}</p><div className="mt-4 space-y-2 text-xs text-muted-foreground"><p>{current.snapshot.workflow.map((step) => step.title).join(' → ')}</p><p>{current.snapshot.components.map((component) => component.name).join(' · ')}</p></div></div>
       </CardContent>
     </Card>}
+  </div>;
+}
+
+function MembersTab({ projectId }: { projectId: string }) {
+  const membersQuery = useListPstProjectMembers(projectId, {
+    query: { queryKey: getListPstProjectMembersQueryKey(projectId) },
+  });
+  const removeMember = useRemovePstProjectMember();
+  const qc = useQueryClient();
+  const [selectedMember, setSelectedMember] = useState<PstProjectMember | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const queryKey = getListPstProjectMembersQueryKey(projectId);
+  const members = membersQuery.data ?? [];
+
+  const confirmRemoval = () => {
+    if (!selectedMember) return;
+    const userId = selectedMember.userId;
+    removeMember.mutate({ projectId, userId }, {
+      onSuccess: () => {
+        qc.setQueryData<PstProjectMember[]>(queryKey, (current) => current?.filter((member) => member.userId !== userId) ?? []);
+        setSelectedMember(null);
+        setNotice(null);
+        void qc.invalidateQueries({ queryKey });
+      },
+      onError: (error) => {
+        setNotice(memberAccessError(error));
+        if (apiErrorStatus(error) === 404) void membersQuery.refetch();
+      },
+    });
+  };
+
+  if (membersQuery.isLoading) return <Loading label="Loading project access" />;
+  if (membersQuery.isError) {
+    return <Card className="max-w-3xl border-destructive/30" data-testid="card-member-access-error">
+      <CardHeader><CardTitle className="flex items-center gap-2 text-base"><ShieldCheck className="text-destructive" size={18} /> Access controls unavailable</CardTitle></CardHeader>
+      <CardContent><p className="text-sm text-muted-foreground" role="alert" data-testid="status-member-error">{memberAccessError(membersQuery.error)}</p><Button variant="outline" size="sm" className="mt-4" onClick={() => void membersQuery.refetch()} data-testid="button-retry-members">Retry</Button></CardContent>
+    </Card>;
+  }
+
+  return <div className="max-w-4xl space-y-5">
+    <Card data-testid="card-project-members">
+      <CardHeader className="flex-row items-start justify-between border-b border-border/70">
+        <div><CardTitle className="flex items-center gap-2 text-base"><Users className="text-accent" size={18} /> Project access</CardTitle><CardDescription className="mt-1">Review who can open this workspace and what they can do.</CardDescription></div>
+        <Badge variant="outline" className="font-mono text-[10px]">{members.length} {members.length === 1 ? 'member' : 'members'}</Badge>
+      </CardHeader>
+      <CardContent className="p-0">
+        {members.length === 0 ? <EmptyState icon={Users} title="No members found" detail="No access records are currently attached to this project." /> : <div className="divide-y divide-border/70">
+          {members.map((member) => <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center" key={member.id} data-testid={`row-project-member-${member.userId}`}>
+            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary/10 font-mono text-xs font-bold text-primary">{member.userId.slice(-2).toUpperCase()}</div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-mono text-xs" title={member.userId}>{member.userId}</p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Badge variant="outline" className="capitalize">{member.role}</Badge>
+                {member.isOwner ? <Badge className="bg-accent/15 text-accent hover:bg-accent/20">Project owner</Badge> : <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Member access</span>}
+              </div>
+            </div>
+            {member.isOwner ? <span className="text-xs text-muted-foreground" data-testid={`text-owner-protected-${member.userId}`}>Owner access is protected</span> : <Button variant="outline" size="sm" onClick={() => { setNotice(null); setSelectedMember(member); }} aria-label={`Revoke access for ${member.userId}`} data-testid={`button-remove-member-${member.userId}`}><Trash2 size={14} /> Revoke access</Button>}
+          </div>)}
+        </div>}
+      </CardContent>
+    </Card>
+    {notice && <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm" role="alert" data-testid="status-member-mutation-error"><TriangleAlert className="mt-0.5 shrink-0 text-destructive" size={16} /><p>{notice}</p><button type="button" className="ml-auto text-muted-foreground hover:text-foreground" onClick={() => setNotice(null)} aria-label="Dismiss access error" data-testid="button-dismiss-member-error"><X size={14} /></button></div>}
+    <AlertDialog open={Boolean(selectedMember)} onOpenChange={(open) => { if (!open && !removeMember.isPending) setSelectedMember(null); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader><AlertDialogTitle>Revoke member access?</AlertDialogTitle><AlertDialogDescription>This will remove <span className="font-mono text-foreground">{selectedMember?.userId}</span> from this project. They will no longer be able to access this workspace.</AlertDialogDescription></AlertDialogHeader>
+        <AlertDialogFooter><AlertDialogCancel disabled={removeMember.isPending}>Keep access</AlertDialogCancel><AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={confirmRemoval} disabled={removeMember.isPending}>{removeMember.isPending ? 'Revoking...' : 'Revoke access'}</AlertDialogAction></AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </div>;
 }
 

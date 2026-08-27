@@ -1373,7 +1373,8 @@ export const ListPstProjectMembersResponseItem = zod.object({
   "projectId": zod.string(),
   "userId": zod.string(),
   "role": zod.enum(['admin', 'editor', 'viewer']),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "isOwner": zod.boolean().optional().describe('Whether this member is the project owner. Present on member list responses.')
 })
 export const ListPstProjectMembersResponse = zod.array(ListPstProjectMembersResponseItem)
 
@@ -1398,7 +1399,8 @@ export const UpsertPstProjectMemberResponse = zod.object({
   "projectId": zod.string(),
   "userId": zod.string(),
   "role": zod.enum(['admin', 'editor', 'viewer']),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "isOwner": zod.boolean().optional().describe('Whether this member is the project owner. Present on member list responses.')
 })
 
 

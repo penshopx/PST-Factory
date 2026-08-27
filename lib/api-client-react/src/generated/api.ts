@@ -1973,7 +1973,7 @@ export const removePstProjectMember = async (projectId: string,
 
 
 
-export const getRemovePstProjectMemberMutationOptions = <TError = ErrorType<NotFoundResponse>,
+export const getRemovePstProjectMemberMutationOptions = <TError = ErrorType<ErrorResponse | NotFoundResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removePstProjectMember>>, TError,{projectId: string;userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof removePstProjectMember>>, TError,{projectId: string;userId: string}, TContext> => {
 
@@ -2002,12 +2002,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type RemovePstProjectMemberMutationResult = NonNullable<Awaited<ReturnType<typeof removePstProjectMember>>>
 
-    export type RemovePstProjectMemberMutationError = ErrorType<NotFoundResponse>
+    export type RemovePstProjectMemberMutationError = ErrorType<ErrorResponse | NotFoundResponse>
 
     /**
  * @summary Remove a project member
  */
-export const useRemovePstProjectMember = <TError = ErrorType<NotFoundResponse>,
+export const useRemovePstProjectMember = <TError = ErrorType<ErrorResponse | NotFoundResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removePstProjectMember>>, TError,{projectId: string;userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof removePstProjectMember>>,
