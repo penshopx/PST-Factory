@@ -227,6 +227,25 @@ async function ensureSeedReferences() {
   }
 }
 
+async function ensureSeedAssetCompatibility() {
+  const [guidedAssessment] = await db
+    .select({
+      id: pstAssetsTable.id,
+      tags: pstAssetsTable.tags,
+    })
+    .from(pstAssetsTable)
+    .where(eq(pstAssetsTable.id, "asset-guided-assessment"));
+  if (guidedAssessment && !guidedAssessment.tags.includes("questions")) {
+    await db
+      .update(pstAssetsTable)
+      .set({
+        tags: [...guidedAssessment.tags, "questions"],
+        updatedAt: new Date(),
+      })
+      .where(eq(pstAssetsTable.id, guidedAssessment.id));
+  }
+}
+
 async function ensureSeed(userId = "system") {
   if (!seedPromise) {
     seedPromise = (async () => {
@@ -235,6 +254,7 @@ async function ensureSeed(userId = "system") {
         .from(pstAssetsTable);
       if (Number(count) > 0) {
         await ensureSeedReferences();
+        await ensureSeedAssetCompatibility();
         return;
       }
 
@@ -437,6 +457,7 @@ async function ensureSeed(userId = "system") {
   }
   await seedPromise;
   await ensureSeedReferences();
+  await ensureSeedAssetCompatibility();
 
   // Existing development databases were seeded before ownership existed.
   // Claim only the legacy seed project, never another user's project.
@@ -1230,7 +1251,32 @@ router.post("/pst/projects/:projectId/qa", async (req, res): Promise<void> => {
     res.status(404).json({ error: "PST project not found" });
     return;
   }
-  const results: QaResult[] = evaluateQa(project, project.blueprint);
+  const componentRows = await db
+    .select({
+      name: pstProjectComponentsTable.name,
+      status: pstProjectComponentsTable.status,
+      assetId: pstProjectComponentsTable.assetId,
+    })
+    .from(pstProjectComponentsTable)
+    .where(eq(pstProjectComponentsTable.projectId, project.id));
+  const assetIds = componentRows.map((component) => component.assetId);
+  const assets = assetIds.length
+    ? await db.select().from(pstAssetsTable).where(inArray(pstAssetsTable.id, assetIds))
+    : [];
+  const assetById = new Map(assets.map((asset) => [asset.id, asset]));
+  const results: QaResult[] = evaluateQa({
+    ...project,
+    components: componentRows.map((component) => {
+      const asset = assetById.get(component.assetId);
+      return {
+        name: component.name,
+        status: component.status,
+        description: asset?.description,
+        tags: asset?.tags,
+        compatibility: asset?.compatibility,
+      };
+    }),
+  }, project.blueprint);
   const status = qaStatus(results);
   const [run] = await db.insert(pstQaRunsTable).values({ id: randomUUID(), projectId: project.id, status, results }).returning();
   await db.update(pstProjectsTable).set({ qaStatus: status, status: "QA", updatedAt: new Date() }).where(eq(pstProjectsTable.id, project.id));

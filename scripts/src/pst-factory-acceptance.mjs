@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import {
   buildFromConfiguration,
   canApprove,
@@ -120,10 +121,222 @@ const publicSteps = publicCustomerWorkspaceSteps(assessment.workflow);
 assert.equal("configuration" in publicSteps[0], false);
 assert.deepEqual(publicSteps.map((step) => step.title), assessment.workflow.map((step) => step.title));
 
+const apiBaseUrl = (process.env.PST_API_URL ?? `http://127.0.0.1:${process.env.PORT ?? "8080"}/api`).replace(/\/$/, "");
+
+async function clerkRequest(path, init = {}) {
+  if (!process.env.CLERK_SECRET_KEY) {
+    throw new Error("CLERK_SECRET_KEY is required for the authenticated PST route acceptance.");
+  }
+  const response = await fetch(`https://api.clerk.com/v1${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}`,
+      "Content-Type": "application/json",
+      ...(init.headers ?? {}),
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`Clerk API ${init.method ?? "GET"} ${path} returned ${response.status}.`);
+  }
+  return response.json();
+}
+
+async function createClerkTestSession(label) {
+  const email = `pst-factory-acceptance-${label}-${randomUUID().replaceAll("-", "")}@example.com`;
+  const user = await clerkRequest("/users", {
+    method: "POST",
+    body: JSON.stringify({
+      email_address: [email],
+      password: `PstAcceptance-${randomUUID()}-aB9!`,
+      skip_password_checks: true,
+    }),
+  });
+  try {
+    const session = await clerkRequest("/sessions", {
+      method: "POST",
+      body: JSON.stringify({ user_id: user.id }),
+    });
+    const tokenResponse = await clerkRequest(`/sessions/${session.id}/tokens`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    const token = tokenResponse.jwt ?? tokenResponse.token;
+    if (!token) {
+      throw new Error(`Clerk session token was not returned for ${label}.`);
+    }
+    return { userId: user.id, token };
+  } catch (error) {
+    await clerkRequest(`/users/${user.id}`, { method: "DELETE" }).catch(() => {});
+    throw error;
+  }
+}
+
+async function deleteClerkTestUser(userId) {
+  if (!userId) return;
+  await clerkRequest(`/users/${userId}`, { method: "DELETE" }).catch(() => {});
+}
+
+async function apiRequest(token, path, init = {}) {
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    ...init,
+    headers: {
+      ...(init.body ? { "Content-Type": "application/json" } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(init.headers ?? {}),
+    },
+  });
+  const body = await response.json().catch(() => undefined);
+  return { response, body };
+}
+
+function assertStatus(result, expected, label) {
+  assert.equal(result.response.status, expected, `${label}: expected ${expected}, got ${result.response.status}`);
+}
+
+async function runAuthenticatedRouteAcceptance() {
+  const owner = await createClerkTestSession("owner");
+  let viewer;
+  try {
+    viewer = await createClerkTestSession("viewer");
+
+    const unauthenticatedCreate = await apiRequest(undefined, "/pst/projects", {
+      method: "POST",
+      body: JSON.stringify({
+        name: "Unauthenticated PST",
+        problemStatement: "Should be rejected",
+        targetUser: "Test user",
+        desiredOutcome: "No project",
+      }),
+    });
+    assertStatus(unauthenticatedCreate, 401, "unauthenticated create");
+
+    const projectName = `Authenticated lifecycle ${randomUUID().slice(0, 8)}`;
+    const created = await apiRequest(owner.token, "/pst/projects", {
+      method: "POST",
+      body: JSON.stringify({
+        name: projectName,
+        description: "Route-level lifecycle acceptance project",
+        domain: "General",
+        family: "Problem Solving",
+        series: "Acceptance",
+        problemStatement: "Teams need a reliable way to assess operational choices.",
+        targetUser: "Operations lead",
+        desiredOutcome: "Choose one justified next action.",
+      }),
+    });
+    assertStatus(created, 201, "authenticated create");
+    assert.equal(created.body.status, "DRAFT");
+    assert.equal(created.body.publicationStatus, "UNPUBLISHED");
+    assert.deepEqual(created.body.selectedPatterns, []);
+    assert.deepEqual(created.body.selectedRecipes, []);
+    const projectId = created.body.id;
+    const slug = created.body.slug;
+
+    const beforePublish = await apiRequest(undefined, `/pst/public/workspaces/${slug}`);
+    assertStatus(beforePublish, 404, "public workspace before publish");
+
+    const architected = await apiRequest(owner.token, `/pst/projects/${projectId}/architect`, {
+      method: "POST",
+      body: JSON.stringify({
+        additionalContext: "Use the reusable assessment library configuration.",
+        patternId: "pattern-assessment",
+        recipeId: "recipe-assessment",
+      }),
+    });
+    assertStatus(architected, 200, "architect with pattern and recipe");
+    assert.deepEqual(architected.body.journey, ["Questions", "Scoring", "Analysis", "Recommendation"]);
+    assert.ok(architected.body.workflow.every((step) => step.configuration?.sourceType === "pattern"));
+
+    const referencesPersisted = await apiRequest(owner.token, `/pst/projects/${projectId}`);
+    assertStatus(referencesPersisted, 200, "project after architect");
+    assert.deepEqual(referencesPersisted.body.selectedPatterns.map((pattern) => pattern.id), ["pattern-assessment"]);
+    assert.deepEqual(referencesPersisted.body.selectedRecipes.map((recipe) => recipe.id), ["recipe-assessment"]);
+    assert.equal(referencesPersisted.body.status, "ARCHITECTED");
+
+    const membership = await apiRequest(owner.token, `/pst/projects/${projectId}/members`, {
+      method: "POST",
+      body: JSON.stringify({ userId: viewer.userId, role: "viewer" }),
+    });
+    assertStatus(membership, 201, "add viewer membership");
+
+    const viewerCanRead = await apiRequest(viewer.token, `/pst/projects/${projectId}`);
+    assertStatus(viewerCanRead, 200, "viewer read");
+    const viewerMutation = await apiRequest(viewer.token, `/pst/projects/${projectId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ description: "Viewer must not mutate this project." }),
+    });
+    assertStatus(viewerMutation, 403, "viewer mutation");
+
+    const built = await apiRequest(owner.token, `/pst/projects/${projectId}/builder`, {
+      method: "POST",
+      body: JSON.stringify({
+        assetIds: [
+          "asset-guided-assessment",
+          "asset-scoring-framework",
+          "asset-outcome-guide",
+          "asset-ai-recommendation",
+          "asset-action-plan",
+        ],
+        patternId: "pattern-assessment",
+        recipeId: "recipe-assessment",
+      }),
+    });
+    assertStatus(built, 200, "builder");
+    assert.equal(built.body.status, "READY");
+    assert.deepEqual(built.body.missing, []);
+
+    const qa = await apiRequest(owner.token, `/pst/projects/${projectId}/qa`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    assertStatus(qa, 200, "QA");
+    assert.equal(qa.body.status, "PASS");
+
+    const approved = await apiRequest(owner.token, `/pst/projects/${projectId}/approve`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    assertStatus(approved, 200, "approval");
+    assert.equal(approved.body.status, "APPROVED");
+
+    const published = await apiRequest(owner.token, `/pst/projects/${projectId}/publish`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    assertStatus(published, 200, "publish");
+    assert.equal(published.body.status, "PUBLISHED");
+    assert.equal(published.body.publicationStatus, "PUBLISHED");
+
+    const afterPublish = await apiRequest(undefined, `/pst/public/workspaces/${slug}`);
+    assertStatus(afterPublish, 200, "public workspace after publish");
+    assert.equal(afterPublish.body.project.slug, slug);
+    assert.equal(afterPublish.body.project.status, "PUBLISHED");
+    assert.ok(afterPublish.body.steps.length > 0);
+    assert.equal("selectedPatterns" in afterPublish.body.project, false);
+    assert.equal("qaStatus" in afterPublish.body.project, false);
+    assert.equal("configuration" in afterPublish.body.steps[0], false);
+
+    return {
+      projectId,
+      slug,
+      patternId: referencesPersisted.body.selectedPatterns[0].id,
+      recipeId: referencesPersisted.body.selectedRecipes[0].id,
+      qaStatus: qa.body.status,
+      publicStatus: afterPublish.body.project.status,
+    };
+  } finally {
+    await deleteClerkTestUser(viewer?.userId);
+    await deleteClerkTestUser(owner.userId);
+  }
+}
+
+const authenticatedRouteResult = await runAuthenticatedRouteAcceptance();
+
 console.log("PST Factory v1.1 acceptance: PASS");
 console.log(JSON.stringify({
   blueprints: 2,
   assessmentSteps: assessment.workflow.map((step) => step.title),
   decisionSteps: decision.workflow.map((step) => step.title),
-  checks: ["configuration-driven build", "different customer journeys/outcomes", "QA failure", "missing dependency", "duplicate isolation", "publish gate", "customer access boundary"],
+  checks: ["configuration-driven build", "different customer journeys/outcomes", "QA failure", "missing dependency", "duplicate isolation", "publish gate", "customer access boundary", "authenticated create-to-publish route lifecycle"],
+  authenticatedRoute: authenticatedRouteResult,
 }, null, 2));

@@ -71,7 +71,13 @@ export type QaProject = {
   problemStatement: string;
   targetUser: string;
   desiredOutcome: string;
-  components: Array<{ name: string; status: string }>;
+  components: Array<{
+    name: string;
+    status: string;
+    description?: string;
+    tags?: string[];
+    compatibility?: string[];
+  }>;
 };
 
 export type ReleaseState = {
@@ -207,9 +213,9 @@ export function evaluateQa(project: QaProject, blueprint: ManufacturingBlueprint
           id: component.name,
           name: component.name,
           type: "component",
-          description: "",
-          tags: [],
-          compatibility: [],
+          description: component.description ?? "",
+          tags: component.tags ?? [],
+          compatibility: component.compatibility ?? [],
           status: component.status,
         }),
       ),
