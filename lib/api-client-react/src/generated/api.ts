@@ -38,6 +38,7 @@ import type {
   PstProjectMember,
   PstProjectMemberInput,
   PstProjectUpdate,
+  PstPublicWorkspace,
   PstRecipe,
   PstWorkspace,
   QaRun,
@@ -1803,9 +1804,9 @@ export const getGetPublicPstWorkspaceUrl = (slug: string,) => {
 /**
  * @summary Get a published customer workspace without factory authentication
  */
-export const getPublicPstWorkspace = async (slug: string, options?: Parameters<typeof customFetch>[1]): Promise<PstWorkspace> => {
+export const getPublicPstWorkspace = async (slug: string, options?: Parameters<typeof customFetch>[1]): Promise<PstPublicWorkspace> => {
 
-  return customFetch<PstWorkspace>(getGetPublicPstWorkspaceUrl(slug),
+  return customFetch<PstPublicWorkspace>(getGetPublicPstWorkspaceUrl(slug),
   {
     ...options,
     method: 'GET'

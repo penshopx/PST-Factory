@@ -299,3 +299,16 @@ export function customerWorkspaceSteps(
     configuration: { ...step.configuration, ...(assistant ? { assistant } : {}) },
   }));
 }
+
+export function publicCustomerWorkspaceSteps(workflow: ManufacturingWorkflowStep[]) {
+  return workflow.map((step) => ({
+    id: step.id,
+    type: step.type,
+    title: step.title,
+    description: step.description,
+    inputs: step.inputs,
+    outputs: step.outputs,
+    dependencies: step.dependencies,
+    nextStep: step.nextStep,
+  }));
+}

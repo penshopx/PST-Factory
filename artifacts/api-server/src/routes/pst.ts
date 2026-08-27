@@ -37,6 +37,7 @@ import {
   GetPstBlueprintResponse,
   GetPstProjectParams,
   GetPstProjectResponse,
+  GetPublicPstWorkspaceResponse,
   GetPstWorkspaceParams,
   GetPstWorkspaceResponse,
   ListPstAssetsQueryParams,
@@ -72,6 +73,7 @@ import {
   customerWorkspaceSteps,
   evaluateQa,
   isPublicCustomerWorkspace,
+  publicCustomerWorkspaceSteps,
   qaStatus,
   workflowFromStructure,
 } from "../lib/services/pst/manufacturing";
@@ -177,32 +179,51 @@ const makeBlueprint = (
 let seedPromise: Promise<void> | undefined;
 
 async function ensureSeedReferences() {
-  const [project] = await db
-    .select({ id: pstProjectsTable.id })
-    .from(pstProjectsTable)
-    .where(eq(pstProjectsTable.id, "pst-cashflow-check"));
-  if (!project) return;
-  const [pattern] = await db
-    .select({ id: pstPatternsTable.id })
-    .from(pstPatternsTable)
-    .where(eq(pstPatternsTable.id, "pattern-assessment"));
-  const [recipe] = await db
-    .select({ id: pstRecipesTable.id })
-    .from(pstRecipesTable)
-    .where(eq(pstRecipesTable.id, "recipe-assessment"));
-  if (pattern) {
-    await db.insert(pstProjectPatternsTable).values({
-      id: "project-pattern-cashflow-assessment",
-      projectId: project.id,
-      patternId: pattern.id,
-    }).onConflictDoNothing();
-  }
-  if (recipe) {
-    await db.insert(pstProjectRecipesTable).values({
-      id: "project-recipe-cashflow-assessment",
-      projectId: project.id,
-      recipeId: recipe.id,
-    }).onConflictDoNothing();
+  const seedReferences = [
+    {
+      slug: "cashflow-health-check",
+      patternId: "pattern-assessment",
+      recipeId: "recipe-assessment",
+      patternReferenceId: "project-pattern-cashflow-assessment",
+      recipeReferenceId: "project-recipe-cashflow-assessment",
+    },
+    {
+      slug: "decision-readiness-check-aa0f4",
+      patternId: "pattern-decision",
+      recipeId: "recipe-decision",
+      patternReferenceId: "project-pattern-decision-readiness",
+      recipeReferenceId: "project-recipe-decision-readiness",
+    },
+  ] as const;
+
+  for (const reference of seedReferences) {
+    const [project] = await db
+      .select({ id: pstProjectsTable.id })
+      .from(pstProjectsTable)
+      .where(eq(pstProjectsTable.slug, reference.slug));
+    if (!project) continue;
+    const [pattern] = await db
+      .select({ id: pstPatternsTable.id })
+      .from(pstPatternsTable)
+      .where(eq(pstPatternsTable.id, reference.patternId));
+    const [recipe] = await db
+      .select({ id: pstRecipesTable.id })
+      .from(pstRecipesTable)
+      .where(eq(pstRecipesTable.id, reference.recipeId));
+    if (pattern) {
+      await db.insert(pstProjectPatternsTable).values({
+        id: reference.patternReferenceId,
+        projectId: project.id,
+        patternId: pattern.id,
+      }).onConflictDoNothing();
+    }
+    if (recipe) {
+      await db.insert(pstProjectRecipesTable).values({
+        id: reference.recipeReferenceId,
+        projectId: project.id,
+        recipeId: recipe.id,
+      }).onConflictDoNothing();
+    }
   }
 }
 
@@ -415,6 +436,7 @@ async function ensureSeed(userId = "system") {
     })();
   }
   await seedPromise;
+  await ensureSeedReferences();
 
   // Existing development databases were seeded before ownership existed.
   // Claim only the legacy seed project, never another user's project.
@@ -677,7 +699,47 @@ async function publicWorkspace(slug: string) {
       ),
     );
   if (!project) return undefined;
-  return projectAggregate(project.id);
+  const [blueprint] = await db
+    .select()
+    .from(pstBlueprintsTable)
+    .where(eq(pstBlueprintsTable.projectId, project.id));
+  if (!blueprint) return undefined;
+  return {
+    id: project.id,
+    name: project.name,
+    slug: project.slug,
+    description: project.description,
+    status: project.status,
+    publicationStatus: project.publicationStatus,
+    version: project.version,
+    domain: project.domain,
+    family: project.family,
+    series: project.series,
+    problemStatement: project.problemStatement,
+    targetUser: project.targetUser,
+    desiredOutcome: project.desiredOutcome,
+    productDna: {
+      problem: project.productDna.problem,
+      user: project.productDna.user,
+      journey: project.productDna.journey,
+      outcome: project.productDna.outcome,
+    },
+    blueprint: {
+      id: blueprint.id,
+      projectId: blueprint.projectId,
+      problem: blueprint.problem,
+      targetUser: blueprint.targetUser,
+      desiredOutcome: blueprint.desiredOutcome,
+      problemType: blueprint.problemType,
+      journey: blueprint.journey,
+      workflow: publicCustomerWorkspaceSteps(blueprint.workflow),
+      expectedOutput: blueprint.expectedOutput,
+      actionPlan: blueprint.actionPlan,
+      nextStep: blueprint.nextStep,
+      version: blueprint.version,
+      updatedAt: blueprint.updatedAt,
+    },
+  };
 }
 
 router.get("/pst/dashboard/summary", async (_req, res): Promise<void> => {
@@ -1315,9 +1377,10 @@ router.get("/pst/public/workspaces/:slug", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Published customer workspace not found" });
     return;
   }
-  const persona = await gustaftaEngine.getPersona();
-  const steps = customerWorkspaceSteps(project.blueprint.workflow, persona);
-  res.json(GetPstWorkspaceResponse.parse({ project, steps }));
+  res.json(GetPublicPstWorkspaceResponse.parse({
+    project,
+    steps: project.blueprint.workflow,
+  }));
 });
 
 export default router;

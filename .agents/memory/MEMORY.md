@@ -1,2 +1,3 @@
 - [Managed artifact workflow](workflow-and-auth.md) — Vite artifact services require injected PORT/BASE_PATH and managed workflow restarts.
 - [PST manufacturing boundary](pst-manufacturing-acceptance.md) — New PST variants should be expressed through Blueprint/library configuration and remain covered by the v1.1 acceptance scenario.
+- [PST runtime boundaries](pst-runtime-boundaries.md) — Public customer payloads need an allowlist contract; seeded project references need idempotent reconciliation.

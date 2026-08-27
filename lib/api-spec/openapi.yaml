@@ -419,7 +419,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PstWorkspace"
+                $ref: "#/components/schemas/PstPublicWorkspace"
         "404":
           $ref: "#/components/responses/NotFound"
 components:
@@ -699,6 +699,67 @@ components:
       properties:
         project: { $ref: "#/components/schemas/PstProject" }
         steps: { type: array, items: { $ref: "#/components/schemas/WorkflowStep" } }
+    PstPublicWorkspace:
+      type: object
+      required: [project, steps]
+      properties:
+        project: { $ref: "#/components/schemas/PstPublicProject" }
+        steps: { type: array, items: { $ref: "#/components/schemas/PublicWorkflowStep" } }
+    PstPublicProject:
+      type: object
+      required: [id, name, slug, description, status, version, domain, family, series, problemStatement, targetUser, desiredOutcome, productDna, blueprint]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        slug: { type: string }
+        description: { type: string }
+        status: { $ref: "#/components/schemas/ProjectStatus" }
+        version: { type: string }
+        domain: { type: string }
+        family: { type: string }
+        series: { type: string }
+        problemStatement: { type: string }
+        targetUser: { type: string }
+        desiredOutcome: { type: string }
+        productDna: { $ref: "#/components/schemas/PublicProductDna" }
+        blueprint: { $ref: "#/components/schemas/PublicPstBlueprint" }
+    PublicProductDna:
+      type: object
+      required: [problem, user, journey, outcome]
+      properties:
+        problem: { type: string }
+        user: { type: string }
+        journey: { type: array, items: { type: string } }
+        outcome: { type: string }
+    PublicPstBlueprint:
+      type: object
+      required: [id, projectId, problem, targetUser, desiredOutcome, problemType, journey, workflow, expectedOutput, actionPlan, nextStep, version, updatedAt]
+      properties:
+        id: { type: string }
+        projectId: { type: string }
+        problem: { type: string }
+        targetUser: { type: string }
+        desiredOutcome: { type: string }
+        problemType: { type: string }
+        journey: { type: array, items: { type: string } }
+        workflow: { type: array, items: { $ref: "#/components/schemas/PublicWorkflowStep" } }
+        expectedOutput: { type: array, items: { type: string } }
+        actionPlan: { type: array, items: { type: string } }
+        nextStep: { type: string }
+        version: { type: string }
+        updatedAt: { type: string, format: date-time }
+    PublicWorkflowStep:
+      type: object
+      required: [id, type, title, description, inputs, outputs, dependencies, nextStep]
+      properties:
+        id: { type: string }
+        type: { type: string }
+        title: { type: string }
+        description: { type: string }
+        inputs: { type: array, items: { type: string } }
+        outputs: { type: array, items: { type: string } }
+        dependencies: { type: array, items: { type: string } }
+        nextStep: { type: string }
     FactoryEvent:
       type: object
       required: [id, type, message, createdAt]

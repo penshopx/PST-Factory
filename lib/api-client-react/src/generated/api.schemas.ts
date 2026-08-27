@@ -345,6 +345,62 @@ export interface PstWorkspace {
   steps: WorkflowStep[];
 }
 
+export interface PublicProductDna {
+  problem: string;
+  user: string;
+  journey: string[];
+  outcome: string;
+}
+
+export interface PublicWorkflowStep {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  inputs: string[];
+  outputs: string[];
+  dependencies: string[];
+  nextStep: string;
+}
+
+export interface PublicPstBlueprint {
+  id: string;
+  projectId: string;
+  problem: string;
+  targetUser: string;
+  desiredOutcome: string;
+  problemType: string;
+  journey: string[];
+  workflow: PublicWorkflowStep[];
+  expectedOutput: string[];
+  actionPlan: string[];
+  nextStep: string;
+  version: string;
+  updatedAt: string;
+}
+
+export interface PstPublicProject {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  status: ProjectStatus;
+  version: string;
+  domain: string;
+  family: string;
+  series: string;
+  problemStatement: string;
+  targetUser: string;
+  desiredOutcome: string;
+  productDna: PublicProductDna;
+  blueprint: PublicPstBlueprint;
+}
+
+export interface PstPublicWorkspace {
+  project: PstPublicProject;
+  steps: PublicWorkflowStep[];
+}
+
 export interface FactoryEvent {
   id: string;
   type: string;

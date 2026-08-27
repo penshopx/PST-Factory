@@ -1256,8 +1256,6 @@ export const GetPublicPstWorkspaceResponse = zod.object({
   "problem": zod.string(),
   "user": zod.string(),
   "journey": zod.array(zod.string()),
-  "components": zod.array(zod.string()),
-  "intelligence": zod.string(),
   "outcome": zod.string()
 }),
   "blueprint": zod.object({
@@ -1268,9 +1266,6 @@ export const GetPublicPstWorkspaceResponse = zod.object({
   "desiredOutcome": zod.string(),
   "problemType": zod.string(),
   "journey": zod.array(zod.string()),
-  "knowledgeRequirements": zod.array(zod.string()),
-  "componentRequirements": zod.array(zod.string()),
-  "aiRequirements": zod.array(zod.string()),
   "workflow": zod.array(zod.object({
   "id": zod.string(),
   "type": zod.string(),
@@ -1279,50 +1274,14 @@ export const GetPublicPstWorkspaceResponse = zod.object({
   "inputs": zod.array(zod.string()),
   "outputs": zod.array(zod.string()),
   "dependencies": zod.array(zod.string()),
-  "nextStep": zod.string(),
-  "configuration": zod.record(zod.string(), zod.unknown()).optional()
+  "nextStep": zod.string()
 })),
   "expectedOutput": zod.array(zod.string()),
   "actionPlan": zod.array(zod.string()),
   "nextStep": zod.string(),
   "version": zod.string(),
   "updatedAt": zod.coerce.date()
-}),
-  "components": zod.array(zod.object({
-  "id": zod.string(),
-  "name": zod.string(),
-  "type": zod.string(),
-  "source": zod.string(),
-  "status": zod.enum(['READY', 'MISSING', 'WARNING'])
-})),
-  "selectedPatterns": zod.array(zod.object({
-  "id": zod.string(),
-  "name": zod.string(),
-  "description": zod.string(),
-  "steps": zod.array(zod.string()),
-  "usageCount": zod.number(),
-  "projectIds": zod.array(zod.string()),
-  "projects": zod.array(zod.object({
-  "id": zod.string(),
-  "name": zod.string()
-}))
-})).describe('Pattern library records resolved through project reference relations.'),
-  "selectedRecipes": zod.array(zod.object({
-  "id": zod.string(),
-  "name": zod.string(),
-  "description": zod.string(),
-  "components": zod.array(zod.string()),
-  "usageCount": zod.number(),
-  "projectIds": zod.array(zod.string()),
-  "projects": zod.array(zod.object({
-  "id": zod.string(),
-  "name": zod.string()
-}))
-})).describe('Recipe library records resolved through project reference relations.'),
-  "qaStatus": zod.enum(['NOT_RUN', 'PASS', 'WARNING', 'ERROR']),
-  "publicationStatus": zod.enum(['UNPUBLISHED', 'PUBLISHED', 'ARCHIVED']),
-  "createdAt": zod.coerce.date(),
-  "updatedAt": zod.coerce.date()
+})
 }),
   "steps": zod.array(zod.object({
   "id": zod.string(),
@@ -1332,8 +1291,7 @@ export const GetPublicPstWorkspaceResponse = zod.object({
   "inputs": zod.array(zod.string()),
   "outputs": zod.array(zod.string()),
   "dependencies": zod.array(zod.string()),
-  "nextStep": zod.string(),
-  "configuration": zod.record(zod.string(), zod.unknown()).optional()
+  "nextStep": zod.string()
 }))
 })
 

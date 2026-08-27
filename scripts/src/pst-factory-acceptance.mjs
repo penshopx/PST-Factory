@@ -7,6 +7,7 @@ import {
   evaluateQa,
   isPublicCustomerWorkspace,
   qaStatus,
+  publicCustomerWorkspaceSteps,
 } from "../../artifacts/api-server/src/lib/services/pst/manufacturing.ts";
 
 const assets = [
@@ -113,6 +114,11 @@ assert.equal(canPublish({ status: "PREVIEW", qaStatus: "PASS" }), false);
 assert.equal(isPublicCustomerWorkspace({ slug: "assessment", status: "PUBLISHED", publicationStatus: "PUBLISHED" }, "assessment"), true);
 assert.equal(isPublicCustomerWorkspace({ slug: "assessment", status: "APPROVED", publicationStatus: "UNPUBLISHED" }, "assessment"), false);
 assert.equal(isPublicCustomerWorkspace({ slug: "assessment", status: "PUBLISHED", publicationStatus: "PUBLISHED" }, "other-project"), false);
+
+// Public customer payloads must not carry factory library or QA internals.
+const publicSteps = publicCustomerWorkspaceSteps(assessment.workflow);
+assert.equal("configuration" in publicSteps[0], false);
+assert.deepEqual(publicSteps.map((step) => step.title), assessment.workflow.map((step) => step.title));
 
 console.log("PST Factory v1.1 acceptance: PASS");
 console.log(JSON.stringify({
