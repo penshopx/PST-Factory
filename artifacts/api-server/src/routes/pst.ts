@@ -12,12 +12,14 @@ import {
   pstProjectComponentsTable,
   pstProjectsTable,
   pstProjectRecipesTable,
+  pstReleasesTable,
   pstQaRunsTable,
   pstRecipesTable,
   pstSimulationsTable,
   type WorkflowStep,
   type QaResult,
   type PstProjectRole,
+  type PstReleaseSnapshot,
 } from "@workspace/db";
 import {
   ArchivePstProjectParams,
@@ -48,6 +50,11 @@ import {
   ListPstRecipesResponse,
   PublishPstProjectParams,
   PublishPstProjectResponse,
+  GetPstReleasesParams,
+  GetPstReleasesResponse,
+  PstRelease,
+  RestorePstReleaseParams,
+  RestorePstReleaseResponse,
   RunPstArchitectBody,
   RunPstArchitectParams,
   RunPstArchitectResponse,
@@ -516,6 +523,68 @@ async function projectAggregate(projectId: string) {
   };
 }
 
+async function latestRelease(projectId: string) {
+  const [release] = await db
+    .select()
+    .from(pstReleasesTable)
+    .where(eq(pstReleasesTable.projectId, projectId))
+    .orderBy(desc(pstReleasesTable.createdAt))
+    .limit(1);
+  return release;
+}
+
+function releaseNumber(version?: string) {
+  const match = version?.match(/^v(\d+)/);
+  return match ? Number(match[1]) : 0;
+}
+
+async function nextReleaseVersion(projectId: string) {
+  const release = await latestRelease(projectId);
+  return `v${releaseNumber(release?.version) + 1}.0`;
+}
+
+async function releaseSnapshot(
+  project: typeof pstProjectsTable.$inferSelect,
+  blueprint: typeof pstBlueprintsTable.$inferSelect,
+  version: string,
+): Promise<PstReleaseSnapshot> {
+  const components = await db
+    .select()
+    .from(pstProjectComponentsTable)
+    .where(eq(pstProjectComponentsTable.projectId, project.id));
+  return {
+    project: {
+      name: project.name,
+      description: project.description,
+      status: "PUBLISHED",
+      version,
+      domain: project.domain,
+      family: project.family,
+      series: project.series,
+      problemStatement: project.problemStatement,
+      targetUser: project.targetUser,
+      desiredOutcome: project.desiredOutcome,
+      productDna: project.productDna,
+      qaStatus: project.qaStatus,
+      publicationStatus: "PUBLISHED",
+    },
+    blueprint: {
+      ...blueprint,
+      version,
+      updatedAt: blueprint.updatedAt.toISOString(),
+    },
+    workflow: blueprint.workflow,
+    components: components.map(({ assetId, name, type, source, status, required }) => ({
+      assetId,
+      name,
+      type,
+      source,
+      status,
+      required,
+    })),
+  };
+}
+
 async function getPatternUsage(patternId: string) {
   const projects = await db
     .select({ id: pstProjectsTable.id, name: pstProjectsTable.name })
@@ -716,49 +785,47 @@ async function publicWorkspace(slug: string) {
       and(
         eq(pstProjectsTable.slug, slug),
         eq(pstProjectsTable.publicationStatus, "PUBLISHED"),
-        eq(pstProjectsTable.status, "PUBLISHED"),
       ),
     );
   if (!project) return undefined;
-  const [blueprint] = await db
-    .select()
-    .from(pstBlueprintsTable)
-    .where(eq(pstBlueprintsTable.projectId, project.id));
-  if (!blueprint) return undefined;
+  const release = await latestRelease(project.id);
+  if (!release) return undefined;
+  const snapshot = release.snapshot;
+  const publicWorkflow = publicCustomerWorkspaceSteps(snapshot.workflow);
   return {
     id: project.id,
-    name: project.name,
+    name: snapshot.project.name,
     slug: project.slug,
-    description: project.description,
-    status: project.status,
-    publicationStatus: project.publicationStatus,
-    version: project.version,
-    domain: project.domain,
-    family: project.family,
-    series: project.series,
-    problemStatement: project.problemStatement,
-    targetUser: project.targetUser,
-    desiredOutcome: project.desiredOutcome,
+    description: snapshot.project.description,
+    status: "PUBLISHED",
+    publicationStatus: "PUBLISHED",
+    version: release.version,
+    domain: snapshot.project.domain,
+    family: snapshot.project.family,
+    series: snapshot.project.series,
+    problemStatement: snapshot.project.problemStatement,
+    targetUser: snapshot.project.targetUser,
+    desiredOutcome: snapshot.project.desiredOutcome,
     productDna: {
-      problem: project.productDna.problem,
-      user: project.productDna.user,
-      journey: project.productDna.journey,
-      outcome: project.productDna.outcome,
+      problem: snapshot.project.productDna.problem,
+      user: snapshot.project.productDna.user,
+      journey: snapshot.project.productDna.journey,
+      outcome: snapshot.project.productDna.outcome,
     },
     blueprint: {
-      id: blueprint.id,
-      projectId: blueprint.projectId,
-      problem: blueprint.problem,
-      targetUser: blueprint.targetUser,
-      desiredOutcome: blueprint.desiredOutcome,
-      problemType: blueprint.problemType,
-      journey: blueprint.journey,
-      workflow: publicCustomerWorkspaceSteps(blueprint.workflow),
-      expectedOutput: blueprint.expectedOutput,
-      actionPlan: blueprint.actionPlan,
-      nextStep: blueprint.nextStep,
-      version: blueprint.version,
-      updatedAt: blueprint.updatedAt,
+      id: snapshot.blueprint.id,
+      projectId: snapshot.blueprint.projectId,
+      problem: snapshot.blueprint.problem,
+      targetUser: snapshot.blueprint.targetUser,
+      desiredOutcome: snapshot.blueprint.desiredOutcome,
+      problemType: snapshot.blueprint.problemType,
+      journey: snapshot.blueprint.journey,
+      workflow: publicWorkflow,
+      expectedOutput: snapshot.blueprint.expectedOutput,
+      actionPlan: snapshot.blueprint.actionPlan,
+      nextStep: snapshot.blueprint.nextStep,
+      version: release.version,
+      updatedAt: new Date(release.createdAt),
     },
   };
 }
@@ -1319,9 +1386,116 @@ router.post("/pst/projects/:projectId/publish", async (req, res): Promise<void> 
     res.status(409).json({ error: "Only an approved PST without blocking QA errors can be published." });
     return;
   }
-  const [updated] = await db.update(pstProjectsTable).set({ status: "PUBLISHED", publicationStatus: "PUBLISHED", updatedAt: new Date() }).where(eq(pstProjectsTable.id, project.id)).returning();
+  const [blueprint] = await db
+    .select()
+    .from(pstBlueprintsTable)
+    .where(eq(pstBlueprintsTable.projectId, project.id));
+  if (!blueprint) {
+    res.status(409).json({ error: "A blueprint is required before publishing." });
+    return;
+  }
+  const version = await nextReleaseVersion(project.id);
+  const snapshot = await releaseSnapshot(project, blueprint, version);
+  const [updated] = await db.transaction(async (tx) => {
+    await tx.insert(pstReleasesTable).values({
+      id: randomUUID(),
+      projectId: project.id,
+      version,
+      snapshot,
+    });
+    await tx.update(pstBlueprintsTable)
+      .set({ version, updatedAt: new Date() })
+      .where(eq(pstBlueprintsTable.projectId, project.id));
+    return tx.update(pstProjectsTable)
+      .set({ status: "PUBLISHED", publicationStatus: "PUBLISHED", version, updatedAt: new Date() })
+      .where(eq(pstProjectsTable.id, project.id))
+      .returning();
+  });
   await addEvent("PST_PUBLISHED", `${project.name} is now available in the customer workspace.`, project.id);
   res.json(PublishPstProjectResponse.parse(await projectAggregate(updated.id)));
+});
+
+router.get("/pst/projects/:projectId/releases", async (req, res): Promise<void> => {
+  const params = GetPstReleasesParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const access = await authorizeProject(req, res, params.data.projectId);
+  if (!access) return;
+  const releases = await db
+    .select()
+    .from(pstReleasesTable)
+    .where(eq(pstReleasesTable.projectId, access.project.id))
+    .orderBy(desc(pstReleasesTable.createdAt));
+  res.json(GetPstReleasesResponse.parse(releases));
+});
+
+router.post("/pst/projects/:projectId/releases/:releaseId/restore", async (req, res): Promise<void> => {
+  const params = RestorePstReleaseParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const access = await authorizeProject(req, res, params.data.projectId, adminRoles);
+  if (!access) return;
+  const [release] = await db
+    .select()
+    .from(pstReleasesTable)
+    .where(
+      and(
+        eq(pstReleasesTable.id, params.data.releaseId),
+        eq(pstReleasesTable.projectId, access.project.id),
+      ),
+    );
+  if (!release) {
+    res.status(404).json({ error: "PST release not found" });
+    return;
+  }
+  const snapshot = release.snapshot;
+  await db.transaction(async (tx) => {
+    await tx.update(pstProjectsTable).set({
+      name: snapshot.project.name,
+      description: snapshot.project.description,
+      version: release.version,
+      domain: snapshot.project.domain,
+      family: snapshot.project.family,
+      series: snapshot.project.series,
+      problemStatement: snapshot.project.problemStatement,
+      targetUser: snapshot.project.targetUser,
+      desiredOutcome: snapshot.project.desiredOutcome,
+      productDna: snapshot.project.productDna,
+      status: "BLUEPRINT_READY",
+      qaStatus: "NOT_RUN",
+      updatedAt: new Date(),
+    }).where(eq(pstProjectsTable.id, access.project.id));
+    await tx.update(pstBlueprintsTable).set({
+      problem: snapshot.blueprint.problem,
+      targetUser: snapshot.blueprint.targetUser,
+      desiredOutcome: snapshot.blueprint.desiredOutcome,
+      problemType: snapshot.blueprint.problemType,
+      journey: snapshot.blueprint.journey,
+      knowledgeRequirements: snapshot.blueprint.knowledgeRequirements,
+      componentRequirements: snapshot.blueprint.componentRequirements,
+      aiRequirements: snapshot.blueprint.aiRequirements,
+      workflow: snapshot.workflow,
+      expectedOutput: snapshot.blueprint.expectedOutput,
+      actionPlan: snapshot.blueprint.actionPlan,
+      nextStep: snapshot.blueprint.nextStep,
+      version: release.version,
+      updatedAt: new Date(),
+    }).where(eq(pstBlueprintsTable.projectId, access.project.id));
+    await tx.delete(pstProjectComponentsTable).where(eq(pstProjectComponentsTable.projectId, access.project.id));
+    if (snapshot.components.length) {
+      await tx.insert(pstProjectComponentsTable).values(snapshot.components.map((component) => ({
+        id: randomUUID(),
+        projectId: access.project.id,
+        ...component,
+      })));
+    }
+  });
+  await addEvent("PST_RELEASE_RESTORED", `${access.project.name} release ${release.version} was restored to the draft.`, access.project.id);
+  res.json(RestorePstReleaseResponse.parse(await projectAggregate(access.project.id)));
 });
 
 router.get("/pst/projects/:projectId/workspace", async (req, res): Promise<void> => {
@@ -1334,7 +1508,29 @@ router.get("/pst/projects/:projectId/workspace", async (req, res): Promise<void>
   if (!access) {
     return;
   }
-  const project = await projectAggregate(access.project.id);
+  const liveProject = await projectAggregate(access.project.id);
+  const release = await latestRelease(access.project.id);
+  const project = liveProject && release
+    ? {
+        ...liveProject,
+        ...release.snapshot.project,
+        status: "PUBLISHED",
+        publicationStatus: "PUBLISHED",
+        version: release.version,
+        blueprint: {
+          ...release.snapshot.blueprint,
+          workflow: release.snapshot.workflow,
+          updatedAt: new Date(release.createdAt),
+        },
+        components: release.snapshot.components.map((component, index) => ({
+          id: `${release.id}-component-${index}`,
+          name: component.name,
+          type: component.type,
+          source: component.source,
+          status: component.status,
+        })),
+      }
+    : liveProject;
   if (!project) {
     res.status(404).json({ error: "PST workspace not found" });
     return;

@@ -316,6 +316,39 @@ async function runAuthenticatedRouteAcceptance() {
     assert.equal("qaStatus" in afterPublish.body.project, false);
     assert.equal("configuration" in afterPublish.body.steps[0], false);
 
+    const releases = await apiRequest(owner.token, `/pst/projects/${projectId}/releases`);
+    assertStatus(releases, 200, "release history");
+    assert.equal(releases.body.length, 1);
+    assert.equal(releases.body[0].version, afterPublish.body.project.version);
+    assert.equal(releases.body[0].snapshot.workflow[0].title, afterPublish.body.steps[0].title);
+    assert.equal(releases.body[0].snapshot.components.length, published.body.components.length);
+
+    const editedAfterPublish = await apiRequest(owner.token, `/pst/projects/${projectId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ description: "Draft edit must not change the live release." }),
+    });
+    assertStatus(editedAfterPublish, 200, "edit after publish");
+    const editedBlueprintAfterPublish = await apiRequest(owner.token, `/pst/projects/${projectId}/blueprint`, {
+      method: "PATCH",
+      body: JSON.stringify({ nextStep: "Draft-only next step." }),
+    });
+    assertStatus(editedBlueprintAfterPublish, 200, "blueprint edit after publish");
+
+    const afterDraftEdit = await apiRequest(undefined, `/pst/public/workspaces/${slug}`);
+    assertStatus(afterDraftEdit, 200, "public workspace after draft edit");
+    assert.deepEqual(afterDraftEdit.body, afterPublish.body);
+
+    const restored = await apiRequest(owner.token, `/pst/projects/${projectId}/releases/${releases.body[0].id}/restore`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    assertStatus(restored, 200, "restore release");
+    assert.equal(restored.body.status, "BLUEPRINT_READY");
+    assert.equal(restored.body.blueprint.nextStep, afterPublish.body.project.blueprint.nextStep);
+    const afterRestore = await apiRequest(undefined, `/pst/public/workspaces/${slug}`);
+    assertStatus(afterRestore, 200, "public workspace after restore");
+    assert.deepEqual(afterRestore.body, afterPublish.body);
+
     return {
       projectId,
       slug,
@@ -323,6 +356,7 @@ async function runAuthenticatedRouteAcceptance() {
       recipeId: referencesPersisted.body.selectedRecipes[0].id,
       qaStatus: qa.body.status,
       publicStatus: afterPublish.body.project.status,
+      releaseVersion: releases.body[0].version,
     };
   } finally {
     await deleteClerkTestUser(viewer?.userId);

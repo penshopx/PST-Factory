@@ -14,17 +14,18 @@ import {
 import {
   getGetDashboardActivityQueryKey, getGetDashboardSummaryQueryKey,
   getGetPstBlueprintQueryKey, getGetPstProjectQueryKey, getGetPublicPstWorkspaceQueryKey,
+  getGetPstReleasesQueryKey,
   getListPstAssetsQueryKey, getListPstPatternsQueryKey, getListPstProjectsQueryKey,
   getListPstRecipesQueryKey, useApprovePstProject, useArchivePstProject,
   useBuildPstProject, useCreatePstProject, useDuplicatePstProject,
   useGetDashboardActivity, useGetDashboardSummary, useGetPstBlueprint,
-  useGetPstProject, useGetPublicPstWorkspace, useListPstAssets, useListPstPatterns,
+  useGetPstProject, useGetPstReleases, useGetPublicPstWorkspace, useListPstAssets, useListPstPatterns,
   useListPstProjects, useListPstRecipes, usePublishPstProject, useRunPstArchitect,
-  useRunPstQa, useSimulatePstProject, useUpdatePstBlueprint, useUpdatePstProject,
+  useRestorePstRelease, useRunPstQa, useSimulatePstProject, useUpdatePstBlueprint, useUpdatePstProject,
 } from '@workspace/api-client-react';
 import type {
   BuildResult, FactoryEvent, PstAsset, PstBlueprint, PstPattern, PstProject,
-  PstRecipe, QaRun, SimulationReport, WorkflowStep,
+  PstRecipe, PstRelease, QaRun, SimulationReport, WorkflowStep,
 } from '@workspace/api-client-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -267,6 +268,7 @@ function ProjectWorkspace() {
   const { projectId = '' } = useParams<{ projectId: string }>();
   const projectQuery = useGetPstProject(projectId, { query: { queryKey: getGetPstProjectQueryKey(projectId) } });
   const blueprintQuery = useGetPstBlueprint(projectId, { query: { queryKey: getGetPstBlueprintQueryKey(projectId) } });
+  const releasesQuery = useGetPstReleases(projectId, { query: { queryKey: getGetPstReleasesQueryKey(projectId) } });
   const patternsQuery = useListPstPatterns({ query: { queryKey: getListPstPatternsQueryKey() } });
   const recipesQuery = useListPstRecipes({ query: { queryKey: getListPstRecipesQueryKey() } });
   const project = projectQuery.data;
@@ -285,6 +287,7 @@ function ProjectWorkspace() {
   const runQa = useRunPstQa();
   const approve = useApprovePstProject();
   const publish = usePublishPstProject();
+  const restoreRelease = useRestorePstRelease();
   const qc = useQueryClient();
   const projectPatternId = project?.selectedPatterns?.[0]?.id ?? '';
   const projectRecipeId = project?.selectedRecipes?.[0]?.id ?? '';
@@ -297,7 +300,11 @@ function ProjectWorkspace() {
   if (projectQuery.isLoading) return <Loading label="Loading PST workspace" />;
   if (projectQuery.isError || !project) return <ErrorState onRetry={() => void projectQuery.refetch()} label="Project workspace not found" />;
   const blueprint = blueprintQuery.data ?? project.blueprint;
-  const invalidate = () => { void qc.invalidateQueries({ queryKey: getGetPstProjectQueryKey(projectId) }); void qc.invalidateQueries({ queryKey: getGetPstBlueprintQueryKey(projectId) }); };
+  const invalidate = () => {
+    void qc.invalidateQueries({ queryKey: getGetPstProjectQueryKey(projectId) });
+    void qc.invalidateQueries({ queryKey: getGetPstBlueprintQueryKey(projectId) });
+    void qc.invalidateQueries({ queryKey: getGetPstReleasesQueryKey(projectId) });
+  };
   const run = (action: 'architect' | 'build' | 'simulate' | 'qa' | 'approve' | 'publish') => {
     const references = {
       patternId: selectedPatternId || null,
@@ -309,6 +316,11 @@ function ProjectWorkspace() {
     if (action === 'qa') runQa.mutate({ projectId }, { onSuccess: (result) => { setQa(result); invalidate(); setTab('qa'); } });
     if (action === 'approve') approve.mutate({ projectId }, { onSuccess: invalidate });
     if (action === 'publish') publish.mutate({ projectId }, { onSuccess: invalidate });
+  };
+  const restore = (releaseId: string) => {
+    if (window.confirm('Restore this release into the editable draft? The currently published customer release will stay live until you publish again.')) {
+      restoreRelease.mutate({ projectId, releaseId }, { onSuccess: invalidate });
+    }
   };
   const tabs = [{ key: 'overview', label: 'Overview' }, { key: 'problem', label: 'Problem' }, { key: 'architect', label: 'Architect' }, { key: 'blueprint', label: 'Blueprint' }, { key: 'assets', label: 'Assets' }, { key: 'workflow', label: 'Workflow' }, { key: 'ai', label: 'AI' }, { key: 'build', label: 'Assembly' }, { key: 'preview', label: 'Preview' }, { key: 'qa', label: 'QA' }, { key: 'publish', label: 'Publish' }, { key: 'versions', label: 'Versions' }];
   return <div className="mx-auto max-w-[1440px]"><Link href="/projects" className="mb-5 inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-primary" data-testid="link-back-projects"><ArrowLeft size={14} /> All projects</Link><div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end"><div><div className="mb-2 flex items-center gap-2"><StatusBadge value={project.status} /><span className="font-mono text-[10px] text-muted-foreground">v{project.version} · {project.domain || 'general'}</span></div><h1 className="text-3xl font-extrabold tracking-[-.05em]" data-testid="heading-project-name">{project.name}</h1><p className="mt-2 max-w-2xl text-sm text-muted-foreground">{project.description || project.problemStatement}</p></div><div className="flex flex-wrap gap-2"><Link href={`/workspace/${project.slug}`} className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs font-semibold hover:border-primary hover:text-primary" data-testid="link-customer-workspace"><ExternalLink size={14} /> Customer view</Link><Button variant="outline" size="sm" onClick={() => updateProject.mutate({ projectId, data: { description: project.description } }, { onSuccess: invalidate })} data-testid="button-save-project"><Check size={14} /> Sync brief</Button></div></div>
@@ -323,7 +335,7 @@ function ProjectWorkspace() {
     {tab === 'preview' && <PreviewTab project={project} simulation={simulation} onSimulate={() => run('simulate')} pending={simulate.isPending} />}
     {tab === 'qa' && <QaTab project={project} qa={qa} onRun={() => run('qa')} pending={runQa.isPending} />}
     {tab === 'publish' && <PublishTab project={project} onApprove={() => run('approve')} onPublish={() => run('publish')} approvePending={approve.isPending} publishPending={publish.isPending} />}
-    {tab === 'versions' && <VersionsTab project={project} />}
+     {tab === 'versions' && <VersionsTab project={project} releases={releasesQuery.data ?? []} onRestore={restore} restorePending={restoreRelease.isPending} />}
     {tab === 'build' && (build ? <BuildTab build={build} /> : <EmptyState icon={Hammer} title="Assembly has not run" detail="Use Assemble from Overview to resolve the blueprint into selected components." />)}
     {tab !== 'build' && buildMutation.isPending && <div className="fixed bottom-5 right-5 flex items-center gap-3 rounded-lg border border-accent/30 bg-card px-4 py-3 text-sm shadow-lg"><span className="h-2 w-2 animate-pulse rounded-full bg-accent" /> Assembling components...</div>}
   </div>;
@@ -364,7 +376,30 @@ function BuildTab({ build }: { build: BuildResult }) { return <Card><CardHeader>
 function PreviewTab({ project, simulation, onSimulate, pending }: { project: PstProject; simulation: SimulationReport | null; onSimulate: () => void; pending: boolean }) { return <div className="grid gap-6 lg:grid-cols-[1.2fr_.8fr]"><Card className="min-h-[360px] overflow-hidden"><div className="flex items-center justify-between border-b border-border bg-muted/35 px-5 py-3"><div className="flex gap-1.5"><span className="h-2 w-2 rounded-full bg-destructive/60" /><span className="h-2 w-2 rounded-full bg-amber-400/70" /><span className="h-2 w-2 rounded-full bg-emerald-500/70" /></div><span className="font-mono text-[10px] uppercase tracking-[.15em] text-muted-foreground">customer preview / {project.slug}</span><ExternalLink size={14} className="text-muted-foreground" /></div><div className="factory-grid flex min-h-[300px] items-center justify-center p-8 text-center"><div className="max-w-md"><div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-accent text-accent-foreground"><Target size={22} /></div><h2 className="text-2xl font-extrabold">{project.name}</h2><p className="mt-3 text-sm text-muted-foreground">{project.desiredOutcome}</p><Button className="mt-5" onClick={onSimulate} disabled={pending} data-testid="button-simulate-preview"><FlaskConical size={15} /> {pending ? 'Simulating...' : 'Run simulation'}</Button></div></div></Card><Card><CardHeader><CardTitle className="text-base">Simulation report</CardTitle><CardDescription>Test the path before a human sees it.</CardDescription></CardHeader><CardContent>{simulation ? <div><div className="flex items-center gap-3"><StatusBadge value={simulation.status} /><span className="font-mono text-[10px] text-muted-foreground">{new Date(simulation.createdAt).toLocaleString()}</span></div><div className="mt-4 space-y-2">{simulation.checks?.map((check) => <div className="flex gap-2 text-sm" key={check}><CheckCircle2 className="shrink-0 text-emerald-500" size={16} />{check}</div>)}</div></div> : <EmptyState icon={FlaskConical} title="No simulation yet" detail="Run a synthetic user path to surface rough edges." />}</CardContent></Card></div>; }
 function QaTab({ project, qa, onRun, pending }: { project: PstProject; qa: QaRun | null; onRun: () => void; pending: boolean }) { return <Card><CardHeader className="flex-row items-start justify-between"><div><CardTitle className="text-base">Quality assurance</CardTitle><CardDescription>Check clarity, completeness, and outcome alignment.</CardDescription></div><Button onClick={onRun} disabled={pending} data-testid="button-run-qa"><ClipboardCheck size={15} /> {pending ? 'Running checks...' : 'Run QA'}</Button></CardHeader><CardContent>{qa ? <div className="space-y-2">{qa.results?.map((result) => <div className="flex items-start gap-3 rounded-lg border border-border p-3" key={`${result.category}-${result.label}`}><StatusBadge value={result.status} /><div><p className="text-sm font-semibold">{result.label}</p><p className="mt-1 text-xs text-muted-foreground">{result.detail}</p></div></div>)}</div> : <div className="flex items-center gap-3 rounded-lg border border-dashed border-border p-5"><div className="rounded-lg bg-muted p-2"><ClipboardCheck size={17} /></div><div><p className="text-sm font-semibold">QA has not run on v{project.version}</p><p className="mt-1 text-xs text-muted-foreground">The report becomes the handoff signal for approval.</p></div></div>}</CardContent></Card>; }
 function PublishTab({ project, onApprove, onPublish, approvePending, publishPending }: { project: PstProject; onApprove: () => void; onPublish: () => void; approvePending: boolean; publishPending: boolean }) { const approved = project.status === 'APPROVED' || project.status === 'PUBLISHED'; return <div className="max-w-3xl"><Card><CardHeader><CardTitle className="text-base">Release gate</CardTitle><CardDescription>Publishing makes the guided workspace available to customers.</CardDescription></CardHeader><CardContent><div className="space-y-3">{[['QA result', project.qaStatus, project.qaStatus === 'PASS'], ['Approval', approved ? project.status : 'Awaiting approval', approved], ['Publication', project.publicationStatus, project.publicationStatus === 'PUBLISHED']].map(([label, value, good]) => <div className="flex items-center gap-3 rounded-lg border border-border p-4" key={String(label)}><div className={cn('grid h-8 w-8 place-items-center rounded-full', good ? 'bg-emerald-500/10 text-emerald-500' : 'bg-muted text-muted-foreground')}>{good ? <Check size={15} /> : <CircleDot size={15} />}</div><div className="flex-1"><p className="text-sm font-semibold">{label}</p><p className="font-mono text-[10px] uppercase text-muted-foreground">{String(value).replaceAll('_', ' ')}</p></div></div>)}</div><div className="mt-5 flex gap-2">{!approved && <Button variant="outline" onClick={onApprove} disabled={approvePending || project.qaStatus !== 'PASS'} data-testid="button-approve-pst"><CheckCircle2 size={15} /> {approvePending ? 'Approving...' : 'Approve build'}</Button>}<Button onClick={onPublish} disabled={publishPending || !approved || project.publicationStatus === 'PUBLISHED'} data-testid="button-publish-pst"><Rocket size={15} /> {publishPending ? 'Publishing...' : project.publicationStatus === 'PUBLISHED' ? 'Published' : 'Publish workspace'}</Button></div></CardContent></Card></div>; }
-function VersionsTab({ project }: { project: PstProject }) { return <Card className="max-w-3xl"><CardHeader><CardTitle className="text-base">Version history</CardTitle><CardDescription>Stable handoff points for your product line.</CardDescription></CardHeader><CardContent><div className="flex items-center gap-4 rounded-lg border border-border p-4"><div className="grid h-8 w-8 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{project.version}</div><div className="flex-1"><p className="text-sm font-semibold">Current factory version</p><p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">updated {new Date(project.updatedAt).toLocaleString()}</p></div><StatusBadge value={project.status} /></div></CardContent></Card>; }
+function VersionsTab({ project, releases, onRestore, restorePending }: { project: PstProject; releases: PstRelease[]; onRestore: (releaseId: string) => void; restorePending: boolean }) {
+  const [compareId, setCompareId] = useState('');
+  const selected = releases.find((release) => release.id === compareId) ?? releases[0];
+  const current = releases[0];
+  return <div className="max-w-4xl space-y-5">
+    <Card>
+      <CardHeader><CardTitle className="text-base">Version history</CardTitle><CardDescription>Every published release is an immutable handoff point. Draft edits never rewrite what customers see.</CardDescription></CardHeader>
+      <CardContent className="space-y-3">
+        {releases.length === 0 ? <EmptyState icon={Rocket} title="No published releases yet" detail={`The first immutable snapshot will be created when ${project.name} is published.`} /> : releases.map((release, index) => <div className={cn('flex flex-col gap-3 rounded-lg border p-4 md:flex-row md:items-center', index === 0 ? 'border-accent/40 bg-accent/5' : 'border-border')} key={release.id} data-testid={`card-release-${release.id}`}>
+          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{release.version}</div>
+          <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="text-sm font-semibold">{index === 0 ? 'Live customer release' : 'Archived customer release'}</p>{index === 0 && <StatusBadge value="PUBLISHED" />}</div><p className="mt-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">published {new Date(release.createdAt).toLocaleString()} · {release.snapshot.workflow.length} workflow steps · {release.snapshot.components.length} components</p></div>
+          <div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => setCompareId(release.id)} data-testid={`button-compare-release-${release.id}`}>Compare</Button><Button size="sm" variant="ghost" onClick={() => onRestore(release.id)} disabled={restorePending} data-testid={`button-restore-release-${release.id}`}><ArrowLeft size={14} /> Restore</Button></div>
+        </div>)}
+      </CardContent>
+    </Card>
+    {selected && current && <Card data-testid="card-release-comparison">
+      <CardHeader><CardTitle className="text-base">Compare releases</CardTitle><CardDescription>{selected.version} is preserved exactly as it was published. Restore it to the draft when you want to build from this handoff point.</CardDescription></CardHeader>
+      <CardContent className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-lg border border-accent/30 bg-accent/5 p-4"><p className="font-mono text-[10px] uppercase tracking-wider text-accent">Selected / {selected.version}</p><p className="mt-3 text-sm font-semibold">{selected.snapshot.project.desiredOutcome}</p><div className="mt-4 space-y-2 text-xs text-muted-foreground"><p>{selected.snapshot.workflow.map((step) => step.title).join(' → ')}</p><p>{selected.snapshot.components.map((component) => component.name).join(' · ')}</p></div></div>
+        <div className="rounded-lg border border-border p-4"><p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Latest / {current.version}</p><p className="mt-3 text-sm font-semibold">{current.snapshot.project.desiredOutcome}</p><div className="mt-4 space-y-2 text-xs text-muted-foreground"><p>{current.snapshot.workflow.map((step) => step.title).join(' → ')}</p><p>{current.snapshot.components.map((component) => component.name).join(' · ')}</p></div></div>
+      </CardContent>
+    </Card>}
+  </div>;
+}
 
 function LibraryPage({ kind }: { kind: 'assets' | 'patterns' | 'recipes' }) {
   const [search, setSearch] = useState('');

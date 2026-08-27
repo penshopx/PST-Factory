@@ -1191,6 +1191,177 @@ export const GetPstWorkspaceResponse = zod.object({
 
 
 /**
+ * @summary List immutable PST releases
+ */
+export const GetPstReleasesParams = zod.object({
+  "projectId": zod.coerce.string()
+})
+
+export const GetPstReleasesResponseItem = zod.object({
+  "id": zod.string(),
+  "projectId": zod.string(),
+  "version": zod.string(),
+  "snapshot": zod.object({
+  "project": zod.object({
+  "name": zod.string(),
+  "description": zod.string(),
+  "status": zod.enum(['DRAFT', 'ARCHITECTED', 'BLUEPRINT_READY', 'BUILDING', 'PREVIEW', 'QA', 'APPROVED', 'PUBLISHED', 'ARCHIVED']),
+  "version": zod.string(),
+  "domain": zod.string(),
+  "family": zod.string(),
+  "series": zod.string(),
+  "problemStatement": zod.string(),
+  "targetUser": zod.string(),
+  "desiredOutcome": zod.string(),
+  "productDna": zod.object({
+  "problem": zod.string(),
+  "user": zod.string(),
+  "journey": zod.array(zod.string()),
+  "components": zod.array(zod.string()),
+  "intelligence": zod.string(),
+  "outcome": zod.string()
+}),
+  "qaStatus": zod.enum(['NOT_RUN', 'PASS', 'WARNING', 'ERROR']),
+  "publicationStatus": zod.enum(['UNPUBLISHED', 'PUBLISHED', 'ARCHIVED'])
+}),
+  "blueprint": zod.object({
+  "id": zod.string(),
+  "projectId": zod.string(),
+  "problem": zod.string(),
+  "targetUser": zod.string(),
+  "desiredOutcome": zod.string(),
+  "problemType": zod.string(),
+  "journey": zod.array(zod.string()),
+  "knowledgeRequirements": zod.array(zod.string()),
+  "componentRequirements": zod.array(zod.string()),
+  "aiRequirements": zod.array(zod.string()),
+  "expectedOutput": zod.array(zod.string()),
+  "actionPlan": zod.array(zod.string()),
+  "nextStep": zod.string(),
+  "version": zod.string(),
+  "updatedAt": zod.coerce.date()
+}),
+  "workflow": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "inputs": zod.array(zod.string()),
+  "outputs": zod.array(zod.string()),
+  "dependencies": zod.array(zod.string()),
+  "nextStep": zod.string(),
+  "configuration": zod.record(zod.string(), zod.unknown()).optional()
+})),
+  "components": zod.array(zod.object({
+  "assetId": zod.string(),
+  "name": zod.string(),
+  "type": zod.string(),
+  "source": zod.string(),
+  "status": zod.string(),
+  "required": zod.boolean()
+}))
+}),
+  "createdAt": zod.coerce.date()
+})
+export const GetPstReleasesResponse = zod.array(GetPstReleasesResponseItem)
+
+
+/**
+ * @summary Restore a release into the editable draft
+ */
+export const RestorePstReleaseParams = zod.object({
+  "projectId": zod.coerce.string(),
+  "releaseId": zod.coerce.string()
+})
+
+export const RestorePstReleaseResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "slug": zod.string(),
+  "description": zod.string(),
+  "status": zod.enum(['DRAFT', 'ARCHITECTED', 'BLUEPRINT_READY', 'BUILDING', 'PREVIEW', 'QA', 'APPROVED', 'PUBLISHED', 'ARCHIVED']),
+  "version": zod.string(),
+  "domain": zod.string(),
+  "family": zod.string(),
+  "series": zod.string(),
+  "problemStatement": zod.string(),
+  "targetUser": zod.string(),
+  "desiredOutcome": zod.string(),
+  "productDna": zod.object({
+  "problem": zod.string(),
+  "user": zod.string(),
+  "journey": zod.array(zod.string()),
+  "components": zod.array(zod.string()),
+  "intelligence": zod.string(),
+  "outcome": zod.string()
+}),
+  "blueprint": zod.object({
+  "id": zod.string(),
+  "projectId": zod.string(),
+  "problem": zod.string(),
+  "targetUser": zod.string(),
+  "desiredOutcome": zod.string(),
+  "problemType": zod.string(),
+  "journey": zod.array(zod.string()),
+  "knowledgeRequirements": zod.array(zod.string()),
+  "componentRequirements": zod.array(zod.string()),
+  "aiRequirements": zod.array(zod.string()),
+  "workflow": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "inputs": zod.array(zod.string()),
+  "outputs": zod.array(zod.string()),
+  "dependencies": zod.array(zod.string()),
+  "nextStep": zod.string(),
+  "configuration": zod.record(zod.string(), zod.unknown()).optional()
+})),
+  "expectedOutput": zod.array(zod.string()),
+  "actionPlan": zod.array(zod.string()),
+  "nextStep": zod.string(),
+  "version": zod.string(),
+  "updatedAt": zod.coerce.date()
+}),
+  "components": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "type": zod.string(),
+  "source": zod.string(),
+  "status": zod.enum(['READY', 'MISSING', 'WARNING'])
+})),
+  "selectedPatterns": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "steps": zod.array(zod.string()),
+  "usageCount": zod.number(),
+  "projectIds": zod.array(zod.string()),
+  "projects": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}))
+})).describe('Pattern library records resolved through project reference relations.'),
+  "selectedRecipes": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "components": zod.array(zod.string()),
+  "usageCount": zod.number(),
+  "projectIds": zod.array(zod.string()),
+  "projects": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}))
+})).describe('Recipe library records resolved through project reference relations.'),
+  "qaStatus": zod.enum(['NOT_RUN', 'PASS', 'WARNING', 'ERROR']),
+  "publicationStatus": zod.enum(['UNPUBLISHED', 'PUBLISHED', 'ARCHIVED']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
  * @summary List project access members
  */
 export const ListPstProjectMembersParams = zod.object({

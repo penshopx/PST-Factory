@@ -185,6 +185,66 @@ export const pstProjectComponentsTable = pgTable("pst_project_components", {
   required: boolean("required").notNull().default(true),
 });
 
+export type PstReleaseComponentSnapshot = {
+  assetId: string;
+  name: string;
+  type: string;
+  source: string;
+  status: string;
+  required: boolean;
+};
+
+export type PstReleaseProjectSnapshot = {
+  name: string;
+  description: string;
+  status: string;
+  version: string;
+  domain: string;
+  family: string;
+  series: string;
+  problemStatement: string;
+  targetUser: string;
+  desiredOutcome: string;
+  productDna: {
+    problem: string;
+    user: string;
+    journey: string[];
+    components: string[];
+    intelligence: string;
+    outcome: string;
+  };
+  qaStatus: string;
+  publicationStatus: string;
+};
+
+export type PstReleaseSnapshot = {
+  project: PstReleaseProjectSnapshot;
+  blueprint: Omit<PstBlueprint, "updatedAt"> & { version: string; updatedAt: string };
+  workflow: WorkflowStep[];
+  components: PstReleaseComponentSnapshot[];
+};
+
+export const pstReleasesTable = pgTable(
+  "pst_releases",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => pstProjectsTable.id, { onDelete: "cascade" }),
+    version: text("version").notNull(),
+    snapshot: jsonb("snapshot").$type<PstReleaseSnapshot>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    projectVersionUnique: uniqueIndex("pst_releases_project_version_idx").on(
+      table.projectId,
+      table.version,
+    ),
+  }),
+);
+
 export const pstFactoryEventsTable = pgTable("pst_factory_events", {
   id: text("id").primaryKey(),
   type: text("type").notNull(),
@@ -254,6 +314,7 @@ export type PstRecipe = typeof pstRecipesTable.$inferSelect;
 export type PstProjectPattern = typeof pstProjectPatternsTable.$inferSelect;
 export type PstProjectRecipe = typeof pstProjectRecipesTable.$inferSelect;
 export type PstProjectComponent = typeof pstProjectComponentsTable.$inferSelect;
+export type PstRelease = typeof pstReleasesTable.$inferSelect;
 export type PstFactoryEvent = typeof pstFactoryEventsTable.$inferSelect;
 export type PstQaRun = typeof pstQaRunsTable.$inferSelect;
 export type PstSimulation = typeof pstSimulationsTable.$inferSelect;

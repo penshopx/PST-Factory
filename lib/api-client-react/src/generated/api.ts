@@ -40,6 +40,7 @@ import type {
   PstProjectUpdate,
   PstPublicWorkspace,
   PstRecipe,
+  PstRelease,
   PstWorkspace,
   QaRun,
   SimulationInput,
@@ -1643,6 +1644,156 @@ export function useGetPstWorkspace<TData = Awaited<ReturnType<typeof getPstWorks
 
 
 
+
+export const getGetPstReleasesUrl = (projectId: string,) => {
+
+
+
+
+  return `/api/pst/projects/${projectId}/releases`
+}
+
+/**
+ * @summary List immutable PST releases
+ */
+export const getPstReleases = async (projectId: string, options?: Parameters<typeof customFetch>[1]): Promise<PstRelease[]> => {
+
+  return customFetch<PstRelease[]>(getGetPstReleasesUrl(projectId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPstReleasesQueryKey = (projectId: string,) => {
+    return [
+    `/api/pst/projects/${projectId}/releases`
+    ] as const;
+    }
+
+
+export const getGetPstReleasesQueryOptions = <TData = Awaited<ReturnType<typeof getPstReleases>>, TError = ErrorType<unknown>>(projectId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPstReleases>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPstReleasesQueryKey(projectId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPstReleases>>> = ({ signal }) => getPstReleases(projectId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: projectId !== null && projectId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPstReleases>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPstReleasesQueryResult = NonNullable<Awaited<ReturnType<typeof getPstReleases>>>
+export type GetPstReleasesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List immutable PST releases
+ */
+
+export function useGetPstReleases<TData = Awaited<ReturnType<typeof getPstReleases>>, TError = ErrorType<unknown>>(
+ projectId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPstReleases>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPstReleasesQueryOptions(projectId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRestorePstReleaseUrl = (projectId: string,
+    releaseId: string,) => {
+
+
+
+
+  return `/api/pst/projects/${projectId}/releases/${releaseId}/restore`
+}
+
+/**
+ * @summary Restore a release into the editable draft
+ */
+export const restorePstRelease = async (projectId: string,
+    releaseId: string, options?: Parameters<typeof customFetch>[1]): Promise<PstProject> => {
+
+  return customFetch<PstProject>(getRestorePstReleaseUrl(projectId,releaseId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRestorePstReleaseMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restorePstRelease>>, TError,{projectId: string;releaseId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof restorePstRelease>>, TError,{projectId: string;releaseId: string}, TContext> => {
+
+const mutationKey = ['restorePstRelease'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restorePstRelease>>, {projectId: string;releaseId: string}> = (props) => {
+          const {projectId,releaseId} = props ?? {};
+
+          return  restorePstRelease(projectId,releaseId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RestorePstReleaseMutationResult = NonNullable<Awaited<ReturnType<typeof restorePstRelease>>>
+
+    export type RestorePstReleaseMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Restore a release into the editable draft
+ */
+export const useRestorePstRelease = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restorePstRelease>>, TError,{projectId: string;releaseId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof restorePstRelease>>,
+        TError,
+        {projectId: string;releaseId: string},
+        TContext
+      > => {
+      return useMutation(getRestorePstReleaseMutationOptions(options));
+    }
 
 export const getListPstProjectMembersUrl = (projectId: string,) => {
 

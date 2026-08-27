@@ -185,6 +185,73 @@ export interface PstProjectMemberInput {
   role: PstProjectMemberInputRole;
 }
 
+export type PstReleaseProjectPublicationStatus = typeof PstReleaseProjectPublicationStatus[keyof typeof PstReleaseProjectPublicationStatus];
+
+
+export const PstReleaseProjectPublicationStatus = {
+  UNPUBLISHED: 'UNPUBLISHED',
+  PUBLISHED: 'PUBLISHED',
+  ARCHIVED: 'ARCHIVED',
+} as const;
+
+export interface PstReleaseProject {
+  name: string;
+  description: string;
+  status: ProjectStatus;
+  version: string;
+  domain: string;
+  family: string;
+  series: string;
+  problemStatement: string;
+  targetUser: string;
+  desiredOutcome: string;
+  productDna: ProductDna;
+  qaStatus: QaStatus;
+  publicationStatus: PstReleaseProjectPublicationStatus;
+}
+
+export interface PstReleaseBlueprint {
+  id: string;
+  projectId: string;
+  problem: string;
+  targetUser: string;
+  desiredOutcome: string;
+  problemType: string;
+  journey: string[];
+  knowledgeRequirements: string[];
+  componentRequirements: string[];
+  aiRequirements: string[];
+  expectedOutput: string[];
+  actionPlan: string[];
+  nextStep: string;
+  version: string;
+  updatedAt: string;
+}
+
+export interface PstReleaseComponent {
+  assetId: string;
+  name: string;
+  type: string;
+  source: string;
+  status: string;
+  required: boolean;
+}
+
+export interface PstReleaseSnapshot {
+  project: PstReleaseProject;
+  blueprint: PstReleaseBlueprint;
+  workflow: WorkflowStep[];
+  components: PstReleaseComponent[];
+}
+
+export interface PstRelease {
+  id: string;
+  projectId: string;
+  version: string;
+  snapshot: PstReleaseSnapshot;
+  createdAt: string;
+}
+
 export interface PstProjectInput {
   /** @minLength 1 */
   name: string;

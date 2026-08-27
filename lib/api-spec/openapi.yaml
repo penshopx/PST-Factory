@@ -360,6 +360,41 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PstWorkspace"
+  /pst/projects/{projectId}/releases:
+    get:
+      operationId: getPstReleases
+      tags: [projects]
+      summary: List immutable PST releases
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Release history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PstRelease"
+  /pst/projects/{projectId}/releases/{releaseId}/restore:
+    post:
+      operationId: restorePstRelease
+      tags: [projects]
+      summary: Restore a release into the editable draft
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - name: releaseId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Restored project draft
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PstProject"
   /pst/projects/{projectId}/members:
     get:
       operationId: listPstProjectMembers
@@ -501,6 +536,73 @@ components:
       properties:
         userId: { type: string, minLength: 1 }
         role: { type: string, enum: [admin, editor, viewer] }
+    PstRelease:
+      type: object
+      required: [id, projectId, version, snapshot, createdAt]
+      properties:
+        id: { type: string }
+        projectId: { type: string }
+        version: { type: string }
+        snapshot: { $ref: "#/components/schemas/PstReleaseSnapshot" }
+        createdAt: { type: string, format: date-time }
+    PstReleaseSnapshot:
+      type: object
+      required: [project, blueprint, workflow, components]
+      properties:
+        project: { $ref: "#/components/schemas/PstReleaseProject" }
+        blueprint: { $ref: "#/components/schemas/PstReleaseBlueprint" }
+        workflow:
+          type: array
+          items: { $ref: "#/components/schemas/WorkflowStep" }
+        components:
+          type: array
+          items: { $ref: "#/components/schemas/PstReleaseComponent" }
+    PstReleaseProject:
+      type: object
+      required: [name, description, status, version, domain, family, series, problemStatement, targetUser, desiredOutcome, productDna, qaStatus, publicationStatus]
+      properties:
+        name: { type: string }
+        description: { type: string }
+        status: { $ref: "#/components/schemas/ProjectStatus" }
+        version: { type: string }
+        domain: { type: string }
+        family: { type: string }
+        series: { type: string }
+        problemStatement: { type: string }
+        targetUser: { type: string }
+        desiredOutcome: { type: string }
+        productDna: { $ref: "#/components/schemas/ProductDna" }
+        qaStatus: { $ref: "#/components/schemas/QaStatus" }
+        publicationStatus: { type: string, enum: [UNPUBLISHED, PUBLISHED, ARCHIVED] }
+    PstReleaseBlueprint:
+      type: object
+      required: [id, projectId, problem, targetUser, desiredOutcome, problemType, journey, knowledgeRequirements, componentRequirements, aiRequirements, expectedOutput, actionPlan, nextStep, version, updatedAt]
+      properties:
+        id: { type: string }
+        projectId: { type: string }
+        problem: { type: string }
+        targetUser: { type: string }
+        desiredOutcome: { type: string }
+        problemType: { type: string }
+        journey: { type: array, items: { type: string } }
+        knowledgeRequirements: { type: array, items: { type: string } }
+        componentRequirements: { type: array, items: { type: string } }
+        aiRequirements: { type: array, items: { type: string } }
+        expectedOutput: { type: array, items: { type: string } }
+        actionPlan: { type: array, items: { type: string } }
+        nextStep: { type: string }
+        version: { type: string }
+        updatedAt: { type: string, format: date-time }
+    PstReleaseComponent:
+      type: object
+      required: [assetId, name, type, source, status, required]
+      properties:
+        assetId: { type: string }
+        name: { type: string }
+        type: { type: string }
+        source: { type: string }
+        status: { type: string }
+        required: { type: boolean }
     PstProjectInput:
       type: object
       required: [name, problemStatement, targetUser, desiredOutcome]
