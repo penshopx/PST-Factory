@@ -1,0 +1,762 @@
+Ya. Dengan pernyataan Replit tersebut, saya akan menganggap **Reality Check sudah selesai dan arah arsitektur PST Factory sudah terkunci**.
+
+Yang penting sekarang: **jangan minta Replit langsung coding semuanya.** Kita perlu memberikan satu prompt fase berikutnya yang mengubah MVP menjadi **PST Manufacturing Engine v1** secara bertahap.
+
+Saya sarankan kita mulai dengan **Phase 1–3 dalam satu pekerjaan terkontrol**: security boundary → PST Schema → executable Pattern/Recipe. Setelah itu baru kita review sebelum Compiler dibangun.
+
+## Prompt berikutnya untuk Replit
+
+```text
+PST FACTORY — MANUFACTURING ENGINE v1
+PHASE 1: GOVERNANCE + PST SCHEMA + EXECUTABLE MANUFACTURING INTELLIGENCE
+
+The PST Factory Reality Check has been completed.
+
+The current application is a valid Factory MVP, but it is not yet
+a fully configuration-driven Product Manufacturing Engine.
+
+The strategic direction is now LOCKED.
+
+============================================================
+STRATEGIC DECISIONS — DO NOT CHANGE
+============================================================
+
+1. Do NOT integrate real Gustafta yet.
+2. Do NOT build a marketplace.
+3. Do NOT add unrelated major features.
+4. Do NOT rebuild the existing application.
+5. Preserve working Factory MVP functionality.
+6. Convert the Factory from a builder into a true
+   Problem-Solving Toolkit Manufacturing Engine.
+
+The target manufacturing model is:
+
+PROBLEM
+→ PATTERN
+→ RECIPE
+→ KNOWLEDGE
+→ BLUEPRINT
+→ COMPILER
+→ EXECUTABLE PST
+→ CUSTOMER RUNTIME
+→ OUTCOME
+→ FACTORY LEARNING
+
+The current phase focuses on:
+
+A. Security / access boundary
+B. PST Schema
+C. Executable Pattern
+D. Executable Recipe
+E. Their relationship to Blueprint
+
+DO NOT implement the full Compiler or Factory Learning yet.
+
+============================================================
+PART 1 — SECURITY BOUNDARY
+============================================================
+
+Before expanding manufacturing capabilities, establish proper
+server-side ownership and access boundaries.
+
+Introduce the concept:
+
+USER
+→ WORKSPACE
+→ ROLE
+→ PROJECT
+
+Minimum roles:
+
+ADMIN
+EDITOR
+VIEWER
+CUSTOMER
+
+ADMIN:
+- manage workspace
+- manage users/roles
+- create/edit projects
+- manage libraries
+- approve
+- publish
+
+EDITOR:
+- create projects
+- edit projects
+- run Architect
+- edit Blueprint
+- assemble
+- simulate
+- run QA
+
+VIEWER:
+- read-only Factory access
+
+CUSTOMER:
+- cannot access Factory management interfaces
+- can only access explicitly published PST runtime experiences
+
+============================================================
+OWNERSHIP
+============================================================
+
+Add appropriate ownership/workspace relationships.
+
+Projects must not be globally accessible merely because a user
+is authenticated.
+
+Every Factory resource that represents private manufacturing
+data must have a server-side authorization boundary.
+
+At minimum review:
+
+- projects
+- blueprints
+- assets
+- patterns
+- recipes
+- simulations
+- QA runs
+- factory events
+
+Do not rely on frontend hiding.
+
+Every protected API endpoint must verify:
+
+1. authenticated actor
+2. workspace membership
+3. role
+4. resource ownership/access
+
+============================================================
+CUSTOMER BOUNDARY
+============================================================
+
+Separate:
+
+FACTORY MANAGEMENT
+from
+PUBLISHED CUSTOMER RUNTIME
+
+A customer must NOT be able to access:
+
+- draft projects
+- factory settings
+- internal assets
+- internal patterns
+- internal recipes
+- internal QA data
+- manufacturing events
+
+Customer runtime should only resolve a valid PUBLISHED release.
+
+Do not make the customer workspace publicly accessible unless
+there is an explicit published access mechanism.
+
+Create the architecture for:
+
+Published PST
+→ Release
+→ Customer Runtime
+
+Do not overbuild billing or customer account management.
+
+============================================================
+PART 2 — PST SCHEMA
+============================================================
+
+Introduce the concept:
+
+PST SCHEMA
+
+The PST Schema is the executable contract describing how a PST
+behaves.
+
+It must be more than metadata.
+
+A PST Schema should describe:
+
+1. Metadata
+2. Problem
+3. Target User
+4. Inputs
+5. Questions
+6. Rules
+7. Scoring
+8. Knowledge
+9. Workflow
+10. AI
+11. Outputs
+12. Action Plan
+13. Completion
+
+The Schema must be structured and machine-readable.
+
+Example conceptual structure:
+
+PST
+├── metadata
+├── problem
+├── user
+├── inputs
+├── questions
+├── rules
+├── scoring
+├── knowledge
+├── workflow
+├── ai
+├── outputs
+├── actionPlan
+└── completion
+
+Do not put the entire executable behavior into an uncontrolled
+JSON blob.
+
+Use relational entities where relationships and identity matter.
+
+Use JSON/JSONB only for genuinely flexible configuration.
+
+============================================================
+PART 3 — INPUT SCHEMA
+============================================================
+
+Define structured inputs.
+
+Each input should be capable of describing:
+
+- id
+- name
+- label
+- description
+- type
+- required
+- validation
+- default
+- options
+- source
+
+Support common types such as:
+
+TEXT
+NUMBER
+BOOLEAN
+SELECT
+MULTI_SELECT
+DATE
+FILE
+JSON
+
+Do not implement every possible input type.
+
+Build an extensible foundation.
+
+============================================================
+PART 4 — QUESTION SCHEMA
+============================================================
+
+Questions must be structured.
+
+A question should support:
+
+- id
+- label
+- type
+- required
+- options
+- validation
+- scoring reference
+- conditional visibility where appropriate
+
+Questions must be usable by customer runtime.
+
+The system must no longer treat questions as static descriptive
+text only.
+
+============================================================
+PART 5 — RULES ENGINE FOUNDATION
+============================================================
+
+Introduce a simple configuration-driven rule model.
+
+Example:
+
+IF
+cashflow_score < 40
+
+THEN
+condition = "HIGH_RISK"
+
+Do not build a complex programming language.
+
+Use a safe structured rule representation.
+
+Rules must be data-driven.
+
+The purpose is to prove that different PSTs can have different
+logic without requiring product-specific code.
+
+============================================================
+PART 6 — SCORING MODEL
+============================================================
+
+Create a configurable scoring foundation.
+
+Example:
+
+Question A
+→ weight 10
+
+Question B
+→ weight 20
+
+Question C
+→ weight 30
+
+Calculate:
+
+raw score
+normalized score
+classification
+
+Example:
+
+0–39 = HIGH_RISK
+40–69 = MODERATE
+70–100 = HEALTHY
+
+Do not hard-code these values into the application.
+
+The values must belong to the PST configuration.
+
+============================================================
+PART 7 — EXECUTABLE PATTERN
+============================================================
+
+Transform Pattern from a descriptive library record into a
+reusable manufacturing structure.
+
+A Pattern should define a reusable problem-solving flow.
+
+Example:
+
+PATTERN: DIAGNOSIS
+
+INPUT
+→ ASSESSMENT
+→ SCORING
+→ ANALYSIS
+→ RECOMMENDATION
+→ OUTPUT
+
+PATTERN: DECISION
+
+INPUT
+→ OPTIONS
+→ CRITERIA
+→ SCORING
+→ COMPARISON
+→ RECOMMENDATION
+
+PATTERN: PLANNING
+
+GOAL
+→ CURRENT STATE
+→ GAP
+→ PRIORITY
+→ PLAN
+→ ACTION
+
+PATTERN: DOCUMENT ANALYSIS
+
+UPLOAD
+→ EXTRACT
+→ VALIDATE
+→ ANALYZE
+→ SCORE
+→ REPORT
+
+Patterns must become structured and machine-readable.
+
+A Pattern must be capable of influencing Blueprint generation.
+
+Do not yet build the complete Compiler.
+
+============================================================
+PART 8 — EXECUTABLE RECIPE
+============================================================
+
+Transform Recipe from descriptive metadata into a manufacturing
+formula.
+
+A Recipe should define:
+
+- purpose
+- required pattern
+- components
+- inputs
+- outputs
+- workflow
+- optional knowledge
+- optional AI
+- configuration parameters
+
+Example:
+
+RECIPE:
+FINANCIAL HEALTH CHECK
+
+Pattern:
+DIAGNOSIS
+
+Components:
+
+Profile
+Assessment
+Scoring
+Knowledge Rules
+AI Analysis
+Recommendation
+Action Plan
+
+Conceptually:
+
+RECIPE
+→ PATTERN
+→ COMPONENTS
+→ INPUTS
+→ RULES
+→ OUTPUTS
+
+Recipe must be selectable by PST Architect.
+
+============================================================
+PART 9 — PATTERN + RECIPE + BLUEPRINT
+============================================================
+
+Establish the relationship:
+
+PROBLEM
+↓
+PST ARCHITECT
+↓
+PATTERN
+↓
+RECIPE
+↓
+BLUEPRINT
+
+The Architect should be able to:
+
+1. identify an appropriate Pattern
+2. identify an appropriate Recipe
+3. propose them
+4. generate a Blueprint using them
+
+Human must remain able to:
+
+- change Pattern
+- change Recipe
+- edit Blueprint
+- reject AI proposal
+
+AI does not automatically publish anything.
+
+============================================================
+PART 10 — BLUEPRINT MUST BECOME EXECUTABLE-READY
+============================================================
+
+Blueprint must explicitly reference:
+
+- selected Pattern
+- selected Recipe
+- required Assets
+- required Knowledge
+- inputs
+- questions
+- rules
+- scoring
+- workflow
+- AI configuration
+- outputs
+- action plan
+
+Builder must consume this structured Blueprint.
+
+Avoid generic fallback behavior whenever configuration exists.
+
+If a required configuration is missing, return:
+
+MISSING
+
+rather than silently inventing behavior.
+
+============================================================
+PART 11 — PRODUCT DNA CONSISTENCY
+============================================================
+
+Prevent:
+
+Project fields
+≠
+Product DNA
+
+Define a clear source-of-truth strategy.
+
+Problem
+User
+Outcome
+
+must remain synchronized with Product DNA.
+
+Do not allow stale duplicate representations.
+
+Choose the cleanest implementation.
+
+============================================================
+PART 12 — USAGE TRACKING
+============================================================
+
+Make usage tracking real.
+
+For Assets, Patterns and Recipes track actual relationships.
+
+Examples:
+
+Asset A
+→ used by PST 001
+→ used by PST 002
+→ used by PST 005
+
+Pattern B
+→ used by PST 003
+→ used by PST 004
+
+Recipe C
+→ used by PST 001
+→ used by PST 006
+
+Do not rely on manually incremented usageCount values.
+
+Derive usage from relationships where practical.
+
+============================================================
+PART 13 — VERSIONING FOUNDATION
+============================================================
+
+Do NOT implement full release versioning yet.
+
+But ensure the data model can support:
+
+PST Project
+→ PST Version
+→ Blueprint Version
+→ Release
+
+Do not break the current MVP.
+
+Published versions must eventually be immutable.
+
+Create only the necessary foundation during this phase.
+
+============================================================
+PART 14 — ACCEPTANCE TEST
+============================================================
+
+The critical test is NOT whether the new tables exist.
+
+The critical test is whether manufacturing behavior has become
+configuration-driven.
+
+Create at least TWO substantially different PST definitions.
+
+Example:
+
+PST A:
+Cashflow Health Check
+
+PST B:
+Decision Readiness Check
+
+They must have different:
+
+- inputs
+- questions
+- pattern
+- recipe
+- scoring
+- outputs
+- workflow
+
+The two PSTs must NOT require product-specific frontend code.
+
+============================================================
+PART 15 — DO NOT BUILD THE FULL COMPILER YET
+============================================================
+
+Do NOT implement:
+
+Blueprint → final executable PST compiler
+
+in this phase.
+
+Instead prepare the contracts required for the next phase.
+
+The next phase will be:
+
+PST COMPILER
+
+which will transform:
+
+Blueprint
++
+Pattern
++
+Recipe
++
+Assets
++
+Knowledge
++
+AI configuration
+
+into:
+
+EXECUTABLE PST
+
+============================================================
+PART 16 — TESTING
+============================================================
+
+Run:
+
+- TypeScript checks
+- database migration tests
+- API tests
+- authorization tests
+- Pattern tests
+- Recipe tests
+- Blueprint tests
+- configuration validation tests
+- regression tests for the existing MVP
+
+Verify that existing functionality still works.
+
+Do not remove existing working functionality.
+
+============================================================
+PART 17 — OUTPUT REPORT
+============================================================
+
+At the end provide:
+
+1. Files changed
+2. Database changes
+3. API changes
+4. Security changes
+5. PST Schema implemented
+6. Pattern implementation
+7. Recipe implementation
+8. Blueprint changes
+9. Tests executed
+10. Test results
+11. Known limitations
+12. What is intentionally NOT implemented
+13. Readiness for PST Compiler phase
+
+Most importantly answer:
+
+"Can two substantially different PSTs now be represented through
+configuration rather than product-specific application code?"
+
+Answer:
+
+YES
+PARTIALLY
+NO
+
+Explain with concrete evidence.
+
+============================================================
+FINAL RULE
+============================================================
+
+Do not optimize for number of features.
+
+Optimize for:
+
+MANUFACTURING LEVERAGE.
+
+The purpose of this phase is to make:
+
+Pattern
+Recipe
+Schema
+Blueprint
+
+into real manufacturing intelligence.
+
+The next milestone is:
+
+PST COMPILER.
+
+Do not jump ahead to Gustafta integration.
+
+Do not build marketplace functionality.
+
+Do not rebuild the Factory.
+
+Preserve the current working MVP while upgrading its manufacturing
+architecture.
+```
+
+### Kenapa saya memilih urutan ini?
+
+Karena laporan Replit menunjukkan **asset reuse sudah terbukti**, sedangkan tiga bagian yang paling menentukan leverage masih lemah:
+
+**Pattern → Recipe → Runtime Schema.**
+
+Kalau kita langsung membuat Compiler sekarang, kita hanya akan **mengompilasi struktur yang masih generik**.
+
+Lebih aman:
+
+```text
+SEKARANG
+Pattern
+   +
+Recipe
+   +
+PST Schema
+   +
+Blueprint
+        ↓
+      [LOCK]
+
+BERIKUTNYA
+        ↓
+     COMPILER
+        ↓
+Executable PST
+
+SETELAH ITU
+        ↓
+Dynamic Runtime
+
+LALU
+        ↓
+Versioning
+
+LALU
+        ↓
+Factory Learning
+
+TERAKHIR
+        ↓
+Gustafta
+```
+
+Dan ada satu **milestone yang saya anggap sangat penting** setelah prompt ini selesai:
+
+> **Cashflow Health Check dan Decision Readiness Check harus memiliki perilaku yang benar-benar berbeda hanya karena konfigurasi mereka berbeda.**
+
+Kalau Replit berhasil menunjukkan itu tanpa menulis `if (product === "cashflow")` atau logika khusus produk lainnya, kita sudah membuat lompatan dari **PST Builder → PST Manufacturing Engine**.
