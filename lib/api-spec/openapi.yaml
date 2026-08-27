@@ -442,6 +442,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PstProjectMember"
+  /pst/projects/{projectId}/members/{userId}:
+    delete:
+      operationId: removePstProjectMember
+      tags: [projects]
+      summary: Remove a project member
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - name: userId
+          in: path
+          required: true
+          description: User whose project membership should be revoked
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Project member removed
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: The project owner cannot be removed
   /pst/public/workspaces/{slug}:
     get:
       operationId: getPublicPstWorkspace

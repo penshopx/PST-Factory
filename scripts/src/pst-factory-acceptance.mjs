@@ -240,6 +240,7 @@ async function assertPrivateRouteAuthentication() {
     ["GET", `/pst/projects/${projectId}/workspace`],
     ["GET", `/pst/projects/${projectId}/members`],
     ["POST", `/pst/projects/${projectId}/members`, { userId: "unauthenticated-user", role: "viewer" }],
+    ["DELETE", `/pst/projects/${projectId}/members/unauthenticated-user`],
   ];
 
   for (const [method, path, body] of requests) {
@@ -275,6 +276,7 @@ async function assertCrossOwnerIsolation(outsider, projectId, releaseId) {
     ["GET", `/pst/projects/${projectId}/workspace`],
     ["GET", `/pst/projects/${projectId}/members`],
     ["POST", `/pst/projects/${projectId}/members`, { userId: outsider.userId, role: "viewer" }],
+    ["DELETE", `/pst/projects/${projectId}/members/${outsider.userId}`],
   ];
 
   for (const [method, path, body] of requests) {
@@ -369,20 +371,6 @@ async function runAuthenticatedRouteAcceptance() {
     assert.equal(outsiderAssessmentRecipe.projectIds.includes(projectId), false);
     assert.equal(outsiderAssessmentRecipe.projects.some((project) => project.id === projectId), false);
 
-    const membership = await apiRequest(owner.token, `/pst/projects/${projectId}/members`, {
-      method: "POST",
-      body: JSON.stringify({ userId: viewer.userId, role: "viewer" }),
-    });
-    assertStatus(membership, 201, "add viewer membership");
-
-    const viewerCanRead = await apiRequest(viewer.token, `/pst/projects/${projectId}`);
-    assertStatus(viewerCanRead, 200, "viewer read");
-    const viewerMutation = await apiRequest(viewer.token, `/pst/projects/${projectId}`, {
-      method: "PATCH",
-      body: JSON.stringify({ description: "Viewer must not mutate this project." }),
-    });
-    assertStatus(viewerMutation, 403, "viewer mutation");
-
     const built = await apiRequest(owner.token, `/pst/projects/${projectId}/builder`, {
       method: "POST",
       body: JSON.stringify({
@@ -432,6 +420,62 @@ async function runAuthenticatedRouteAcceptance() {
     const published = successfulPublishes[0];
 
     await assertCrossOwnerIsolation(outsider, projectId, (await apiRequest(owner.token, `/pst/projects/${projectId}/releases`)).body[0].id);
+
+    const membership = await apiRequest(owner.token, `/pst/projects/${projectId}/members`, {
+      method: "POST",
+      body: JSON.stringify({ userId: viewer.userId, role: "viewer" }),
+    });
+    assertStatus(membership, 201, "add viewer membership");
+
+    const otherMembership = await apiRequest(owner.token, `/pst/projects/${projectId}/members`, {
+      method: "POST",
+      body: JSON.stringify({ userId: outsider.userId, role: "admin" }),
+    });
+    assertStatus(otherMembership, 201, "add second admin membership");
+
+    const viewerCanRead = await apiRequest(viewer.token, `/pst/projects/${projectId}`);
+    assertStatus(viewerCanRead, 200, "viewer read");
+    const viewerMutation = await apiRequest(viewer.token, `/pst/projects/${projectId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ description: "Viewer must not mutate this project." }),
+    });
+    assertStatus(viewerMutation, 403, "viewer mutation");
+
+    const ownerRevokeProtection = await apiRequest(owner.token, `/pst/projects/${projectId}/members/${owner.userId}`, {
+      method: "DELETE",
+    });
+    assertStatus(ownerRevokeProtection, 409, "protect project owner membership");
+
+    const revokedByAdmin = await apiRequest(outsider.token, `/pst/projects/${projectId}/members/${viewer.userId}`, {
+      method: "DELETE",
+    });
+    assertStatus(revokedByAdmin, 204, "admin revoke viewer membership");
+
+    const revokedViewerRead = await apiRequest(viewer.token, `/pst/projects/${projectId}`);
+    assertStatus(revokedViewerRead, 404, "revoked viewer read");
+    assert.deepEqual(revokedViewerRead.body, { error: "PST project not found" });
+    const revokedViewerMutation = await apiRequest(viewer.token, `/pst/projects/${projectId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ description: "Revoked viewer must not mutate this project." }),
+    });
+    assertStatus(revokedViewerMutation, 404, "revoked viewer mutation");
+    assert.deepEqual(revokedViewerMutation.body, { error: "PST project not found" });
+
+    const restoredMembership = await apiRequest(owner.token, `/pst/projects/${projectId}/members`, {
+      method: "POST",
+      body: JSON.stringify({ userId: viewer.userId, role: "viewer" }),
+    });
+    assertStatus(restoredMembership, 201, "restore viewer membership for owner revoke");
+    const revokedByOwner = await apiRequest(owner.token, `/pst/projects/${projectId}/members/${viewer.userId}`, {
+      method: "DELETE",
+    });
+    assertStatus(revokedByOwner, 204, "owner revoke viewer membership");
+
+    const ownerCanStillRead = await apiRequest(owner.token, `/pst/projects/${projectId}`);
+    assertStatus(ownerCanStillRead, 200, "owner read after revoke");
+    assert.equal(ownerCanStillRead.body.id, projectId);
+    const otherMemberCanStillRead = await apiRequest(outsider.token, `/pst/projects/${projectId}`);
+    assertStatus(otherMemberCanStillRead, 200, "other member read after revoke");
 
     const afterPublish = await apiRequest(undefined, `/pst/public/workspaces/${slug}`);
     assertStatus(afterPublish, 200, "public workspace after publish");
@@ -487,7 +531,9 @@ async function runAuthenticatedRouteAcceptance() {
 
     const ownerMembers = await apiRequest(owner.token, `/pst/projects/${projectId}/members`);
     assertStatus(ownerMembers, 200, "owner member list after outsider attempts");
-    assert.equal(ownerMembers.body.some((member) => member.userId === outsider.userId), false);
+    assert.equal(ownerMembers.body.some((member) => member.userId === owner.userId), true);
+    assert.equal(ownerMembers.body.some((member) => member.userId === outsider.userId), true);
+    assert.equal(ownerMembers.body.some((member) => member.userId === viewer.userId), false);
 
     return {
       projectId,
@@ -512,6 +558,6 @@ console.log(JSON.stringify({
   blueprints: 2,
   assessmentSteps: assessment.workflow.map((step) => step.title),
   decisionSteps: decision.workflow.map((step) => step.title),
-  checks: ["configuration-driven build", "different customer journeys/outcomes", "QA failure", "missing dependency", "duplicate isolation", "publish gate", "customer access boundary", "public metadata allowlist", "private route authentication sweep", "router isolation outside /api", "cross-owner route isolation", "cross-owner access boundary", "scoped library usage", "authenticated create-to-publish route lifecycle", "concurrent publish version guard"],
+  checks: ["configuration-driven build", "different customer journeys/outcomes", "QA failure", "missing dependency", "duplicate isolation", "publish gate", "customer access boundary", "public metadata allowlist", "private route authentication sweep", "router isolation outside /api", "cross-owner route isolation", "cross-owner access boundary", "scoped library usage", "authenticated create-to-publish route lifecycle", "safe project membership revocation", "concurrent publish version guard"],
   authenticatedRoute: authenticatedRouteResult,
 }, null, 2));

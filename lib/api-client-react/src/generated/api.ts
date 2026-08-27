@@ -1945,6 +1945,79 @@ export const useUpsertPstProjectMember = <TError = ErrorType<unknown>,
       return useMutation(getUpsertPstProjectMemberMutationOptions(options));
     }
 
+export const getRemovePstProjectMemberUrl = (projectId: string,
+    userId: string,) => {
+
+
+
+
+  return `/api/pst/projects/${projectId}/members/${userId}`
+}
+
+/**
+ * @summary Remove a project member
+ */
+export const removePstProjectMember = async (projectId: string,
+    userId: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getRemovePstProjectMemberUrl(projectId,userId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRemovePstProjectMemberMutationOptions = <TError = ErrorType<NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removePstProjectMember>>, TError,{projectId: string;userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removePstProjectMember>>, TError,{projectId: string;userId: string}, TContext> => {
+
+const mutationKey = ['removePstProjectMember'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removePstProjectMember>>, {projectId: string;userId: string}> = (props) => {
+          const {projectId,userId} = props ?? {};
+
+          return  removePstProjectMember(projectId,userId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemovePstProjectMemberMutationResult = NonNullable<Awaited<ReturnType<typeof removePstProjectMember>>>
+
+    export type RemovePstProjectMemberMutationError = ErrorType<NotFoundResponse>
+
+    /**
+ * @summary Remove a project member
+ */
+export const useRemovePstProjectMember = <TError = ErrorType<NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removePstProjectMember>>, TError,{projectId: string;userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof removePstProjectMember>>,
+        TError,
+        {projectId: string;userId: string},
+        TContext
+      > => {
+      return useMutation(getRemovePstProjectMemberMutationOptions(options));
+    }
+
 export const getGetPublicPstWorkspaceUrl = (slug: string,) => {
 
 

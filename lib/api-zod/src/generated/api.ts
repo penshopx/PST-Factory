@@ -1403,6 +1403,17 @@ export const UpsertPstProjectMemberResponse = zod.object({
 
 
 /**
+ * @summary Remove a project member
+ */
+export const RemovePstProjectMemberParams = zod.object({
+  "projectId": zod.coerce.string(),
+  "userId": zod.coerce.string().describe('User whose project membership should be revoked')
+})
+
+export const RemovePstProjectMemberResponse = zod.void()
+
+
+/**
  * @summary Get a published customer workspace without factory authentication
  */
 export const GetPublicPstWorkspaceParams = zod.object({

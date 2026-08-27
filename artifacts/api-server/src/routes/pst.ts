@@ -53,6 +53,7 @@ import {
   GetPstReleasesParams,
   GetPstReleasesResponse,
   PstRelease,
+  RemovePstProjectMemberParams,
   RestorePstReleaseParams,
   RestorePstReleaseResponse,
   RunPstArchitectBody,
@@ -1709,6 +1710,44 @@ router.post("/pst/projects/:projectId/members", async (req, res): Promise<void> 
     })
     .returning();
   res.status(201).json(member);
+});
+
+router.delete("/pst/projects/:projectId/members/:userId", async (req, res): Promise<void> => {
+  const params = RemovePstProjectMemberParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const access = await authorizeProject(req, res, params.data.projectId, adminRoles);
+  if (!access) return;
+
+  const [member] = await db
+    .select()
+    .from(pstProjectMembersTable)
+    .where(
+      and(
+        eq(pstProjectMembersTable.projectId, access.project.id),
+        eq(pstProjectMembersTable.userId, params.data.userId),
+      ),
+    );
+  if (!member) {
+    res.status(404).json({ error: "PST project member not found" });
+    return;
+  }
+  if (member.userId === access.project.ownerId) {
+    res.status(409).json({ error: "The project owner cannot be removed." });
+    return;
+  }
+
+  await db
+    .delete(pstProjectMembersTable)
+    .where(
+      and(
+        eq(pstProjectMembersTable.id, member.id),
+        eq(pstProjectMembersTable.projectId, access.project.id),
+      ),
+    );
+  res.status(204).send();
 });
 
 router.get("/pst/public/workspaces/:slug", async (req, res): Promise<void> => {
