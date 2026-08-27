@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { getAuth } from "@clerk/express";
-import { and, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, exists, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   pstAssetsTable,
@@ -496,7 +496,7 @@ async function ensureSeed(userId = "system") {
   }
 }
 
-async function projectAggregate(projectId: string) {
+async function projectAggregate(projectId: string, userId: string) {
   const [project] = await db.select().from(pstProjectsTable).where(eq(pstProjectsTable.id, projectId));
   if (!project) return undefined;
   const [blueprint] = await db
@@ -513,7 +513,7 @@ async function projectAggregate(projectId: string) {
     })
     .from(pstProjectComponentsTable)
     .where(eq(pstProjectComponentsTable.projectId, projectId));
-  const { selectedPatterns, selectedRecipes } = await getProjectReferences(projectId);
+  const { selectedPatterns, selectedRecipes } = await getProjectReferences(projectId, userId);
   return {
     ...project,
     blueprint: blueprint ?? makeBlueprint(projectId, project.problemStatement, project.targetUser, project.desiredOutcome),
@@ -585,12 +585,30 @@ async function releaseSnapshot(
   };
 }
 
-async function getPatternUsage(patternId: string) {
+async function getPatternUsage(patternId: string, userId: string) {
   const projects = await db
     .select({ id: pstProjectsTable.id, name: pstProjectsTable.name })
     .from(pstProjectPatternsTable)
     .innerJoin(pstProjectsTable, eq(pstProjectsTable.id, pstProjectPatternsTable.projectId))
-    .where(eq(pstProjectPatternsTable.patternId, patternId));
+    .where(
+      and(
+        eq(pstProjectPatternsTable.patternId, patternId),
+        or(
+          eq(pstProjectsTable.ownerId, userId),
+          exists(
+            db
+              .select({ id: pstProjectMembersTable.id })
+              .from(pstProjectMembersTable)
+              .where(
+                and(
+                  eq(pstProjectMembersTable.projectId, pstProjectsTable.id),
+                  eq(pstProjectMembersTable.userId, userId),
+                ),
+              ),
+          ),
+        ),
+      ),
+    );
   return {
     usageCount: projects.length,
     projectIds: projects.map((project) => project.id),
@@ -598,12 +616,30 @@ async function getPatternUsage(patternId: string) {
   };
 }
 
-async function getRecipeUsage(recipeId: string) {
+async function getRecipeUsage(recipeId: string, userId: string) {
   const projects = await db
     .select({ id: pstProjectsTable.id, name: pstProjectsTable.name })
     .from(pstProjectRecipesTable)
     .innerJoin(pstProjectsTable, eq(pstProjectsTable.id, pstProjectRecipesTable.projectId))
-    .where(eq(pstProjectRecipesTable.recipeId, recipeId));
+    .where(
+      and(
+        eq(pstProjectRecipesTable.recipeId, recipeId),
+        or(
+          eq(pstProjectsTable.ownerId, userId),
+          exists(
+            db
+              .select({ id: pstProjectMembersTable.id })
+              .from(pstProjectMembersTable)
+              .where(
+                and(
+                  eq(pstProjectMembersTable.projectId, pstProjectsTable.id),
+                  eq(pstProjectMembersTable.userId, userId),
+                ),
+              ),
+          ),
+        ),
+      ),
+    );
   return {
     usageCount: projects.length,
     projectIds: projects.map((project) => project.id),
@@ -611,7 +647,7 @@ async function getRecipeUsage(recipeId: string) {
   };
 }
 
-async function getProjectReferences(projectId: string) {
+async function getProjectReferences(projectId: string, userId: string) {
   const [patternReferences, recipeReferences] = await Promise.all([
     db.select({ patternId: pstProjectPatternsTable.patternId })
       .from(pstProjectPatternsTable)
@@ -633,11 +669,11 @@ async function getProjectReferences(projectId: string) {
   return {
     selectedPatterns: await Promise.all(patterns.map(async (pattern) => ({
       ...pattern,
-      ...(await getPatternUsage(pattern.id)),
+      ...(await getPatternUsage(pattern.id, userId)),
     }))),
     selectedRecipes: await Promise.all(recipes.map(async (recipe) => ({
       ...recipe,
-      ...(await getRecipeUsage(recipe.id)),
+      ...(await getRecipeUsage(recipe.id, userId)),
     }))),
   };
 }
@@ -676,8 +712,8 @@ async function applyProjectReferences(projectId: string, input: ReferenceSelecti
   return { pattern, recipe };
 }
 
-async function currentProjectReferences(projectId: string) {
-  const references = await getProjectReferences(projectId);
+async function currentProjectReferences(projectId: string, userId: string) {
+  const references = await getProjectReferences(projectId, userId);
   return {
     pattern: references.selectedPatterns[0],
     recipe: references.selectedRecipes[0],
@@ -722,6 +758,7 @@ async function accessibleProjectIds(userId: string) {
 type ProjectAccess = {
   project: typeof pstProjectsTable.$inferSelect;
   role: PstProjectRole;
+  userId: string;
 };
 
 async function authorizeProject(
@@ -771,7 +808,7 @@ async function authorizeProject(
     });
     return;
   }
-  return { project, role };
+  return { project, role, userId };
 }
 
 const editorRoles: readonly PstProjectRole[] = ["admin", "editor"];
