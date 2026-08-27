@@ -528,7 +528,7 @@ async function latestRelease(projectId: string) {
     .select()
     .from(pstReleasesTable)
     .where(eq(pstReleasesTable.projectId, projectId))
-    .orderBy(desc(pstReleasesTable.createdAt))
+    .orderBy(desc(pstReleasesTable.createdAt), desc(pstReleasesTable.id))
     .limit(1);
   return release;
 }
@@ -538,17 +538,30 @@ function releaseNumber(version?: string) {
   return match ? Number(match[1]) : 0;
 }
 
-async function nextReleaseVersion(projectId: string) {
-  const release = await latestRelease(projectId);
+type PstSelectExecutor = Pick<typeof db, "select">;
+
+async function nextReleaseVersion(projectId: string, query: PstSelectExecutor = db) {
+  const [release] = await query
+    .select({ version: pstReleasesTable.version })
+    .from(pstReleasesTable)
+    .where(eq(pstReleasesTable.projectId, projectId))
+    .orderBy(desc(pstReleasesTable.createdAt), desc(pstReleasesTable.id))
+    .limit(1);
   return `v${releaseNumber(release?.version) + 1}.0`;
 }
+
+class PublishConflictError extends Error {}
+
+const publishConflictMessage =
+  "This PST was published by another request. Refresh the project before retrying.";
 
 async function releaseSnapshot(
   project: typeof pstProjectsTable.$inferSelect,
   blueprint: typeof pstBlueprintsTable.$inferSelect,
   version: string,
+  query: PstSelectExecutor = db,
 ): Promise<PstReleaseSnapshot> {
-  const components = await db
+  const components = await query
     .select()
     .from(pstProjectComponentsTable)
     .where(eq(pstProjectComponentsTable.projectId, project.id));
@@ -1438,6 +1451,10 @@ router.post("/pst/projects/:projectId/publish", async (req, res): Promise<void> 
   }
   const project = access.project;
   if (!canPublish(project)) {
+    if (project.status === "PUBLISHED" && project.publicationStatus === "PUBLISHED") {
+      res.status(409).json({ error: publishConflictMessage, retryable: true });
+      return;
+    }
     res.status(409).json({ error: "Only an approved PST without blocking QA errors can be published." });
     return;
   }
@@ -1449,23 +1466,59 @@ router.post("/pst/projects/:projectId/publish", async (req, res): Promise<void> 
     res.status(409).json({ error: "A blueprint is required before publishing." });
     return;
   }
-  const version = await nextReleaseVersion(project.id);
-  const snapshot = await releaseSnapshot(project, blueprint, version);
-  const [updated] = await db.transaction(async (tx) => {
-    await tx.insert(pstReleasesTable).values({
-      id: randomUUID(),
-      projectId: project.id,
-      version,
-      snapshot,
+  let updated: typeof pstProjectsTable.$inferSelect;
+  try {
+    [updated] = await db.transaction(async (tx) => {
+      const [lockedProject] = await tx
+        .select()
+        .from(pstProjectsTable)
+        .where(eq(pstProjectsTable.id, project.id))
+        .for("update");
+      if (!lockedProject || !canPublish(lockedProject)) {
+        throw new PublishConflictError(publishConflictMessage);
+      }
+
+      const [lockedBlueprint] = await tx
+        .select()
+        .from(pstBlueprintsTable)
+        .where(eq(pstBlueprintsTable.projectId, lockedProject.id));
+      if (!lockedBlueprint) {
+        throw new PublishConflictError("A blueprint is required before publishing.");
+      }
+
+      const version = await nextReleaseVersion(lockedProject.id, tx);
+      const snapshot = await releaseSnapshot(lockedProject, lockedBlueprint, version, tx);
+      await tx.insert(pstReleasesTable).values({
+        id: randomUUID(),
+        projectId: lockedProject.id,
+        version,
+        snapshot,
+      });
+      await tx.update(pstBlueprintsTable)
+        .set({ version, updatedAt: new Date() })
+        .where(eq(pstBlueprintsTable.projectId, lockedProject.id));
+      return tx.update(pstProjectsTable)
+        .set({ status: "PUBLISHED", publicationStatus: "PUBLISHED", version, updatedAt: new Date() })
+        .where(eq(pstProjectsTable.id, lockedProject.id))
+        .returning();
     });
-    await tx.update(pstBlueprintsTable)
-      .set({ version, updatedAt: new Date() })
-      .where(eq(pstBlueprintsTable.projectId, project.id));
-    return tx.update(pstProjectsTable)
-      .set({ status: "PUBLISHED", publicationStatus: "PUBLISHED", version, updatedAt: new Date() })
-      .where(eq(pstProjectsTable.id, project.id))
-      .returning();
-  });
+  } catch (error) {
+    const isUniqueViolation =
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "23505";
+    if (error instanceof PublishConflictError || isUniqueViolation) {
+      res.status(409).json({
+        error: error instanceof PublishConflictError
+          ? error.message
+          : publishConflictMessage,
+        retryable: true,
+      });
+      return;
+    }
+    throw error;
+  }
   await addEvent("PST_PUBLISHED", `${project.name} is now available in the customer workspace.`, project.id);
   res.json(PublishPstProjectResponse.parse(await projectAggregate(updated.id, access.userId)));
 });
@@ -1482,7 +1535,7 @@ router.get("/pst/projects/:projectId/releases", async (req, res): Promise<void> 
     .select()
     .from(pstReleasesTable)
     .where(eq(pstReleasesTable.projectId, access.project.id))
-    .orderBy(desc(pstReleasesTable.createdAt));
+    .orderBy(desc(pstReleasesTable.createdAt), desc(pstReleasesTable.id));
   res.json(GetPstReleasesResponse.parse(releases));
 });
 

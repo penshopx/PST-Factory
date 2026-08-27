@@ -360,13 +360,21 @@ async function runAuthenticatedRouteAcceptance() {
     assertStatus(approved, 200, "approval");
     assert.equal(approved.body.status, "APPROVED");
 
-    const published = await apiRequest(owner.token, `/pst/projects/${projectId}/publish`, {
-      method: "POST",
-      body: JSON.stringify({}),
-    });
-    assertStatus(published, 200, "publish");
-    assert.equal(published.body.status, "PUBLISHED");
-    assert.equal(published.body.publicationStatus, "PUBLISHED");
+    const concurrentPublishes = await Promise.all(
+      [1, 2].map(() => apiRequest(owner.token, `/pst/projects/${projectId}/publish`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      })),
+    );
+    const successfulPublishes = concurrentPublishes.filter(({ response }) => response.status === 200);
+    const rejectedPublishes = concurrentPublishes.filter(({ response }) => response.status === 409);
+    assert.equal(successfulPublishes.length, 1, "concurrent publish has one winner");
+    assert.equal(rejectedPublishes.length, 1, "concurrent publish has one retry-safe loser");
+    assert.equal(successfulPublishes[0].body.status, "PUBLISHED");
+    assert.equal(successfulPublishes[0].body.publicationStatus, "PUBLISHED");
+    assert.equal(rejectedPublishes[0].body.retryable, true);
+    assert.match(rejectedPublishes[0].body.error, /published by another request/i);
+    const published = successfulPublishes[0];
 
     await assertCrossOwnerIsolation(outsider, projectId, (await apiRequest(owner.token, `/pst/projects/${projectId}/releases`)).body[0].id);
 
@@ -383,6 +391,7 @@ async function runAuthenticatedRouteAcceptance() {
     assertStatus(releases, 200, "release history");
     assert.equal(releases.body.length, 1);
     assert.equal(releases.body[0].version, afterPublish.body.project.version);
+    assert.deepEqual(releases.body.map((release) => release.version), ["v1.0"]);
     assert.equal(releases.body[0].snapshot.workflow[0].title, afterPublish.body.steps[0].title);
     assert.equal(releases.body[0].snapshot.components.length, published.body.components.length);
 
@@ -435,6 +444,6 @@ console.log(JSON.stringify({
   blueprints: 2,
   assessmentSteps: assessment.workflow.map((step) => step.title),
   decisionSteps: decision.workflow.map((step) => step.title),
-  checks: ["configuration-driven build", "different customer journeys/outcomes", "QA failure", "missing dependency", "duplicate isolation", "publish gate", "customer access boundary", "cross-owner route isolation", "cross-owner access boundary", "scoped library usage", "authenticated create-to-publish route lifecycle"],
+  checks: ["configuration-driven build", "different customer journeys/outcomes", "QA failure", "missing dependency", "duplicate isolation", "publish gate", "customer access boundary", "cross-owner route isolation", "cross-owner access boundary", "scoped library usage", "authenticated create-to-publish route lifecycle", "concurrent publish version guard"],
   authenticatedRoute: authenticatedRouteResult,
 }, null, 2));
