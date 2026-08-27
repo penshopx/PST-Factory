@@ -8,7 +8,7 @@ import {
   Activity, Archive, ArrowLeft, ArrowRight, Bot, Box, Check, CheckCircle2,
   ChevronRight, CircleDot, ClipboardCheck, Copy, Database, ExternalLink,
   FileCode2, FlaskConical, Gauge, Hammer, LayoutDashboard, Library, Menu,
-  MoreHorizontal, Package, Pencil, Plus, RefreshCw, Rocket, Search, Settings2, Sparkles,
+  MoreHorizontal, Package, Pencil, Plus, Rocket, Search, Settings2, Sparkles,
   Target, TriangleAlert, UserRound, Workflow, X,
 } from 'lucide-react';
 import {
@@ -35,6 +35,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import {
+  getPublishNoticeForError,
+  refreshProjectData,
+  type PublishNotice,
+} from '@/lib/publish-feedback';
+import { PublishNoticePanel } from '@/lib/publish-feedback-panel';
 
 const queryClient = new QueryClient();
 const clerkPubKey = publishableKeyFromHost(
@@ -48,13 +54,6 @@ function stripBase(path: string) {
   return basePath && path.startsWith(basePath)
     ? path.slice(basePath.length) || '/'
     : path;
-}
-
-function isRetryablePublishConflict(error: unknown) {
-  if (!error || typeof error !== 'object') return false;
-  const candidate = error as { status?: unknown; data?: unknown };
-  if (candidate.status !== 409 || !candidate.data || typeof candidate.data !== 'object') return false;
-  return (candidate.data as { retryable?: unknown }).retryable === true;
 }
 
 if (!clerkPubKey) {
@@ -286,7 +285,7 @@ function ProjectWorkspace() {
   const [build, setBuild] = useState<BuildResult | null>(null);
   const [simulation, setSimulation] = useState<SimulationReport | null>(null);
   const [qa, setQa] = useState<QaRun | null>(null);
-  const [publishNotice, setPublishNotice] = useState<string | null>(null);
+  const [publishNotice, setPublishNotice] = useState<PublishNotice | null>(null);
   const architect = useRunPstArchitect();
   const updateProject = useUpdatePstProject();
   const updateBlueprint = useUpdatePstBlueprint();
@@ -314,13 +313,17 @@ function ProjectWorkspace() {
     void qc.invalidateQueries({ queryKey: getGetPstReleasesQueryKey(projectId) });
   };
   const refreshProject = () => {
-    setPublishNotice(null);
-    publish.reset();
-    void Promise.all([
-      projectQuery.refetch(),
-      blueprintQuery.refetch(),
-      releasesQuery.refetch(),
-    ]);
+    void refreshProjectData(
+      [
+        () => projectQuery.refetch(),
+        () => blueprintQuery.refetch(),
+        () => releasesQuery.refetch(),
+      ],
+      () => {
+        setPublishNotice(null);
+        publish.reset();
+      },
+    );
   };
   const run = (action: 'architect' | 'build' | 'simulate' | 'qa' | 'approve' | 'publish') => {
     const references = {
@@ -338,9 +341,7 @@ function ProjectWorkspace() {
         invalidate();
       },
       onError: (error) => {
-        setPublishNotice(isRetryablePublishConflict(error)
-          ? 'This release was already published by another admin. Refresh the project data before trying again.'
-          : 'Publishing could not be completed. Refresh this project and try again.');
+        setPublishNotice(getPublishNoticeForError(error));
       },
     });
   };
@@ -402,16 +403,13 @@ function AiTab({ blueprint }: { blueprint?: PstBlueprint }) { return <Card class
 function BuildTab({ build }: { build: BuildResult }) { return <Card><CardHeader><CardTitle className="flex items-center gap-2"><Hammer className="text-accent" size={19} /> Assembly report <StatusBadge value={build.status} /></CardTitle><CardDescription>Component selection after the latest build run.</CardDescription></CardHeader><CardContent className="grid gap-6 md:grid-cols-2"><ListBlock label="Ready" items={build.ready} /><ListBlock label="Missing" items={build.missing} /><ListBlock label="Warnings" items={build.warnings} /><ListBlock label="Errors" items={build.errors} /></CardContent></Card>; }
 function PreviewTab({ project, simulation, onSimulate, pending }: { project: PstProject; simulation: SimulationReport | null; onSimulate: () => void; pending: boolean }) { return <div className="grid gap-6 lg:grid-cols-[1.2fr_.8fr]"><Card className="min-h-[360px] overflow-hidden"><div className="flex items-center justify-between border-b border-border bg-muted/35 px-5 py-3"><div className="flex gap-1.5"><span className="h-2 w-2 rounded-full bg-destructive/60" /><span className="h-2 w-2 rounded-full bg-amber-400/70" /><span className="h-2 w-2 rounded-full bg-emerald-500/70" /></div><span className="font-mono text-[10px] uppercase tracking-[.15em] text-muted-foreground">customer preview / {project.slug}</span><ExternalLink size={14} className="text-muted-foreground" /></div><div className="factory-grid flex min-h-[300px] items-center justify-center p-8 text-center"><div className="max-w-md"><div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-accent text-accent-foreground"><Target size={22} /></div><h2 className="text-2xl font-extrabold">{project.name}</h2><p className="mt-3 text-sm text-muted-foreground">{project.desiredOutcome}</p><Button className="mt-5" onClick={onSimulate} disabled={pending} data-testid="button-simulate-preview"><FlaskConical size={15} /> {pending ? 'Simulating...' : 'Run simulation'}</Button></div></div></Card><Card><CardHeader><CardTitle className="text-base">Simulation report</CardTitle><CardDescription>Test the path before a human sees it.</CardDescription></CardHeader><CardContent>{simulation ? <div><div className="flex items-center gap-3"><StatusBadge value={simulation.status} /><span className="font-mono text-[10px] text-muted-foreground">{new Date(simulation.createdAt).toLocaleString()}</span></div><div className="mt-4 space-y-2">{simulation.checks?.map((check) => <div className="flex gap-2 text-sm" key={check}><CheckCircle2 className="shrink-0 text-emerald-500" size={16} />{check}</div>)}</div></div> : <EmptyState icon={FlaskConical} title="No simulation yet" detail="Run a synthetic user path to surface rough edges." />}</CardContent></Card></div>; }
 function QaTab({ project, qa, onRun, pending }: { project: PstProject; qa: QaRun | null; onRun: () => void; pending: boolean }) { return <Card><CardHeader className="flex-row items-start justify-between"><div><CardTitle className="text-base">Quality assurance</CardTitle><CardDescription>Check clarity, completeness, and outcome alignment.</CardDescription></div><Button onClick={onRun} disabled={pending} data-testid="button-run-qa"><ClipboardCheck size={15} /> {pending ? 'Running checks...' : 'Run QA'}</Button></CardHeader><CardContent>{qa ? <div className="space-y-2">{qa.results?.map((result) => <div className="flex items-start gap-3 rounded-lg border border-border p-3" key={`${result.category}-${result.label}`}><StatusBadge value={result.status} /><div><p className="text-sm font-semibold">{result.label}</p><p className="mt-1 text-xs text-muted-foreground">{result.detail}</p></div></div>)}</div> : <div className="flex items-center gap-3 rounded-lg border border-dashed border-border p-5"><div className="rounded-lg bg-muted p-2"><ClipboardCheck size={17} /></div><div><p className="text-sm font-semibold">QA has not run on v{project.version}</p><p className="mt-1 text-xs text-muted-foreground">The report becomes the handoff signal for approval.</p></div></div>}</CardContent></Card>; }
-function PublishTab({ project, onApprove, onPublish, onRefreshProject, publishNotice, approvePending, publishPending }: { project: PstProject; onApprove: () => void; onPublish: () => void; onRefreshProject: () => void; publishNotice: string | null; approvePending: boolean; publishPending: boolean }) {
+function PublishTab({ project, onApprove, onPublish, onRefreshProject, publishNotice, approvePending, publishPending }: { project: PstProject; onApprove: () => void; onPublish: () => void; onRefreshProject: () => void; publishNotice: PublishNotice | null; approvePending: boolean; publishPending: boolean }) {
   const approved = project.status === 'APPROVED' || project.status === 'PUBLISHED';
   return <div className="max-w-3xl">
     <Card>
       <CardHeader><CardTitle className="text-base">Release gate</CardTitle><CardDescription>Publishing makes the guided workspace available to customers.</CardDescription></CardHeader>
       <CardContent>
-        {publishNotice && <div className="mb-5 flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-amber-900 dark:text-amber-100" role="alert" data-testid="status-publish-conflict">
-          <TriangleAlert className="mt-0.5 shrink-0" size={18} />
-          <div className="min-w-0 flex-1"><p className="text-sm font-bold">Refresh before publishing again</p><p className="mt-1 text-xs leading-relaxed">{publishNotice}</p><Button className="mt-3" size="sm" variant="outline" onClick={onRefreshProject} data-testid="button-refresh-after-publish-conflict"><RefreshCw size={14} /> Refresh project</Button></div>
-        </div>}
+        {publishNotice && <PublishNoticePanel notice={publishNotice} onRefresh={onRefreshProject} />}
         <div className="space-y-3">{[['QA result', project.qaStatus, project.qaStatus === 'PASS'], ['Approval', approved ? project.status : 'Awaiting approval', approved], ['Publication', project.publicationStatus, project.publicationStatus === 'PUBLISHED']].map(([label, value, good]) => <div className="flex items-center gap-3 rounded-lg border border-border p-4" key={String(label)}><div className={cn('grid h-8 w-8 place-items-center rounded-full', good ? 'bg-emerald-500/10 text-emerald-500' : 'bg-muted text-muted-foreground')}>{good ? <Check size={15} /> : <CircleDot size={15} />}</div><div className="flex-1"><p className="text-sm font-semibold">{label}</p><p className="font-mono text-[10px] uppercase text-muted-foreground">{String(value).replaceAll('_', ' ')}</p></div></div>)}</div>
         <div className="mt-5 flex gap-2">{!approved && <Button variant="outline" onClick={onApprove} disabled={approvePending || project.qaStatus !== 'PASS'} data-testid="button-approve-pst"><CheckCircle2 size={15} /> {approvePending ? 'Approving...' : 'Approve build'}</Button>}<Button onClick={onPublish} disabled={publishPending || !approved || project.publicationStatus === 'PUBLISHED'} data-testid="button-publish-pst"><Rocket size={15} /> {publishPending ? 'Publishing...' : project.publicationStatus === 'PUBLISHED' ? 'Published' : 'Publish workspace'}</Button></div>
       </CardContent>
