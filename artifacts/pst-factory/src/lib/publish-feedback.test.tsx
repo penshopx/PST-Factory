@@ -58,18 +58,29 @@ test('ordinary publish errors keep the general failure guidance', () => {
 
 test('publish error state resets after all project data reloads successfully', async () => {
   let resetCount = 0;
+  const refetched: string[] = [];
 
   await refreshProjectData(
     [
-      async () => ({ isSuccess: true }),
-      async () => ({ isSuccess: true }),
-      async () => ({ isSuccess: true }),
+      async () => {
+        refetched.push('project');
+        return { isSuccess: true };
+      },
+      async () => {
+        refetched.push('blueprint');
+        return { isSuccess: true };
+      },
+      async () => {
+        refetched.push('releases');
+        return { isSuccess: true };
+      },
     ],
     () => {
       resetCount += 1;
     },
   );
 
+  assert.deepEqual(refetched, ['project', 'blueprint', 'releases']);
   assert.equal(resetCount, 1);
 });
 

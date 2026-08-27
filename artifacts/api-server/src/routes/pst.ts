@@ -551,6 +551,7 @@ async function nextReleaseVersion(projectId: string, query: PstSelectExecutor = 
 }
 
 class PublishConflictError extends Error {}
+class PublishRequirementError extends Error {}
 
 const publishConflictMessage =
   "This PST was published by another request. Refresh the project before retrying.";
@@ -1483,7 +1484,7 @@ router.post("/pst/projects/:projectId/publish", async (req, res): Promise<void> 
         .from(pstBlueprintsTable)
         .where(eq(pstBlueprintsTable.projectId, lockedProject.id));
       if (!lockedBlueprint) {
-        throw new PublishConflictError("A blueprint is required before publishing.");
+        throw new PublishRequirementError("A blueprint is required before publishing.");
       }
 
       const version = await nextReleaseVersion(lockedProject.id, tx);
@@ -1508,12 +1509,12 @@ router.post("/pst/projects/:projectId/publish", async (req, res): Promise<void> 
       error !== null &&
       "code" in error &&
       error.code === "23505";
-    if (error instanceof PublishConflictError || isUniqueViolation) {
+    if (error instanceof PublishConflictError || error instanceof PublishRequirementError || isUniqueViolation) {
       res.status(409).json({
-        error: error instanceof PublishConflictError
+        error: error instanceof PublishConflictError || error instanceof PublishRequirementError
           ? error.message
           : publishConflictMessage,
-        retryable: true,
+        ...(error instanceof PublishConflictError || isUniqueViolation ? { retryable: true } : {}),
       });
       return;
     }

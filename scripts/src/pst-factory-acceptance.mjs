@@ -403,10 +403,19 @@ async function runAuthenticatedRouteAcceptance() {
     assertStatus(approved, 200, "approval");
     assert.equal(approved.body.status, "APPROVED");
 
+    const secondAdminMembership = await apiRequest(owner.token, `/pst/projects/${projectId}/members`, {
+      method: "POST",
+      body: JSON.stringify({ userId: viewer.userId, role: "admin" }),
+    });
+    assertStatus(secondAdminMembership, 201, "add concurrent publish admin");
+
     const concurrentPublishes = await Promise.all(
-      [1, 2].map(() => apiRequest(owner.token, `/pst/projects/${projectId}/publish`, {
-        method: "POST",
-        body: JSON.stringify({}),
+      [owner, viewer].map(async (admin) => ({
+        ...admin,
+        ...(await apiRequest(admin.token, `/pst/projects/${projectId}/publish`, {
+          method: "POST",
+          body: JSON.stringify({}),
+        })),
       })),
     );
     const successfulPublishes = concurrentPublishes.filter(({ response }) => response.status === 200);
@@ -418,6 +427,25 @@ async function runAuthenticatedRouteAcceptance() {
     assert.equal(rejectedPublishes[0].body.retryable, true);
     assert.match(rejectedPublishes[0].body.error, /published by another request/i);
     const published = successfulPublishes[0];
+
+    const [refreshedProject, refreshedBlueprint, refreshedReleases] = await Promise.all([
+      apiRequest(rejectedPublishes[0].token, `/pst/projects/${projectId}`),
+      apiRequest(rejectedPublishes[0].token, `/pst/projects/${projectId}/blueprint`),
+      apiRequest(rejectedPublishes[0].token, `/pst/projects/${projectId}/releases`),
+    ]);
+    assertStatus(refreshedProject, 200, "losing admin refresh project");
+    assertStatus(refreshedBlueprint, 200, "losing admin refresh blueprint");
+    assertStatus(refreshedReleases, 200, "losing admin refresh releases");
+    assert.equal(refreshedProject.body.status, "PUBLISHED");
+    assert.equal(refreshedProject.body.publicationStatus, "PUBLISHED");
+    assert.equal(refreshedProject.body.version, "v1.0");
+    assert.equal(refreshedBlueprint.body.version, "v1.0");
+    assert.deepEqual(refreshedReleases.body.map((release) => release.version), ["v1.0"]);
+
+    const removedConcurrentAdmin = await apiRequest(owner.token, `/pst/projects/${projectId}/members/${viewer.userId}`, {
+      method: "DELETE",
+    });
+    assertStatus(removedConcurrentAdmin, 204, "remove concurrent publish admin");
 
     await assertCrossOwnerIsolation(outsider, projectId, (await apiRequest(owner.token, `/pst/projects/${projectId}/releases`)).body[0].id);
 
@@ -431,7 +459,7 @@ async function runAuthenticatedRouteAcceptance() {
       method: "POST",
       body: JSON.stringify({ userId: outsider.userId, role: "admin" }),
     });
-    assertStatus(otherMembership, 201, "add second admin membership");
+    assertStatus(otherMembership, 201, "add another admin membership");
 
     const viewerCanRead = await apiRequest(viewer.token, `/pst/projects/${projectId}`);
     assertStatus(viewerCanRead, 200, "viewer read");
