@@ -1,0 +1,105 @@
+Ya. **Task #19 sudah siap masuk Build mode** dan scope-nya sudah tepat: ini adalah **UI untuk membership revoke** yang menggunakan API Task #17, bukan membuat mekanisme authorization baru.
+
+Berikan perintah berikut ke Replit:
+
+**BUILD TASK #19 — PROJECT MEMBERSHIP MANAGEMENT UI**
+
+Proceed with Task #19 in Build mode.
+
+Implement exactly the approved Task #19 scope.
+
+### Requirements
+
+1. Add a project/workspace membership panel showing:
+
+   * `userId`
+   * role
+   * owner/member status
+
+2. Owner must be clearly marked as **PROTECTED**.
+
+   * Do not render a revoke control for the owner.
+   * Do not rely only on frontend protection; the existing server-side authorization remains authoritative.
+
+3. For eligible members:
+
+   * provide a Revoke action;
+   * require explicit confirmation before revocation;
+   * call the existing Task #17 revoke API;
+   * do not duplicate or reimplement revoke authorization logic in the frontend.
+
+4. After successful revoke:
+
+   * refresh the membership list;
+   * show a clear success state;
+   * ensure the revoked member no longer appears as an active member.
+
+5. Handle API errors safely:
+
+   * `403` → insufficient permission;
+   * `404` → membership/project not found;
+   * `409` → protected/conflict state;
+   * other errors → generic safe error message.
+
+Do not expose internal authorization details or sensitive server information.
+
+6. Role restrictions:
+
+   * owner/admin may see appropriate revoke controls;
+   * viewer must not receive access-management controls;
+   * cross-owner/cross-workspace users must not receive access-management controls.
+
+7. Use the existing membership/revoke API contracts from Task #17.
+   Do not create a parallel API.
+
+8. Preserve all existing Factory functionality and styling conventions.
+
+### Non-goals
+
+Do NOT:
+
+* redesign the membership architecture;
+* change the revoke API;
+* modify owner-protection rules;
+* add invitation systems;
+* add billing;
+* add new roles;
+* implement customer membership;
+* change Gustafta integration;
+* start Compiler development;
+* modify unrelated Factory modules.
+
+### Verification
+
+After implementation:
+
+* run TypeScript checks;
+* run relevant frontend tests;
+* run existing regression tests;
+* verify owner cannot be revoked through the UI;
+* verify eligible admin/owner can revoke a member;
+* verify viewer has no revoke control;
+* verify cross-workspace access does not expose membership controls;
+* verify successful revoke refreshes the list;
+* verify `403`, `404`, `409`, and generic errors are handled safely.
+
+### Definition of Done
+
+Task #19 is complete only when the UI is a thin client of the existing
+server-side membership authorization and provides a safe, usable
+membership management experience without weakening Task #17 security.
+
+At completion, report:
+
+1. files changed;
+2. UI components added/modified;
+3. API contract used;
+4. tests executed;
+5. test results;
+6. security verification;
+7. screenshots/visual verification if available;
+8. known limitations.
+
+Do not proceed to unrelated tasks after Task #19.
+
+**Catatan:** Task #19 ini bagus dikerjakan sekarang karena melengkapi **Task #17** dari sisi operasional. Setelah selesai, kita tetap perlu menjaga agar pekerjaan security tidak melebar dan kembali ke milestone utama **PST Manufacturing Engine → Compiler**.
