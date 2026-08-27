@@ -1,6 +1,9 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
-import { Link, Route, Switch, useLocation, useParams } from 'wouter';
+import { Link, Redirect, Route, Router as WouterRouter, Switch, useLocation, useParams } from 'wouter';
+import { ClerkProvider, Show, SignIn, SignUp, useClerk, useUser } from '@clerk/react';
+import { publishableKeyFromHost } from '@clerk/react/internal';
+import { shadcn } from '@clerk/themes';
 import {
   Activity, Archive, ArrowLeft, ArrowRight, Bot, Box, Check, CheckCircle2,
   ChevronRight, CircleDot, ClipboardCheck, Copy, Database, ExternalLink,
@@ -33,6 +36,73 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 const queryClient = new QueryClient();
+const clerkPubKey = publishableKeyFromHost(
+  window.location.hostname,
+  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
+);
+const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+function stripBase(path: string) {
+  return basePath && path.startsWith(basePath)
+    ? path.slice(basePath.length) || '/'
+    : path;
+}
+
+if (!clerkPubKey) {
+  throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY in environment.');
+}
+
+const clerkAppearance = {
+  theme: shadcn,
+  cssLayerName: 'clerk',
+  options: {
+    logoPlacement: 'inside' as const,
+    logoLinkUrl: basePath || '/',
+    logoImageUrl: `${window.location.origin}${basePath}/logo.svg`,
+    socialButtonsPlacement: 'top' as const,
+    socialButtonsVariant: 'blockButton' as const,
+  },
+  variables: {
+    colorPrimary: '#16d9f5',
+    colorForeground: '#edf7ff',
+    colorMutedForeground: '#91a9bd',
+    colorDanger: '#ff7184',
+    colorBackground: '#101a2a',
+    colorInput: '#0b1421',
+    colorInputForeground: '#edf7ff',
+    colorNeutral: '#2a4054',
+    fontFamily: 'Manrope, sans-serif',
+    borderRadius: '0.75rem',
+  },
+  elements: {
+    rootBox: 'w-full flex justify-center',
+    cardBox: 'bg-[#101a2a] rounded-2xl w-[440px] max-w-full overflow-hidden border border-[#2a4054]',
+    card: '!shadow-none !border-0 !bg-transparent !rounded-none',
+    footer: '!shadow-none !border-0 !bg-transparent !rounded-none',
+    headerTitle: 'text-[#edf7ff] font-extrabold',
+    headerSubtitle: 'text-[#91a9bd]',
+    socialButtonsBlockButtonText: 'text-[#edf7ff]',
+    formFieldLabel: 'text-[#edf7ff]',
+    footerActionLink: 'text-[#16d9f5]',
+    footerActionText: 'text-[#91a9bd]',
+    dividerText: 'text-[#91a9bd]',
+    identityPreviewEditButton: 'text-[#16d9f5]',
+    formFieldSuccessText: 'text-emerald-300',
+    alertText: 'text-[#ffb4be]',
+    logoBox: 'h-10',
+    logoImage: 'h-10',
+    socialButtonsBlockButton: 'border-[#2a4054] bg-[#162538] hover:bg-[#1d334b]',
+    formButtonPrimary: 'bg-[#16d9f5] text-[#07111d] hover:bg-[#72edff]',
+    formFieldInput: 'border-[#2a4054] bg-[#0b1421] text-[#edf7ff]',
+    footerAction: 'border-[#2a4054]',
+    dividerLine: 'bg-[#2a4054]',
+    alert: 'border-[#ff7184]/40 bg-[#ff7184]/10',
+    otpCodeFieldInput: 'border-[#2a4054] bg-[#0b1421] text-[#edf7ff]',
+    formFieldRow: 'text-[#edf7ff]',
+    main: 'bg-transparent',
+  },
+};
 
 const nav = [
   { href: '/', label: 'Factory', icon: LayoutDashboard },
@@ -93,6 +163,10 @@ function StatusBadge({ value }: { value?: string }) {
 function Shell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const [mobile, setMobile] = useState(false);
+  const { user } = useUser();
+  const { signOut } = useClerk();
+  const displayName = user?.fullName || user?.primaryEmailAddress?.emailAddress || 'Factory member';
+  const initials = displayName.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
   return <div className="min-h-[100dvh] bg-background text-foreground">
     <aside className={cn('fixed inset-y-0 left-0 z-30 flex w-[248px] flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-transform md:translate-x-0', mobile ? 'translate-x-0' : '-translate-x-full')} data-testid="sidebar">
       <div className="flex h-[72px] items-center gap-3 border-b border-sidebar-border px-6">
@@ -105,7 +179,7 @@ function Shell({ children }: { children: ReactNode }) {
       <div className="mt-auto space-y-4 border-t border-sidebar-border p-4">
         <Link href="/create" onClick={() => setMobile(false)} className="focus-ring flex items-center justify-center gap-2 rounded-lg bg-sidebar-primary px-3 py-2.5 text-sm font-bold text-sidebar-primary-foreground transition-transform hover:translate-y-[-1px]" data-testid="link-create-pst"><Plus size={16} /> New PST</Link>
         <Link href="/settings" onClick={() => setMobile(false)} className="focus-ring flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-sidebar-foreground/55 hover:text-sidebar-foreground" data-testid="link-settings"><Settings2 size={16} /> Factory settings</Link>
-        <div className="flex items-center gap-3 rounded-lg bg-sidebar-accent/60 p-3"><div className="grid h-8 w-8 place-items-center rounded-full bg-accent text-xs font-bold text-accent-foreground">MC</div><div className="min-w-0"><p className="truncate text-xs font-semibold">Mara Chen</p><p className="truncate font-mono text-[10px] text-sidebar-foreground/45">product architect</p></div><MoreHorizontal className="ml-auto text-sidebar-foreground/40" size={15} /></div>
+        <div className="flex items-center gap-3 rounded-lg bg-sidebar-accent/60 p-3"><div className="grid h-8 w-8 place-items-center rounded-full bg-accent text-xs font-bold text-accent-foreground">{initials}</div><div className="min-w-0"><p className="truncate text-xs font-semibold">{displayName}</p><p className="truncate font-mono text-[10px] text-sidebar-foreground/45">factory member</p></div><button type="button" className="ml-auto text-sidebar-foreground/50 transition-colors hover:text-sidebar-foreground" onClick={() => void signOut({ redirectUrl: basePath || '/' })} aria-label="Sign out" data-testid="button-sign-out"><MoreHorizontal size={15} /></button></div>
       </div>
     </aside>
     <div className="md:pl-[248px]">
@@ -314,6 +388,112 @@ function AppRouter() {
 
 function NotFound() { return <EmptyState icon={X} title="Route not found" detail="This part of the factory does not exist." action={<Link href="/" className="mt-5 text-sm font-bold text-primary" data-testid="link-not-found-home">Return to factory</Link>} />; }
 
+function SignInPage() {
+  return <div className="flex min-h-[100dvh] items-center justify-center bg-[#07111d] px-4 py-10"><SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} /></div>;
+}
+
+function SignUpPage() {
+  return <div className="flex min-h-[100dvh] items-center justify-center bg-[#07111d] px-4 py-10"><SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} /></div>;
+}
+
+function ClerkQueryClientCacheInvalidator() {
+  const { addListener } = useClerk();
+  const previousUserId = useRef<string | null | undefined>(undefined);
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    const unsubscribe = addListener(({ user }) => {
+      const userId = user?.id ?? null;
+      if (previousUserId.current !== undefined && previousUserId.current !== userId) {
+        qc.clear();
+      }
+      previousUserId.current = userId;
+    });
+    return unsubscribe;
+  }, [addListener, qc]);
+  return null;
+}
+
+function HomeRoute() {
+  return <>
+    <Show when="signed-in"><Redirect to="/factory" /></Show>
+    <Show when="signed-out"><PublicHome /></Show>
+  </>;
+}
+
+function PublicHome() {
+  return <main className="min-h-[100dvh] overflow-hidden bg-[#07111d] text-[#edf7ff]">
+    <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_20%,rgba(22,217,245,.16),transparent_32%),linear-gradient(rgba(255,255,255,.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.035)_1px,transparent_1px)] bg-[size:auto,56px_56px,56px_56px]" />
+    <div className="relative mx-auto flex min-h-[100dvh] max-w-6xl flex-col px-6 py-6 sm:px-10">
+      <header className="flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-3" data-testid="link-public-logo">
+          <img src={`${basePath}/logo.svg`} alt="PST Factory" className="h-10 w-auto" />
+        </Link>
+        <nav className="flex items-center gap-2">
+          <Link href="/sign-in" className="rounded-lg px-4 py-2.5 text-sm font-semibold text-[#a9c1d3] transition-colors hover:text-[#edf7ff]" data-testid="link-sign-in">Sign in</Link>
+          <Link href="/sign-up" className="rounded-lg border border-[#16d9f5]/50 bg-[#16d9f5] px-4 py-2.5 text-sm font-bold text-[#07111d] transition-colors hover:bg-[#72edff]" data-testid="link-sign-up">Create account</Link>
+        </nav>
+      </header>
+      <section className="grid flex-1 items-center gap-12 py-20 lg:grid-cols-[1.05fr_.95fr]">
+        <div>
+          <p className="mb-6 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[.22em] text-[#16d9f5]"><span className="h-1.5 w-1.5 rounded-full bg-[#16d9f5] shadow-[0_0_16px_#16d9f5]" /> Product studio for reusable clarity</p>
+          <h1 className="max-w-3xl text-5xl font-extrabold leading-[1.04] tracking-[-.045em] sm:text-7xl">Make the problem <span className="text-[#16d9f5]">shippable.</span></h1>
+          <p className="mt-7 max-w-xl text-lg leading-8 text-[#a9c1d3]">PST Factory turns messy problems into structured, reusable Problem-Solving Toolkits — from first definition to approved customer workspace.</p>
+          <div className="mt-9 flex flex-wrap items-center gap-3">
+            <Link href="/sign-up" className="inline-flex items-center gap-2 rounded-lg bg-[#16d9f5] px-5 py-3.5 text-sm font-extrabold text-[#07111d] transition-transform hover:-translate-y-0.5 hover:bg-[#72edff]" data-testid="button-hero-sign-up">Start building <ArrowRight size={16} /></Link>
+            <Link href="/sign-in" className="rounded-lg border border-[#2a4054] px-5 py-3.5 text-sm font-bold text-[#edf7ff] transition-colors hover:border-[#16d9f5]/60 hover:bg-[#102336]" data-testid="button-hero-sign-in">Open factory</Link>
+          </div>
+          <div className="mt-14 flex flex-wrap gap-x-8 gap-y-3 font-mono text-[10px] uppercase tracking-[.16em] text-[#6f8ca3]"><span>Problem → Blueprint</span><span>Blueprint → Assembly</span><span>QA → Publish</span></div>
+        </div>
+        <div className="relative">
+          <div className="absolute -inset-8 rounded-full bg-[#16d9f5]/10 blur-3xl" />
+          <div className="relative rounded-2xl border border-[#2a4054] bg-[#0d1b2b]/90 p-4 shadow-2xl shadow-[#02070c]/60 backdrop-blur">
+            <div className="flex items-center justify-between border-b border-[#2a4054] px-2 pb-4"><div><p className="font-mono text-[10px] uppercase tracking-[.18em] text-[#6f8ca3]">Production pulse</p><p className="mt-1 text-sm font-bold">Cashflow clarity toolkit</p></div><span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-1 font-mono text-[9px] uppercase tracking-wider text-emerald-300">Approved</span></div>
+            <div className="space-y-3 p-2 pt-5">{['Problem definition', 'Architect blueprint', 'Reusable assembly', 'QA + human approval'].map((step, index) => <div key={step} className="flex items-center gap-3 rounded-lg border border-[#20364a] bg-[#102336] p-3"><div className={`grid h-7 w-7 place-items-center rounded-full font-mono text-xs ${index < 3 ? 'bg-[#16d9f5] text-[#07111d]' : 'border border-emerald-400/50 text-emerald-300'}`}>{index < 3 ? '✓' : '→'}</div><span className="text-sm font-semibold text-[#d8e8f2]">{step}</span><span className="ml-auto font-mono text-[9px] uppercase tracking-wider text-[#6f8ca3]">{index < 3 ? 'done' : 'ready'}</span></div>)}</div>
+            <div className="mt-3 rounded-lg border border-[#16d9f5]/20 bg-[#16d9f5]/5 p-4"><p className="font-mono text-[10px] uppercase tracking-wider text-[#16d9f5]">Reusable intelligence</p><p className="mt-2 text-sm leading-6 text-[#a9c1d3]">Assets, patterns, and recipes compound across every new PST.</p></div>
+          </div>
+        </div>
+      </section>
+      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-[#1b3042] py-5 font-mono text-[10px] uppercase tracking-[.16em] text-[#6f8ca3]"><span>PST Factory · product studio</span><span>Built for measurable progress</span></footer>
+    </div>
+  </main>;
+}
+
+function ProtectedApp() {
+  return <>
+    <Show when="signed-in"><WouterRouter base={`${basePath}/factory`}><AppRouter /></WouterRouter></Show>
+    <Show when="signed-out"><Redirect to="/" /></Show>
+  </>;
+}
+
+function AuthRoutes() {
+  const [, setLocation] = useLocation();
+  return <ClerkProvider
+    publishableKey={clerkPubKey}
+    proxyUrl={clerkProxyUrl}
+    appearance={clerkAppearance}
+    signInUrl={`${basePath}/sign-in`}
+    signUpUrl={`${basePath}/sign-up`}
+    localization={{
+      signIn: { start: { title: 'Welcome back to PST Factory', subtitle: 'Sign in to continue building shippable problems.' } },
+      signUp: { start: { title: 'Create your factory account', subtitle: 'Start turning real problems into reusable tools.' } },
+    }}
+    routerPush={(to) => setLocation(stripBase(to))}
+    routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
+  >
+    <QueryClientProvider client={queryClient}>
+      <ClerkQueryClientCacheInvalidator />
+      <Switch>
+        <Route path="/sign-in/*?" component={SignInPage} />
+        <Route path="/sign-up/*?" component={SignUpPage} />
+        <Route path="/" component={HomeRoute} />
+        <Route path="/factory/*?" component={ProtectedApp} />
+        <Route><Redirect to="/" /></Route>
+      </Switch>
+    </QueryClientProvider>
+  </ClerkProvider>;
+}
+
 export default function App() {
-  return <QueryClientProvider client={queryClient}><TooltipProvider><ErrorBoundary><AppRouter /></ErrorBoundary><Toaster /></TooltipProvider></QueryClientProvider>;
+  return <WouterRouter base={basePath}><TooltipProvider><ErrorBoundary><AuthRoutes /></ErrorBoundary><Toaster /></TooltipProvider></WouterRouter>;
 }

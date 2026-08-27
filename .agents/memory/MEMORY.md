@@ -1,0 +1,1 @@
+- [Managed artifact workflow](workflow-and-auth.md) — Vite artifact services require injected PORT/BASE_PATH and managed workflow restarts.

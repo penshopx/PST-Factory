@@ -5,6 +5,18 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Clerk's provider button inherits a muted label color from the shadcn theme.
+   Keep auth controls readable against PST Factory's dark surface. */
+.cl-socialButtonsBlockButtonText,
+.cl-socialButtonsBlockButton {
+  color: #edf7ff !important;
+}
+
+.cl-formFieldInput::placeholder {
+  color: #91a9bd !important;
+  opacity: 1;
+}
+
 @theme inline {
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
