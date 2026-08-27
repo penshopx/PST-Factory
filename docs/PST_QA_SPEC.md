@@ -11,3 +11,8 @@ QA checks the categories required for a trustworthy PST:
 - UX: the creator and eventual user can understand what to do.
 
 Each check returns PASS, WARNING, or ERROR. Any ERROR blocks approval and publishing.
+
+Technical dependency resolution is a blocking check: when a Blueprint requirement
+does not resolve to an active library asset, Builder returns `BLOCKED` and QA
+returns a technical `ERROR`. The v1.1 acceptance scenario covers this alongside
+two materially different Blueprint configurations and the customer access boundary.

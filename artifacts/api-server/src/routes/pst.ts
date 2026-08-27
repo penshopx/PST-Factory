@@ -65,6 +65,16 @@ import {
 } from "@workspace/api-zod";
 import { aiProvider } from "../lib/services/ai/provider";
 import { gustaftaEngine } from "../lib/services/gustafta/engine";
+import {
+  buildFromConfiguration,
+  canApprove,
+  canPublish,
+  customerWorkspaceSteps,
+  evaluateQa,
+  isPublicCustomerWorkspace,
+  qaStatus,
+  workflowFromStructure,
+} from "../lib/services/pst/manufacturing";
 import { randomUUID } from "node:crypto";
 
 const router: IRouter = Router();
@@ -140,44 +150,6 @@ const defaultDna = (problem: string, user: string, outcome: string) => ({
   intelligence: "Human-approved AI assistance",
   outcome,
 });
-
-function workflowFromStructure(
-  labels: string[],
-  source: { type: "pattern" | "recipe"; id: string; name: string },
-): WorkflowStep[] {
-  const steps = labels.length ? labels : ["Start", "Work", "Result"];
-  return steps.map((label, index) => {
-    const normalized = label.toLowerCase();
-    const type = index === 0
-      ? "INPUT"
-      : index === steps.length - 1
-        ? "OUTPUT"
-        : /assess|question|criteria|score/i.test(normalized)
-          ? "ASSESSMENT"
-          : /analy|extract|gap|current/i.test(normalized)
-            ? "ANALYSIS"
-            : /recommend|plan|action/i.test(normalized)
-              ? "ACTION"
-              : "STEP";
-    const previousId = index > 0 ? `${slugify(steps[index - 1])}-${index - 1}` : undefined;
-    return {
-      id: `${slugify(label)}-${index}`,
-      type,
-      title: label,
-      description: `${label} step from the ${source.type} "${source.name}".`,
-      inputs: previousId ? [`${slugify(steps[index - 1])}_result`] : ["user_context"],
-      outputs: [`${slugify(label)}_result`],
-      dependencies: previousId ? [previousId] : [],
-      nextStep: index < steps.length - 1 ? `${slugify(steps[index + 1])}-${index + 1}` : "",
-      configuration: {
-        sourceType: source.type,
-        sourceId: source.id,
-        sourceName: source.name,
-        sourceIndex: index,
-      },
-    };
-  });
-}
 
 const makeBlueprint = (
   projectId: string,
@@ -1079,17 +1051,6 @@ router.get("/pst/recipes", async (_req, res): Promise<void> => {
   res.json(ListPstRecipesResponse.parse(enrichedRecipes));
 });
 
-function assetMatchesRequirement(requirement: string, asset: typeof pstAssetsTable.$inferSelect) {
-  const requirementWords = requirement.toLowerCase().split(/[^a-z0-9]+/).filter((word) => word.length > 3);
-  const assetText = [
-    asset.name,
-    asset.description,
-    ...asset.tags,
-    ...asset.compatibility,
-  ].join(" ").toLowerCase();
-  return requirementWords.some((word) => assetText.includes(word));
-}
-
 router.post("/pst/projects/:projectId/builder", async (req, res): Promise<void> => {
   const params = BuildPstProjectParams.safeParse(req.params);
   const body = BuildPstProjectBody.safeParse(req.body ?? {});
@@ -1116,78 +1077,50 @@ router.post("/pst/projects/:projectId/builder", async (req, res): Promise<void> 
     return;
   }
   const references = await currentProjectReferences(access.project.id);
-  const recipeRequirements = references.recipe?.components ?? blueprint.componentRequirements;
-  const structure = references.pattern?.steps ?? references.recipe?.components;
-  const workflowSource = references.pattern
-    ? { type: "pattern" as const, id: references.pattern.id, name: references.pattern.name }
-    : references.recipe
-      ? { type: "recipe" as const, id: references.recipe.id, name: references.recipe.name }
-      : undefined;
-  const workflow = workflowSource
-    ? workflowFromStructure(structure ?? [], workflowSource)
-    : blueprint.workflow;
-  if (workflowSource) {
-    await db.update(pstBlueprintsTable).set({
-      journey: references.pattern?.steps ?? blueprint.journey,
-      componentRequirements: recipeRequirements,
-      workflow,
-      updatedAt: new Date(),
-    }).where(eq(pstBlueprintsTable.projectId, access.project.id));
-  }
   const selectedAssets = body.data.assetIds?.length
     ? await db.select().from(pstAssetsTable).where(inArray(pstAssetsTable.id, body.data.assetIds))
     : await db.select().from(pstAssetsTable).where(eq(pstAssetsTable.status, "ACTIVE")).limit(5);
-  const readyAssets = new Map<string, typeof selectedAssets[number]>();
-  const missing = references.recipe
-    ? recipeRequirements.filter((requirement) => {
-        const match = selectedAssets.find((asset) => assetMatchesRequirement(requirement, asset));
-        if (match) readyAssets.set(match.id, match);
-        return !match;
-      })
-    : blueprint.componentRequirements.filter((requirement) => !selectedAssets.some((asset) => asset.name.toLowerCase().includes(requirement.split(" ")[0].toLowerCase())));
-  if (!references.recipe) {
-    selectedAssets.forEach((asset) => readyAssets.set(asset.id, asset));
+  const buildPlan = buildFromConfiguration({
+    blueprint,
+    assets: selectedAssets,
+    pattern: references.pattern
+      ? { type: "pattern", id: references.pattern.id, name: references.pattern.name, steps: references.pattern.steps }
+      : undefined,
+    recipe: references.recipe
+      ? { type: "recipe", id: references.recipe.id, name: references.recipe.name, components: references.recipe.components }
+      : undefined,
+    idFactory: randomUUID,
+  });
+  if (buildPlan.source) {
+    await db.update(pstBlueprintsTable).set({
+      journey: buildPlan.journey,
+      componentRequirements: buildPlan.componentRequirements,
+      workflow: buildPlan.workflow,
+      updatedAt: new Date(),
+    }).where(eq(pstBlueprintsTable.projectId, access.project.id));
   }
-  const components = references.recipe
-    ? recipeRequirements.map((requirement) => {
-        const asset = [...readyAssets.values()].find((candidate) => assetMatchesRequirement(requirement, candidate));
-        return asset
-          ? { id: randomUUID(), name: asset.name, type: asset.type, source: "Asset Library", status: "READY" as const }
-          : { id: `recipe-${slugify(requirement)}`, name: requirement, type: "RECIPE_COMPONENT", source: `Recipe: ${references.recipe?.name ?? "selected"}`, status: "MISSING" as const };
-      })
-    : selectedAssets.map((asset) => ({
-        id: randomUUID(),
-        name: asset.name,
-        type: asset.type,
-        source: "Asset Library",
-        status: "READY" as const,
-      }));
   await db.delete(pstProjectComponentsTable).where(eq(pstProjectComponentsTable.projectId, access.project.id));
-  for (const component of readyAssets.values()) {
+  for (const asset of buildPlan.readyAssets) {
     await db.insert(pstProjectComponentsTable).values({
       id: randomUUID(),
       projectId: access.project.id,
-      assetId: component.id,
-      name: component.name,
-      type: component.type,
+      assetId: asset.id,
+      name: asset.name,
+      type: asset.type,
       source: "Asset Library",
       status: "READY",
       required: true,
     });
   }
-  const status = missing.length ? "BLOCKED" : "READY";
-  await db.update(pstProjectsTable).set({ status: missing.length ? "BUILDING" : "PREVIEW", updatedAt: new Date() }).where(eq(pstProjectsTable.id, access.project.id));
-  await addEvent("BUILD_COMPLETED", `Builder finished with ${status.toLowerCase()} status.`, access.project.id);
+  await db.update(pstProjectsTable).set({ status: buildPlan.status === "BLOCKED" ? "BUILDING" : "PREVIEW", updatedAt: new Date() }).where(eq(pstProjectsTable.id, access.project.id));
+  await addEvent("BUILD_COMPLETED", `Builder finished with ${buildPlan.status.toLowerCase()} status.`, access.project.id);
   res.json(BuildPstProjectResponse.parse({
-    status,
-    ready: [...readyAssets.values()].map((asset) => asset.name),
-    missing,
-    warnings: [
-      references.pattern ? `Workflow derived from pattern: ${references.pattern.name}.` : undefined,
-      references.recipe ? `Components derived from recipe: ${references.recipe.name}.` : undefined,
-    ].filter((warning): warning is string => Boolean(warning)),
-    errors: missing.length ? ["Some blueprint requirements still need a compatible asset."] : [],
-    components,
+    status: buildPlan.status,
+    ready: buildPlan.ready,
+    missing: buildPlan.missing,
+    warnings: buildPlan.warnings,
+    errors: buildPlan.errors,
+    components: buildPlan.components,
   }));
 });
 
@@ -1235,16 +1168,8 @@ router.post("/pst/projects/:projectId/qa", async (req, res): Promise<void> => {
     res.status(404).json({ error: "PST project not found" });
     return;
   }
-  const results: QaResult[] = [
-    { category: "PROBLEM", label: "Problem, user, and outcome defined", status: project.problemStatement && project.targetUser && project.desiredOutcome ? "PASS" : "ERROR", detail: "The product promise is explicit." },
-    { category: "KNOWLEDGE", label: "Knowledge requirements available", status: project.blueprint.knowledgeRequirements.length ? "PASS" : "WARNING", detail: "Blueprint references are ready for review." },
-    { category: "WORKFLOW", label: "Steps connected", status: project.blueprint.workflow.length > 1 ? "PASS" : "ERROR", detail: "Each step has a next-step contract." },
-    { category: "AI", label: "AI configuration exists", status: project.blueprint.aiRequirements.length ? "PASS" : "WARNING", detail: "AI remains an assistive layer and is not auto-publishing." },
-    { category: "OUTPUT", label: "Outputs defined", status: project.blueprint.expectedOutput.length ? "PASS" : "ERROR", detail: "Expected outputs map to the desired outcome." },
-    { category: "TECHNICAL", label: "Dependencies resolved", status: project.components.length >= 3 ? "PASS" : "WARNING", detail: project.components.length >= 3 ? "Reusable components are connected." : "Add more compatible assets before publishing." },
-    { category: "UX", label: "Journey is understandable", status: project.blueprint.journey.length >= 4 ? "PASS" : "WARNING", detail: "The guided path is visible to the creator." },
-  ];
-  const status = results.some((result) => result.status === "ERROR") ? "ERROR" : results.some((result) => result.status === "WARNING") ? "WARNING" : "PASS";
+  const results: QaResult[] = evaluateQa(project, project.blueprint);
+  const status = qaStatus(results);
   const [run] = await db.insert(pstQaRunsTable).values({ id: randomUUID(), projectId: project.id, status, results }).returning();
   await db.update(pstProjectsTable).set({ qaStatus: status, status: "QA", updatedAt: new Date() }).where(eq(pstProjectsTable.id, project.id));
   await addEvent("QA_EXECUTED", `QA completed with ${status.toLowerCase()} status.`, project.id);
@@ -1262,7 +1187,7 @@ router.post("/pst/projects/:projectId/approve", async (req, res): Promise<void> 
     return;
   }
   const project = access.project;
-  if (project.qaStatus === "ERROR" || project.qaStatus === "NOT_RUN") {
+  if (!canApprove(project)) {
     res.status(409).json({ error: "Run a passing QA before approval." });
     return;
   }
@@ -1282,7 +1207,7 @@ router.post("/pst/projects/:projectId/publish", async (req, res): Promise<void> 
     return;
   }
   const project = access.project;
-  if (project.status !== "APPROVED" || project.qaStatus === "ERROR") {
+  if (!canPublish(project)) {
     res.status(409).json({ error: "Only an approved PST without blocking QA errors can be published." });
     return;
   }
@@ -1307,7 +1232,7 @@ router.get("/pst/projects/:projectId/workspace", async (req, res): Promise<void>
     return;
   }
   const persona = await gustaftaEngine.getPersona();
-  const steps = project.blueprint.workflow.map((step) => ({ ...step, configuration: { ...step.configuration, assistant: persona } }));
+  const steps = customerWorkspaceSteps(project.blueprint.workflow, persona);
   res.json(GetPstWorkspaceResponse.parse({ project, steps }));
 });
 
@@ -1386,11 +1311,12 @@ router.get("/pst/public/workspaces/:slug", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Published customer workspace not found" });
     return;
   }
+  if (!isPublicCustomerWorkspace(project, slug)) {
+    res.status(404).json({ error: "Published customer workspace not found" });
+    return;
+  }
   const persona = await gustaftaEngine.getPersona();
-  const steps = project.blueprint.workflow.map((step) => ({
-    ...step,
-    configuration: { ...step.configuration, assistant: persona },
-  }));
+  const steps = customerWorkspaceSteps(project.blueprint.workflow, persona);
   res.json(GetPstWorkspaceResponse.parse({ project, steps }));
 });
 
