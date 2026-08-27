@@ -773,31 +773,39 @@ async function authorizeProject(
     return;
   }
   await ensureSeed(userId);
-  const [project] = await db
-    .select()
+  const [projectAccess] = await db
+    .select({
+      project: pstProjectsTable,
+      memberRole: pstProjectMembersTable.role,
+    })
     .from(pstProjectsTable)
-    .where(eq(pstProjectsTable.id, projectId));
-  if (!project) {
+    .leftJoin(
+      pstProjectMembersTable,
+      and(
+        eq(pstProjectMembersTable.projectId, pstProjectsTable.id),
+        eq(pstProjectMembersTable.userId, userId),
+      ),
+    )
+    .where(
+      and(
+        eq(pstProjectsTable.id, projectId),
+        or(
+          eq(pstProjectsTable.ownerId, userId),
+          eq(pstProjectMembersTable.userId, userId),
+        ),
+      ),
+    );
+  if (!projectAccess) {
+    // Keep missing and cross-owner projects indistinguishable.
     res.status(404).json({ error: "PST project not found" });
     return;
   }
 
-  let role: PstProjectRole | undefined =
-    project.ownerId === userId ? "admin" : undefined;
+  const { project, memberRole } = projectAccess;
+  const role: PstProjectRole | undefined =
+    project.ownerId === userId ? "admin" : memberRole ?? undefined;
   if (!role) {
-    const [membership] = await db
-      .select({ role: pstProjectMembersTable.role })
-      .from(pstProjectMembersTable)
-      .where(
-        and(
-          eq(pstProjectMembersTable.projectId, projectId),
-          eq(pstProjectMembersTable.userId, userId),
-        ),
-      );
-    role = membership?.role;
-  }
-  if (!role) {
-    // Do not disclose the existence of projects outside the user's boundary.
+    // Keep this guard aligned with the scoped query above if role data is ever extended.
     res.status(404).json({ error: "PST project not found" });
     return;
   }

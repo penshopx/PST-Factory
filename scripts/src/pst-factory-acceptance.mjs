@@ -220,6 +220,7 @@ async function assertCrossOwnerIsolation(outsider, projectId, releaseId) {
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
     assertStatus(result, 404, `cross-owner ${method} ${path}`);
+    assert.deepEqual(result.body, { error: "PST project not found" });
   }
 }
 
@@ -263,6 +264,17 @@ async function runAuthenticatedRouteAcceptance() {
     assert.deepEqual(created.body.selectedRecipes, []);
     const projectId = created.body.id;
     const slug = created.body.slug;
+
+    const outsiderRead = await apiRequest(outsider.token, `/pst/projects/${projectId}`);
+    assertStatus(outsiderRead, 404, "cross-owner read");
+    assert.deepEqual(outsiderRead.body, { error: "PST project not found" });
+
+    const outsiderMutation = await apiRequest(outsider.token, `/pst/projects/${projectId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ description: "Cross-owner mutation must not reveal this project." }),
+    });
+    assertStatus(outsiderMutation, 404, "cross-owner mutation");
+    assert.deepEqual(outsiderMutation.body, outsiderRead.body);
 
     const beforePublish = await apiRequest(undefined, `/pst/public/workspaces/${slug}`);
     assertStatus(beforePublish, 404, "public workspace before publish");
@@ -410,8 +422,8 @@ async function runAuthenticatedRouteAcceptance() {
       releaseVersion: releases.body[0].version,
     };
   } finally {
-    await deleteClerkTestUser(viewer?.userId);
     await deleteClerkTestUser(outsider?.userId);
+    await deleteClerkTestUser(viewer?.userId);
     await deleteClerkTestUser(owner.userId);
   }
 }
@@ -423,6 +435,6 @@ console.log(JSON.stringify({
   blueprints: 2,
   assessmentSteps: assessment.workflow.map((step) => step.title),
   decisionSteps: decision.workflow.map((step) => step.title),
-  checks: ["configuration-driven build", "different customer journeys/outcomes", "QA failure", "missing dependency", "duplicate isolation", "publish gate", "customer access boundary", "cross-owner route isolation", "scoped library usage", "authenticated create-to-publish route lifecycle"],
+  checks: ["configuration-driven build", "different customer journeys/outcomes", "QA failure", "missing dependency", "duplicate isolation", "publish gate", "customer access boundary", "cross-owner route isolation", "cross-owner access boundary", "scoped library usage", "authenticated create-to-publish route lifecycle"],
   authenticatedRoute: authenticatedRouteResult,
 }, null, 2));
