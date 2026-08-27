@@ -1,0 +1,186 @@
+import {
+  boolean,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod/v4";
+
+export const pstProjectsTable = pgTable("pst_projects", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  description: text("description").notNull().default(""),
+  status: text("status").notNull().default("DRAFT"),
+  version: text("version").notNull().default("v0.1"),
+  domain: text("domain").notNull().default("General"),
+  family: text("family").notNull().default("Problem Solving"),
+  series: text("series").notNull().default("First Series"),
+  problemStatement: text("problem_statement").notNull(),
+  targetUser: text("target_user").notNull(),
+  desiredOutcome: text("desired_outcome").notNull(),
+  productDna: jsonb("product_dna").$type<{
+    problem: string;
+    user: string;
+    journey: string[];
+    components: string[];
+    intelligence: string;
+    outcome: string;
+  }>().notNull(),
+  qaStatus: text("qa_status").notNull().default("NOT_RUN"),
+  publicationStatus: text("publication_status").notNull().default("UNPUBLISHED"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+export const pstBlueprintsTable = pgTable("pst_blueprints", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id")
+    .notNull()
+    .references(() => pstProjectsTable.id, { onDelete: "cascade" }),
+  problem: text("problem").notNull(),
+  targetUser: text("target_user").notNull(),
+  desiredOutcome: text("desired_outcome").notNull(),
+  problemType: text("problem_type").notNull(),
+  journey: text("journey").array().notNull(),
+  knowledgeRequirements: text("knowledge_requirements").array().notNull(),
+  componentRequirements: text("component_requirements").array().notNull(),
+  aiRequirements: text("ai_requirements").array().notNull(),
+  workflow: jsonb("workflow").$type<WorkflowStep[]>().notNull(),
+  expectedOutput: text("expected_output").array().notNull(),
+  actionPlan: text("action_plan").array().notNull(),
+  nextStep: text("next_step").notNull(),
+  version: text("version").notNull().default("v0.1"),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+export const pstAssetsTable = pgTable("pst_assets", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  type: text("type").notNull(),
+  description: text("description").notNull(),
+  version: text("version").notNull().default("v1.0"),
+  status: text("status").notNull().default("ACTIVE"),
+  tags: text("tags").array().notNull(),
+  domain: text("domain").notNull(),
+  compatibility: text("compatibility").array().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+export const pstPatternsTable = pgTable("pst_patterns", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  steps: text("steps").array().notNull(),
+  usageCount: integer("usage_count").notNull().default(0),
+});
+
+export const pstRecipesTable = pgTable("pst_recipes", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  components: text("components").array().notNull(),
+  usageCount: integer("usage_count").notNull().default(0),
+});
+
+export const pstProjectComponentsTable = pgTable("pst_project_components", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id")
+    .notNull()
+    .references(() => pstProjectsTable.id, { onDelete: "cascade" }),
+  assetId: text("asset_id")
+    .notNull()
+    .references(() => pstAssetsTable.id, { onDelete: "restrict" }),
+  name: text("name").notNull(),
+  type: text("type").notNull(),
+  source: text("source").notNull(),
+  status: text("status").notNull().default("READY"),
+  required: boolean("required").notNull().default(true),
+});
+
+export const pstFactoryEventsTable = pgTable("pst_factory_events", {
+  id: text("id").primaryKey(),
+  type: text("type").notNull(),
+  message: text("message").notNull(),
+  projectId: text("project_id").references(() => pstProjectsTable.id, {
+    onDelete: "set null",
+  }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const pstQaRunsTable = pgTable("pst_qa_runs", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id")
+    .notNull()
+    .references(() => pstProjectsTable.id, { onDelete: "cascade" }),
+  status: text("status").notNull(),
+  results: jsonb("results").$type<QaResult[]>().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const pstSimulationsTable = pgTable("pst_simulations", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id")
+    .notNull()
+    .references(() => pstProjectsTable.id, { onDelete: "cascade" }),
+  status: text("status").notNull(),
+  checks: text("checks").array().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export type WorkflowStep = {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  inputs: string[];
+  outputs: string[];
+  dependencies: string[];
+  nextStep: string;
+  configuration?: Record<string, unknown>;
+};
+
+export type QaResult = {
+  category: string;
+  label: string;
+  status: "PASS" | "WARNING" | "ERROR";
+  detail: string;
+};
+
+export const insertPstProjectSchema = createInsertSchema(pstProjectsTable).omit({
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertPstProject = z.infer<typeof insertPstProjectSchema>;
+export type PstProject = typeof pstProjectsTable.$inferSelect;
+export type PstBlueprint = typeof pstBlueprintsTable.$inferSelect;
+export type PstAsset = typeof pstAssetsTable.$inferSelect;
+export type PstPattern = typeof pstPatternsTable.$inferSelect;
+export type PstRecipe = typeof pstRecipesTable.$inferSelect;
+export type PstProjectComponent = typeof pstProjectComponentsTable.$inferSelect;
+export type PstFactoryEvent = typeof pstFactoryEventsTable.$inferSelect;
+export type PstQaRun = typeof pstQaRunsTable.$inferSelect;
+export type PstSimulation = typeof pstSimulationsTable.$inferSelect;

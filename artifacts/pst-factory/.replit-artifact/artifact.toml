@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "PST Factory"
+description = "A product manufacturing workspace for turning real problems into structured, reusable Problem-Solving Toolkit products. Create PST projects, generate and edit blueprints, assemble reusable components, preview guided workspaces, run QA, approve, and publish customer-ready outcomes."
+version = "1.0.0"
+id = "artifacts/pst-factory"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21409
+
+[services.development]
+run = "pnpm --filter @workspace/pst-factory run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/pst-factory", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/pst-factory/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21409"
+BASE_PATH = "/"

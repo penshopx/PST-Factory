@@ -1,0 +1,1640 @@
+PROJECT NAME:
+PST Factory
+
+FULL NAME:
+Problem-Solving Toolkit Factory
+
+TAGLINE:
+From Problem to Product. From Product to Outcome.
+
+INDONESIAN POSITIONING:
+Dari Masalah Menjadi Solusi. Dari Solusi Menjadi Produk.
+
+============================================================
+1. PROJECT MISSION
+============================================================
+
+Build a NEW, STANDALONE web application called:
+
+PST FACTORY
+
+PST Factory is a product manufacturing platform for creating
+Problem-Solving Toolkit (PST) products.
+
+IMPORTANT:
+
+This is a BRAND NEW REPLIT PROJECT.
+
+Do not assume an existing codebase.
+Do not integrate with an existing application automatically.
+Do not copy another application's architecture.
+Do not modify Gustafta.
+
+PST Factory must be architected as an independent product.
+
+============================================================
+2. WHAT IS PST?
+============================================================
+
+PST means:
+
+Problem-Solving Toolkit.
+
+A PST is NOT simply:
+
+- a chatbot
+- an ebook
+- a PDF
+- a template bundle
+- a collection of tools
+- a generic AI assistant
+
+A PST is:
+
+"A structured digital problem-solving experience designed to
+help a specific user solve a specific problem and achieve a
+defined outcome."
+
+The core principle is:
+
+PROBLEM
+→ PROCESS
+→ OUTCOME
+
+A PST may combine:
+
+- practical guide
+- mini module
+- knowledge
+- assessment
+- checklist
+- template
+- worksheet
+- calculator
+- mini app
+- AI assistant
+- AI agent
+- workflow
+- report
+- recommendation
+- action plan
+
+However:
+
+NOT every PST must contain every component.
+
+The Factory determines which components are necessary based
+on the problem and desired outcome.
+
+============================================================
+3. WHAT IS PST FACTORY?
+============================================================
+
+PST Factory is NOT a marketplace in the first phase.
+
+PST Factory is NOT primarily a customer-facing chatbot.
+
+PST Factory is:
+
+A PRODUCT MANUFACTURING SYSTEM.
+
+Its purpose is to transform:
+
+PROBLEM
++
+KNOWLEDGE
++
+METHOD
++
+TOOLS
++
+AI
++
+WORKFLOW
+↓
+PST PRODUCT
+↓
+USER OUTCOME
+
+The long-term objective is:
+
+Build PST #1
+↓
+reuse what was learned
+↓
+Build PST #2 faster
+↓
+reuse components
+↓
+Build PST #3 faster
+↓
+reuse knowledge and patterns
+↓
+Build PST #10
+↓
+Build PST #100
+
+The Factory should become increasingly:
+
+- faster
+- more reusable
+- more precise
+- more scalable
+- more maintainable
+
+============================================================
+4. CORE PRODUCT PRINCIPLE
+============================================================
+
+The customer does not primarily buy:
+
+"AI"
+
+"chatbot"
+
+"ebook"
+
+or "template".
+
+The customer buys:
+
+OUTCOME.
+
+Therefore every PST must explicitly define:
+
+1. Problem
+2. Target User
+3. Desired Outcome
+4. Problem-Solving Journey
+
+Everything else exists to support the outcome.
+
+============================================================
+5. PST PRODUCT DNA
+============================================================
+
+Every PST must have a structured Product DNA.
+
+Use:
+
+P = Problem
+U = User
+J = Journey
+C = Components
+I = Intelligence
+O = Outcome
+
+Represent this as structured data.
+
+Example:
+
+P:
+Business owner does not know whether current cashflow is healthy.
+
+U:
+Small business owner.
+
+J:
+Profile → Assessment → Analysis → Recommendation → Action Plan.
+
+C:
+Guide + Assessment + Calculator + AI Analyzer + Action Plan.
+
+I:
+AI analysis and recommendation.
+
+O:
+User understands current cashflow condition and knows what
+to do next.
+
+============================================================
+6. STANDARD PST STRUCTURE
+============================================================
+
+Use the following as a DEFAULT structure:
+
+01. Problem
+02. Start Here
+03. Quick Guide
+04. Assessment
+05. Knowledge
+06. Tools
+07. Mini Apps
+08. AI Assistant
+09. Workflow
+10. Output
+11. Action Plan
+12. Next Step
+
+IMPORTANT:
+
+This is NOT a rigid template.
+
+A PST may use only some of these components.
+
+The PST Architect must recommend the appropriate structure.
+
+============================================================
+7. PST FACTORY MANUFACTURING LIFECYCLE
+============================================================
+
+Implement the conceptual lifecycle:
+
+01 DISCOVER
+02 DEFINE
+03 ARCHITECT
+04 BLUEPRINT
+05 ASSEMBLE
+06 SIMULATE
+07 QA
+08 APPROVE
+09 PUBLISH
+10 MEASURE
+11 LEARN
+12 IMPROVE
+
+MVP implementation should focus on:
+
+DEFINE
+→ ARCHITECT
+→ BLUEPRINT
+→ ASSEMBLE
+→ PREVIEW
+→ QA
+→ APPROVE
+→ PUBLISH
+
+Design the architecture so later phases can be added
+without restructuring the entire application.
+
+============================================================
+8. HIGH-LEVEL ARCHITECTURE
+============================================================
+
+Use this conceptual architecture:
+
+                 PST FACTORY
+                      │
+       ┌──────────────┼──────────────┐
+       ↓              ↓              ↓
+PST ARCHITECT    ASSET LIBRARY   PATTERN LIBRARY
+       │              │              │
+       └──────────────┼──────────────┘
+                      ↓
+                PST BLUEPRINT
+                      ↓
+                 PST BUILDER
+                      ↓
+                PST SIMULATOR
+                      ↓
+                    PST QA
+                      ↓
+                  APPROVAL
+                      ↓
+                  PUBLISH
+                      ↓
+                PST WORKSPACE
+                      ↓
+                    USER
+                      ↓
+                   OUTCOME
+
+============================================================
+9. GUSTAFTA RELATIONSHIP
+============================================================
+
+Gustafta is an EXTERNAL ENGINE.
+
+PST Factory is an independent application.
+
+Conceptual architecture:
+
+PST FACTORY
+     │
+     ↓
+SERVICE / ADAPTER LAYER
+     │
+     ↓
+GUSTAFTA ENGINE
+
+PST Factory should be able to use Gustafta capabilities such
+as:
+
+- AI
+- Knowledge Base
+- Persona
+- Agentic AI
+- Memory
+- Mini Apps
+- Workflow/orchestration
+- document processing
+
+BUT:
+
+Do not assume Gustafta APIs exist.
+
+Do not invent endpoints.
+
+Do not hard-code fake production integration.
+
+Create an abstraction layer such as:
+
+GustaftaEngine
+
+Possible capabilities:
+
+- generateAIResponse()
+- retrieveKnowledge()
+- invokeAgent()
+- runMiniApp()
+- getPersona()
+- storeMemory()
+- retrieveMemory()
+
+The exact interface must be adjusted when actual Gustafta
+API specifications become available.
+
+For development, create:
+
+MockGustaftaEngine
+
+This allows PST Factory to function independently during
+development.
+
+The mock must be clearly identified as MOCK.
+
+============================================================
+10. AI PROVIDER ARCHITECTURE
+============================================================
+
+Do not tightly couple PST Factory to one AI provider.
+
+Create an abstraction:
+
+AIProvider
+
+Possible implementations:
+
+- OpenAIProvider
+- MockAIProvider
+- future providers
+
+PST Architect should call the abstraction rather than directly
+calling an AI SDK throughout the application.
+
+Use environment variables for credentials.
+
+Never expose API keys in frontend code.
+
+============================================================
+11. PST ARCHITECT
+============================================================
+
+Build:
+
+PST Architect
+
+Purpose:
+
+Help the product creator transform a problem idea into a
+structured PST Blueprint.
+
+Example input:
+
+"I want to help small business owners determine whether
+their business cashflow is healthy."
+
+The Architect should propose:
+
+- problem definition
+- target user
+- pain points
+- desired outcome
+- problem type
+- required inputs
+- recommended journey
+- knowledge requirements
+- tool requirements
+- mini app requirements
+- AI requirements
+- workflow
+- outputs
+- action plan
+- next step
+
+The AI is a DESIGN ASSISTANT.
+
+IMPORTANT:
+
+AI PROPOSES.
+
+HUMAN APPROVES.
+
+Never automatically publish an AI-generated PST.
+
+============================================================
+12. PST BLUEPRINT
+============================================================
+
+Create a structured Blueprint.
+
+Sections:
+
+1. Problem
+2. Target User
+3. Desired Outcome
+4. Problem Type
+5. Journey
+6. Knowledge Requirements
+7. Component Requirements
+8. AI Requirements
+9. Workflow
+10. Expected Output
+11. Action Plan
+12. Next Step
+
+Blueprint must support:
+
+- AI generation
+- manual editing
+- save
+- draft
+- validation
+- versioning
+- approval
+
+Do not store the entire blueprint only as one uncontrolled
+JSON blob.
+
+Core entities must remain structured.
+
+JSON can be used for flexible configuration fields.
+
+============================================================
+13. PST PROJECT
+============================================================
+
+A PST Project represents a product being manufactured.
+
+Each project should contain:
+
+- id
+- name
+- slug
+- description
+- status
+- version
+- domain
+- family
+- series
+- problem statement
+- target user
+- desired outcome
+- Product DNA
+- Blueprint
+- components
+- knowledge references
+- AI configuration
+- workflow
+- QA status
+- publication status
+- created_at
+- updated_at
+
+Support:
+
+- create
+- edit
+- duplicate
+- archive
+- version
+- preview
+- publish
+
+============================================================
+14. ASSET LIBRARY
+============================================================
+
+Create:
+
+PST Asset Library.
+
+Purpose:
+
+Store reusable building blocks.
+
+Categories:
+
+KNOWLEDGE
+- documents
+- references
+- frameworks
+- expert rules
+
+TOOLS
+- templates
+- checklists
+- worksheets
+- calculators
+- forms
+
+MINI APPS
+- assessment
+- scoring
+- analyzer
+- generator
+- calculator
+
+AI
+- personas
+- prompts
+- agents
+- AI patterns
+
+WORKFLOW
+- assessment
+- decision
+- planning
+- analysis
+- execution
+- review
+
+Each asset should support:
+
+- id
+- name
+- type
+- description
+- version
+- status
+- tags
+- domain
+- compatibility
+- created_at
+- updated_at
+
+IMPORTANT:
+
+The Factory should REUSE assets.
+
+Do not duplicate the same component unnecessarily.
+
+============================================================
+15. PATTERN LIBRARY
+============================================================
+
+Create:
+
+PST Pattern Library.
+
+Patterns are reusable problem-solving structures.
+
+Initial examples:
+
+ASSESSMENT PATTERN
+
+Questions
+→ Scoring
+→ Analysis
+→ Recommendation
+
+DECISION PATTERN
+
+Options
+→ Criteria
+→ Scoring
+→ Recommendation
+→ Action
+
+PLANNING PATTERN
+
+Goal
+→ Current State
+→ Gap
+→ Plan
+→ Action
+
+DOCUMENT ANALYSIS PATTERN
+
+Upload
+→ Extract
+→ Analyze
+→ Score
+→ Report
+
+Patterns must be reusable.
+
+============================================================
+16. RECIPE LIBRARY
+============================================================
+
+Create:
+
+PST Recipe Library.
+
+A Recipe defines a recommended combination of components.
+
+Examples:
+
+Decision Recipe:
+
+Assessment
++
+Criteria
++
+Scoring
++
+AI Recommendation
++
+Action Plan
+
+Assessment Recipe:
+
+Questions
++
+Scoring
++
+Analysis
++
+Recommendation
+
+Planning Recipe:
+
+Goal
++
+Current State
++
+Gap
++
+Plan
++
+Action
+
+PST Architect can recommend Recipes.
+
+============================================================
+17. PST BUILDER
+============================================================
+
+Build:
+
+PST Builder.
+
+Purpose:
+
+Transform Blueprint into an executable PST.
+
+Builder responsibilities:
+
+- resolve components
+- find reusable assets
+- identify missing assets
+- configure components
+- assemble workflow
+- connect inputs
+- connect outputs
+- configure AI
+- validate dependencies
+
+Before build completion, display:
+
+READY
+MISSING
+WARNING
+ERROR
+
+Do not silently ignore missing dependencies.
+
+============================================================
+18. PST WORKFLOW
+============================================================
+
+PST workflows must be structured.
+
+Example:
+
+START
+↓
+USER PROFILE
+↓
+ASSESSMENT
+↓
+ANALYSIS
+↓
+TOOL
+↓
+AI
+↓
+RECOMMENDATION
+↓
+ACTION PLAN
+↓
+COMPLETION
+
+Each step should have:
+
+- id
+- type
+- title
+- description
+- inputs
+- outputs
+- dependencies
+- next step
+- configuration
+
+Avoid hard-coding workflow logic.
+
+============================================================
+19. PST SIMULATOR
+============================================================
+
+Create:
+
+PST Simulator.
+
+Purpose:
+
+Test a PST before publication.
+
+Allow:
+
+- manual simulation
+- synthetic user simulation where possible
+
+Test for:
+
+- unclear questions
+- missing inputs
+- broken transitions
+- invalid dependencies
+- irrelevant outputs
+- AI configuration problems
+
+Produce a Simulation Report.
+
+Do not automatically modify the PST based on simulation.
+
+============================================================
+20. PST QA
+============================================================
+
+Create:
+
+PST QA Center.
+
+QA categories:
+
+PROBLEM QA
+- problem defined
+- user defined
+- outcome defined
+
+KNOWLEDGE QA
+- knowledge requirements available
+- references available
+
+WORKFLOW QA
+- steps connected
+- no broken transitions
+- required inputs available
+
+AI QA
+- AI configuration exists
+- correct provider
+- required instructions exist
+
+OUTPUT QA
+- outputs defined
+- outputs connected
+
+TECHNICAL QA
+- dependencies resolved
+- configuration valid
+
+UX QA
+- user knows what to do
+- journey is understandable
+
+Results:
+
+PASS
+WARNING
+ERROR
+
+A PST with blocking ERROR must not be publishable.
+
+============================================================
+21. PST APPROVAL
+============================================================
+
+Use explicit human approval.
+
+Lifecycle:
+
+DRAFT
+→ ARCHITECTED
+→ BLUEPRINT_READY
+→ BUILDING
+→ PREVIEW
+→ QA
+→ APPROVED
+→ PUBLISHED
+→ ARCHIVED
+
+Publishing requires appropriate permission.
+
+Never auto-publish.
+
+============================================================
+22. PST WORKSPACE
+============================================================
+
+Every published PST gets a customer-facing Workspace.
+
+It should NOT look like a generic chatbot.
+
+It should feel like a guided application.
+
+Default experience:
+
+START
+↓
+UNDERSTAND
+↓
+ASSESS
+↓
+USE TOOLS
+↓
+ASK AI IF NEEDED
+↓
+ANALYZE
+↓
+RECOMMENDATION
+↓
+ACTION PLAN
+↓
+NEXT STEP
+
+The actual journey should come from the PST Blueprint.
+
+The Workspace must dynamically render the PST.
+
+============================================================
+23. DOMAIN / FAMILY / SERIES
+============================================================
+
+Support:
+
+DOMAIN
+→ FAMILY
+→ SERIES
+→ PST
+
+Example:
+
+DOMAIN:
+Contractor
+
+FAMILY:
+Cashflow
+
+SERIES:
+Cashflow Check
+Cashflow Diagnosis
+Cashflow Recovery
+Cashflow Planning
+
+Support inheritance/reuse of:
+
+- knowledge
+- patterns
+- recipes
+- components
+
+============================================================
+24. PST-TO-PST CONTINUITY
+============================================================
+
+Design support for:
+
+PST A OUTPUT
+→ PST B INPUT
+
+Do NOT implement this as uncontrolled text copying.
+
+Use structured output contracts.
+
+Example:
+
+PST A output:
+
+{
+  assessment_score,
+  financial_condition,
+  identified_problems,
+  recommended_priority
+}
+
+PST B may consume these structured values.
+
+Build the data model for this capability even if the complete
+cross-PST journey is not part of MVP.
+
+============================================================
+25. KNOWLEDGE ARCHITECTURE
+============================================================
+
+Use hierarchy:
+
+GLOBAL KNOWLEDGE
+↓
+DOMAIN KNOWLEDGE
+↓
+FAMILY KNOWLEDGE
+↓
+PST KNOWLEDGE
+↓
+USER CONTEXT
+
+Important:
+
+USER DATA MUST NOT AUTOMATICALLY BECOME SHARED KNOWLEDGE.
+
+Future knowledge promotion:
+
+OBSERVATION
+→ INSIGHT
+→ REVIEW
+→ APPROVAL
+→ KNOWLEDGE LIBRARY
+
+Create the appropriate data model now.
+
+============================================================
+26. FACTORY MEMORY
+============================================================
+
+Prepare architecture for three memory categories.
+
+1. Knowledge Memory
+
+What the Factory knows.
+
+2. Manufacturing Memory
+
+How PSTs are built.
+
+Includes:
+
+- recipes
+- patterns
+- component combinations
+- workflow patterns
+
+3. Product Memory
+
+What happens after launch.
+
+Includes:
+
+- usage
+- feedback
+- outcomes
+- performance
+
+Do not mix these three concepts.
+
+============================================================
+27. VERSIONING
+============================================================
+
+Support versioning for:
+
+- PST
+- Blueprint
+- Asset
+- Pattern
+- Recipe
+- Workflow
+- AI configuration
+
+Never destructively overwrite production versions.
+
+Use explicit versions.
+
+============================================================
+28. DATABASE
+============================================================
+
+Use a relational database.
+
+Preferred architecture:
+
+PostgreSQL.
+
+Potential entities:
+
+users
+roles
+pst_projects
+pst_versions
+pst_blueprints
+pst_domains
+pst_families
+pst_series
+pst_assets
+pst_asset_versions
+pst_patterns
+pst_recipes
+pst_workflows
+pst_workflow_steps
+pst_knowledge_refs
+pst_ai_configs
+pst_components
+pst_outputs
+pst_qa_runs
+pst_qa_results
+pst_simulations
+pst_factory_events
+pst_insights
+pst_knowledge_candidates
+pst_published_products
+
+Adjust naming if necessary.
+
+Do not create unnecessary tables.
+
+Use proper foreign keys.
+
+Use indexes for common queries.
+
+============================================================
+29. SECURITY
+============================================================
+
+Initial roles:
+
+ADMIN
+EDITOR
+VIEWER
+
+Server-side authorization is mandatory.
+
+ADMIN can:
+
+- create
+- edit
+- approve
+- publish
+- archive
+- manage assets
+- manage knowledge
+
+EDITOR can create/edit but cannot publish unless explicitly
+authorized.
+
+VIEWER is read-only.
+
+Do not rely solely on frontend authorization.
+
+Protect all API endpoints.
+
+Use secure environment variables.
+
+Never expose secrets in frontend code.
+
+============================================================
+30. UI STRUCTURE
+============================================================
+
+Main navigation:
+
+Dashboard
+PST Projects
+Create PST
+Asset Library
+Pattern Library
+Recipe Library
+Knowledge
+QA Center
+Factory Analytics
+Settings
+
+PST Workspace navigation:
+
+Overview
+Problem
+Architect
+Blueprint
+Assets
+Workflow
+AI
+Preview
+QA
+Publish
+Versions
+
+Design:
+
+- modern SaaS
+- clean
+- professional
+- information-dense but understandable
+- responsive
+- desktop-first but mobile-compatible
+
+Primary CTA:
+
+"Create New PST"
+
+============================================================
+31. CREATE PST WIZARD
+============================================================
+
+Create a guided wizard:
+
+STEP 1
+DEFINE THE PROBLEM
+
+STEP 2
+DEFINE THE USER
+
+STEP 3
+DEFINE THE OUTCOME
+
+STEP 4
+RUN PST ARCHITECT
+
+STEP 5
+REVIEW BLUEPRINT
+
+STEP 6
+SELECT ASSETS
+
+STEP 7
+ASSEMBLE
+
+STEP 8
+PREVIEW
+
+STEP 9
+QA
+
+STEP 10
+APPROVE & PUBLISH
+
+Show progress.
+
+Allow draft saving.
+
+============================================================
+32. FACTORY ANALYTICS
+============================================================
+
+Prepare metrics for:
+
+- Time to Build
+- Component Reuse Rate
+- Knowledge Reuse Rate
+- First Pass QA Rate
+- Time to Outcome
+- Outcome Success Rate
+
+Do NOT fabricate data.
+
+Show empty states when no data exists.
+
+============================================================
+33. FACTORY EVENTS
+============================================================
+
+Track events:
+
+- PST created
+- blueprint generated
+- blueprint edited
+- asset added
+- asset reused
+- build started
+- build completed
+- simulation executed
+- QA executed
+- QA failed
+- PST approved
+- PST published
+- PST archived
+
+These events will later support Factory Analytics and
+Factory Memory.
+
+============================================================
+34. API ARCHITECTURE
+============================================================
+
+Use clean service boundaries.
+
+Potential routes:
+
+/api/pst/projects
+/api/pst/architect
+/api/pst/blueprints
+/api/pst/assets
+/api/pst/patterns
+/api/pst/recipes
+/api/pst/builder
+/api/pst/simulator
+/api/pst/qa
+/api/pst/publish
+/api/pst/workspace
+
+External engine abstraction:
+
+/services/gustafta/
+
+AI abstraction:
+
+/services/ai/
+
+Do not scatter provider-specific code across the application.
+
+============================================================
+35. RECOMMENDED PROJECT STRUCTURE
+============================================================
+
+Use a maintainable structure similar to:
+
+/app or /src
+  /components
+  /features
+    /pst-projects
+    /pst-architect
+    /pst-blueprint
+    /pst-assets
+    /pst-patterns
+    /pst-recipes
+    /pst-builder
+    /pst-simulator
+    /pst-qa
+    /pst-workspace
+  /services
+    /ai
+    /gustafta
+  /lib
+  /db
+  /types
+  /utils
+
+Adjust this structure according to the chosen framework.
+
+Do not create unnecessary abstractions.
+
+============================================================
+36. TECHNOLOGY
+============================================================
+
+Choose a stable modern stack that works reliably on Replit.
+
+Preferred:
+
+Frontend:
+React + TypeScript
+
+Backend:
+Node.js + TypeScript
+
+Database:
+PostgreSQL
+
+ORM:
+Prisma or Drizzle
+
+Authentication:
+Use a secure implementation appropriate for Replit.
+
+UI:
+Use a modern component system.
+
+IMPORTANT:
+
+Do not add libraries simply because they are popular.
+
+Choose dependencies based on actual requirements.
+
+============================================================
+37. MVP BOUNDARY
+============================================================
+
+MVP MUST prove the Factory concept.
+
+MVP includes:
+
+1. Dashboard
+2. PST Projects
+3. Create PST
+4. Problem/User/Outcome definition
+5. PST Architect
+6. Blueprint editor
+7. Asset Library
+8. Pattern Library
+9. Recipe Library
+10. PST Builder
+11. Preview
+12. Basic Simulator
+13. QA Center
+14. Human Approval
+15. Publish
+16. Customer PST Workspace
+17. Basic Factory Events
+
+MVP does NOT require:
+
+- public marketplace
+- creator marketplace
+- social network
+- public community
+- subscription billing
+- affiliate system
+- complex analytics
+- multi-tenant enterprise architecture
+- automatic knowledge promotion
+- advanced cross-PST journeys
+
+Design for future expansion but do not overbuild now.
+
+============================================================
+38. FIRST TEST: THE FACTORY MUST MANUFACTURE A PST
+============================================================
+
+Do not begin by manually coding a hard-coded PST product.
+
+The first meaningful test is:
+
+Can an admin use the Factory to create a PST?
+
+The flow must be:
+
+Create PST
+→ Define Problem
+→ Define User
+→ Define Outcome
+→ PST Architect
+→ Blueprint
+→ Select Assets
+→ Build
+→ Preview
+→ QA
+→ Approve
+→ Publish
+→ Use as Customer
+
+This is the primary MVP acceptance test.
+
+============================================================
+39. SECOND TEST: REUSABILITY
+============================================================
+
+After PST #001 exists:
+
+Create PST #002.
+
+PST #002 must be able to reuse at least some:
+
+- assets
+- patterns
+- recipes
+- knowledge references
+
+from PST #001.
+
+This is a CORE ACCEPTANCE CRITERION.
+
+If every PST must be built from scratch, the system is NOT
+a Factory.
+
+============================================================
+40. THIRD TEST: PRODUCT EVOLUTION
+============================================================
+
+Support:
+
+PST v1
+→ feedback
+→ improvement
+→ PST v1.1
+→ future v2
+
+Do not overwrite production history.
+
+============================================================
+41. DEVELOPMENT METHOD
+============================================================
+
+Build incrementally.
+
+Do not generate the entire application in one giant step.
+
+Use phases:
+
+PHASE 0
+Architecture & Foundation
+
+PHASE 1
+Database + Domain Model
+
+PHASE 2
+PST Project Workspace
+
+PHASE 3
+PST Architect + Blueprint
+
+PHASE 4
+Asset / Pattern / Recipe Libraries
+
+PHASE 5
+Builder + Workflow
+
+PHASE 6
+Preview + Simulator + QA
+
+PHASE 7
+Publish + Customer Workspace
+
+PHASE 8
+Gustafta Integration
+
+PHASE 9
+Factory Memory + Learning
+
+============================================================
+42. PHASE 0 REQUIREMENT
+============================================================
+
+Before implementing major features:
+
+Create a concise:
+
+PST FACTORY TECHNICAL ARCHITECTURE PLAN
+
+Include:
+
+A. Technology stack
+B. Application architecture
+C. Database schema
+D. API structure
+E. Authentication
+F. AI provider abstraction
+G. Gustafta adapter
+H. PST domain model
+I. Asset architecture
+J. Workflow architecture
+K. Security model
+L. Deployment approach
+M. Phase plan
+N. Risks
+
+Do NOT spend the entire project generating documentation.
+
+Keep it practical.
+
+After producing the plan, proceed to Phase 1 unless a
+critical architectural ambiguity blocks implementation.
+
+============================================================
+43. DOCUMENTATION
+============================================================
+
+Maintain:
+
+/docs/PST_PRODUCT_SPEC.md
+/docs/PST_ARCHITECTURE.md
+/docs/PST_DATA_MODEL.md
+/docs/PST_FACTORY_LIFECYCLE.md
+/docs/PST_ASSET_SYSTEM.md
+/docs/PST_KNOWLEDGE_ARCHITECTURE.md
+/docs/PST_QA_SPEC.md
+/docs/GUSTAFTA_INTEGRATION.md
+
+Documentation must reflect actual implementation.
+
+Never claim a feature is implemented when it is only planned.
+
+============================================================
+44. ENGINEERING PRINCIPLES
+============================================================
+
+Follow these principles:
+
+1. Build the Factory, not a collection of PSTs.
+2. Problem first, technology second.
+3. Outcome first, feature count second.
+4. Reuse before rebuild.
+5. AI proposes; humans approve.
+6. Structured data over uncontrolled text.
+7. Configuration over hard-coded product logic.
+8. External engine integration through adapters.
+9. Do not invent Gustafta APIs.
+10. Do not over-engineer the MVP.
+11. Keep production versions immutable.
+12. Security must be server-side.
+13. Do not fabricate analytics.
+14. Keep customer data isolated.
+15. Design for future PST scale.
+
+============================================================
+45. SUCCESS DEFINITION
+============================================================
+
+The MVP is successful when:
+
+An administrator can enter a problem and transform it into a
+working PST product through the Factory.
+
+The resulting PST can be:
+
+- previewed
+- tested
+- QA'd
+- approved
+- published
+- used by a customer
+
+AND:
+
+A second PST can reuse components from the first PST.
+
+The most important metric is not:
+
+"How many PSTs exist?"
+
+The important metric is:
+
+"How much faster can we build PST #2 than PST #1,
+and PST #10 than PST #2?"
+
+============================================================
+46. IMPORTANT FINAL INSTRUCTION
+============================================================
+
+You are building a PRODUCT MANUFACTURING PLATFORM.
+
+Do NOT interpret this project as:
+
+"Build an app with a few digital products."
+
+Interpret it as:
+
+"Build a factory that can manufacture digital
+problem-solving products."
+
+The architecture must reflect that distinction.
+
+Start with the Factory Core.
+
+Do not start by creating a large catalog.
+
+Do not start by building a marketplace.
+
+Do not start by building a hard-coded PST.
+
+Build the manufacturing infrastructure first.
+
+============================================================
+47. START NOW
+============================================================
+
+First:
+
+1. Initialize the new Replit project.
+2. Select the appropriate stack.
+3. Create the project structure.
+4. Create the database schema foundation.
+5. Create the PST domain model.
+6. Create the service abstraction layer.
+7. Create the AI provider abstraction.
+8. Create the Gustafta adapter interface + mock.
+9. Create the initial dashboard shell.
+10. Create the PST Project shell.
+11. Create the Phase 0 architecture documentation.
+12. Verify the application runs successfully.
+13. Verify database connectivity.
+14. Verify authentication foundation.
+15. Verify mock AI flow.
+16. Verify mock Gustafta flow.
+
+Then continue incrementally toward the MVP.
+
+At every major phase:
+
+- run tests
+- check TypeScript/build errors
+- verify database migrations
+- verify API behavior
+- verify UI
+- fix errors before moving forward
+
+Do not leave known critical errors unresolved.
+
+============================================================
+END OF MASTER PROMPT
+============================================================

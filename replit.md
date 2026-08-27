@@ -1,6 +1,6 @@
-# [Project name]
+# PST Factory
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Problem-Solving Toolkit manufacturing workspace: turn a defined problem into a reusable, QA'd, publishable guided product.
 
 ## Run & Operate
 
@@ -22,23 +22,37 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/pst-factory` — React/Vite factory dashboard, project workspace, libraries, guided create flow, and customer workspace.
+- `artifacts/api-server/src/routes/pst.ts` — PST API handlers, seed data, manufacturing transitions, mock provider orchestration.
+- `lib/api-spec/openapi.yaml` — source of truth for API contracts.
+- `lib/db/src/schema/pst.ts` — relational PST domain model.
+- `docs/` — product, architecture, lifecycle, asset, knowledge, QA, and Gustafta notes.
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Product DNA and Blueprint are stored as distinct structured concepts; flexible workflow and result configuration uses JSONB.
+- Asset reuse is modeled through project-to-asset connections, so duplicating a PST reuses library definitions.
+- AI and Gustafta are accessed through provider-neutral interfaces; current implementations are clearly MOCK.
+- QA is a hard gate: blocking errors prevent approval, and only approved PSTs can publish.
+- Production authentication and role enforcement remain a pre-release gate before inviting external users.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Dashboard with live factory summaries and event activity.
+- PST project creation, editing, duplication, archive, Architect proposal, Blueprint editing, assembly, preview, simulation, QA, approval, and publish.
+- Reusable asset, pattern, and recipe libraries.
+- Published customer-facing guided workspace rendered from the project Blueprint.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Use Indonesian for user-facing communication.
+- Prefer a high-contrast dark/black and light/blue pairing with bright, legible text.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Run OpenAPI codegen after changing `lib/api-spec/openapi.yaml`; the generated Zod package currently targets Zod 3, so use numeric schemas instead of OpenAPI integer schemas when codegen emits `zod.int()`.
+- Do not invent Gustafta endpoints; replace the mock adapter only when the real API contract is available.
+- Development seed data is created on the first PST API request and is intentionally small.
 
 ## Pointers
 
