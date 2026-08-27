@@ -14,3 +14,9 @@ Seeded project-to-pattern and project-to-recipe relations must be reconciled ide
 **Why:** Lazy initialization can leave an existing database with valid library rows but no reference rows, making configuration-driven behavior appear generic while bypassing the intended pattern and recipe.
 
 **How to apply:** Reconcile known fixture relations by stable project slugs on seed initialization and verify persisted counts, not only in-memory manufacturing fixtures.
+
+Library usage metadata is part of the project access boundary: project IDs and names in pattern/recipe usage must be scoped to projects the current user owns or can access through membership.
+
+**Why:** A protected library endpoint can still disclose private project existence if aggregate usage joins return every project in the database.
+
+**How to apply:** Apply the same owner-or-membership predicate to usage queries and verify an unrelated authenticated user cannot see another project's identifiers or names.

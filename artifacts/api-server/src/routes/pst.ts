@@ -966,7 +966,7 @@ router.get("/pst/projects", async (req, res): Promise<void> => {
   const projects = await db.select().from(pstProjectsTable)
     .where(filters.length ? and(...filters) : undefined)
     .orderBy(desc(pstProjectsTable.updatedAt));
-  const aggregates = await Promise.all(projects.map((project) => projectAggregate(project.id)));
+  const aggregates = await Promise.all(projects.map((project) => projectAggregate(project.id, userId)));
   res.json(ListPstProjectsResponse.parse(aggregates.filter(Boolean)));
 });
 
@@ -1010,7 +1010,7 @@ router.post("/pst/projects", async (req, res): Promise<void> => {
   });
   await db.insert(pstBlueprintsTable).values(blueprint);
   await addEvent("PST_CREATED", `${project.name} was created as a draft.`, id);
-  const aggregate = await projectAggregate(id);
+  const aggregate = await projectAggregate(id, userId);
   res.status(201).json(CreatePstProjectResponse.parse(aggregate));
 });
 
@@ -1024,7 +1024,7 @@ router.get("/pst/projects/:projectId", async (req, res): Promise<void> => {
   if (!access) {
     return;
   }
-  const aggregate = await projectAggregate(access.project.id);
+  const aggregate = await projectAggregate(access.project.id, access.userId);
   res.json(GetPstProjectResponse.parse(aggregate));
 });
 
@@ -1041,7 +1041,7 @@ router.patch("/pst/projects/:projectId", async (req, res): Promise<void> => {
   }
   const [updated] = await db.update(pstProjectsTable).set({ ...body.data, updatedAt: new Date() }).where(eq(pstProjectsTable.id, access.project.id)).returning();
   await addEvent("BLUEPRINT_EDITED", `${updated.name} project details were edited.`, updated.id);
-  res.json(UpdatePstProjectResponse.parse(await projectAggregate(updated.id)));
+  res.json(UpdatePstProjectResponse.parse(await projectAggregate(updated.id, access.userId)));
 });
 
 router.post("/pst/projects/:projectId/duplicate", async (req, res): Promise<void> => {
@@ -1054,7 +1054,7 @@ router.post("/pst/projects/:projectId/duplicate", async (req, res): Promise<void
   if (!access) {
     return;
   }
-  const source = await projectAggregate(access.project.id);
+  const source = await projectAggregate(access.project.id, access.userId);
   if (!source) {
     res.status(404).json({ error: "PST project not found" });
     return;
@@ -1091,7 +1091,7 @@ router.post("/pst/projects/:projectId/duplicate", async (req, res): Promise<void
     if (original) await db.insert(pstProjectComponentsTable).values({ ...original, id: randomUUID(), projectId: id });
   }
   await addEvent("PST_CREATED", `${duplicate.name} was duplicated with reusable components.`, id);
-  res.status(201).json(DuplicatePstProjectResponse.parse(await projectAggregate(id)));
+  res.status(201).json(DuplicatePstProjectResponse.parse(await projectAggregate(id, access.userId)));
 });
 
 router.post("/pst/projects/:projectId/archive", async (req, res): Promise<void> => {
@@ -1106,7 +1106,7 @@ router.post("/pst/projects/:projectId/archive", async (req, res): Promise<void> 
   }
   const [updated] = await db.update(pstProjectsTable).set({ status: "ARCHIVED", publicationStatus: "ARCHIVED", updatedAt: new Date() }).where(eq(pstProjectsTable.id, access.project.id)).returning();
   await addEvent("PST_ARCHIVED", `${updated.name} was archived.`, updated.id);
-  res.json(ArchivePstProjectResponse.parse(await projectAggregate(updated.id)));
+  res.json(ArchivePstProjectResponse.parse(await projectAggregate(updated.id, access.userId)));
 });
 
 router.post("/pst/projects/:projectId/architect", async (req, res): Promise<void> => {
@@ -1129,7 +1129,7 @@ router.post("/pst/projects/:projectId/architect", async (req, res): Promise<void
     res.status(400).json({ error: appliedReferences.error });
     return;
   }
-  const references = await currentProjectReferences(project.id);
+  const references = await currentProjectReferences(project.id, access.userId);
   const proposal = await aiProvider.proposeBlueprint({
     problem: project.problemStatement,
     targetUser: project.targetUser,
@@ -1218,22 +1218,32 @@ router.get("/pst/assets", async (req, res): Promise<void> => {
   res.json(ListPstAssetsResponse.parse(assets));
 });
 
-router.get("/pst/patterns", async (_req, res): Promise<void> => {
-  await ensureSeed();
+router.get("/pst/patterns", async (req, res): Promise<void> => {
+  const userId = currentUserId(req);
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  await ensureSeed(userId);
   const patterns = await db.select().from(pstPatternsTable).orderBy(pstPatternsTable.name);
   const enrichedPatterns = await Promise.all(patterns.map(async (pattern) => ({
     ...pattern,
-    ...(await getPatternUsage(pattern.id)),
+    ...(await getPatternUsage(pattern.id, userId)),
   })));
   res.json(ListPstPatternsResponse.parse(enrichedPatterns));
 });
 
-router.get("/pst/recipes", async (_req, res): Promise<void> => {
-  await ensureSeed();
+router.get("/pst/recipes", async (req, res): Promise<void> => {
+  const userId = currentUserId(req);
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  await ensureSeed(userId);
   const recipes = await db.select().from(pstRecipesTable).orderBy(pstRecipesTable.name);
   const enrichedRecipes = await Promise.all(recipes.map(async (recipe) => ({
     ...recipe,
-    ...(await getRecipeUsage(recipe.id)),
+    ...(await getRecipeUsage(recipe.id, userId)),
   })));
   res.json(ListPstRecipesResponse.parse(enrichedRecipes));
 });
@@ -1263,7 +1273,7 @@ router.post("/pst/projects/:projectId/builder", async (req, res): Promise<void> 
     res.status(400).json({ error: appliedReferences.error });
     return;
   }
-  const references = await currentProjectReferences(access.project.id);
+  const references = await currentProjectReferences(access.project.id, access.userId);
   const selectedAssets = body.data.assetIds?.length
     ? await db.select().from(pstAssetsTable).where(inArray(pstAssetsTable.id, body.data.assetIds))
     : await db.select().from(pstAssetsTable).where(eq(pstAssetsTable.status, "ACTIVE")).limit(5);
@@ -1322,7 +1332,7 @@ router.post("/pst/projects/:projectId/simulate", async (req, res): Promise<void>
   if (!access) {
     return;
   }
-  const project = await projectAggregate(access.project.id);
+  const project = await projectAggregate(access.project.id, access.userId);
   if (!project) {
     res.status(404).json({ error: "PST project not found" });
     return;
@@ -1350,7 +1360,7 @@ router.post("/pst/projects/:projectId/qa", async (req, res): Promise<void> => {
   if (!access) {
     return;
   }
-  const project = await projectAggregate(access.project.id);
+  const project = await projectAggregate(access.project.id, access.userId);
   if (!project) {
     res.status(404).json({ error: "PST project not found" });
     return;
@@ -1405,7 +1415,7 @@ router.post("/pst/projects/:projectId/approve", async (req, res): Promise<void> 
   }
   const [updated] = await db.update(pstProjectsTable).set({ status: "APPROVED", updatedAt: new Date() }).where(eq(pstProjectsTable.id, project.id)).returning();
   await addEvent("PST_APPROVED", `${project.name} was explicitly approved by a human.`, project.id);
-  res.json(ApprovePstProjectResponse.parse(await projectAggregate(updated.id)));
+  res.json(ApprovePstProjectResponse.parse(await projectAggregate(updated.id, access.userId)));
 });
 
 router.post("/pst/projects/:projectId/publish", async (req, res): Promise<void> => {
@@ -1449,7 +1459,7 @@ router.post("/pst/projects/:projectId/publish", async (req, res): Promise<void> 
       .returning();
   });
   await addEvent("PST_PUBLISHED", `${project.name} is now available in the customer workspace.`, project.id);
-  res.json(PublishPstProjectResponse.parse(await projectAggregate(updated.id)));
+  res.json(PublishPstProjectResponse.parse(await projectAggregate(updated.id, access.userId)));
 });
 
 router.get("/pst/projects/:projectId/releases", async (req, res): Promise<void> => {
@@ -1532,7 +1542,7 @@ router.post("/pst/projects/:projectId/releases/:releaseId/restore", async (req, 
     }
   });
   await addEvent("PST_RELEASE_RESTORED", `${access.project.name} release ${release.version} was restored to the draft.`, access.project.id);
-  res.json(RestorePstReleaseResponse.parse(await projectAggregate(access.project.id)));
+  res.json(RestorePstReleaseResponse.parse(await projectAggregate(access.project.id, access.userId)));
 });
 
 router.get("/pst/projects/:projectId/workspace", async (req, res): Promise<void> => {
@@ -1545,7 +1555,7 @@ router.get("/pst/projects/:projectId/workspace", async (req, res): Promise<void>
   if (!access) {
     return;
   }
-  const liveProject = await projectAggregate(access.project.id);
+  const liveProject = await projectAggregate(access.project.id, access.userId);
   const release = await latestRelease(access.project.id);
   const project = liveProject && release
     ? {

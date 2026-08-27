@@ -193,11 +193,43 @@ function assertStatus(result, expected, label) {
   assert.equal(result.response.status, expected, `${label}: expected ${expected}, got ${result.response.status}`);
 }
 
+async function assertCrossOwnerIsolation(outsider, projectId, releaseId) {
+  const requests = [
+    ["GET", `/pst/projects/${projectId}`],
+    ["PATCH", `/pst/projects/${projectId}`, { description: "Cross-owner mutation must be rejected." }],
+    ["POST", `/pst/projects/${projectId}/duplicate`, {}],
+    ["POST", `/pst/projects/${projectId}/archive`, {}],
+    ["POST", `/pst/projects/${projectId}/architect`, { patternId: "pattern-assessment", recipeId: "recipe-assessment" }],
+    ["GET", `/pst/projects/${projectId}/blueprint`],
+    ["PATCH", `/pst/projects/${projectId}/blueprint`, { nextStep: "Cross-owner blueprint mutation must be rejected." }],
+    ["POST", `/pst/projects/${projectId}/builder`, { patternId: "pattern-assessment", recipeId: "recipe-assessment" }],
+    ["POST", `/pst/projects/${projectId}/simulate`, { mode: "MANUAL" }],
+    ["POST", `/pst/projects/${projectId}/qa`, {}],
+    ["POST", `/pst/projects/${projectId}/approve`, {}],
+    ["POST", `/pst/projects/${projectId}/publish`, {}],
+    ["GET", `/pst/projects/${projectId}/releases`],
+    ["POST", `/pst/projects/${projectId}/releases/${releaseId}/restore`, {}],
+    ["GET", `/pst/projects/${projectId}/workspace`],
+    ["GET", `/pst/projects/${projectId}/members`],
+    ["POST", `/pst/projects/${projectId}/members`, { userId: outsider.userId, role: "viewer" }],
+  ];
+
+  for (const [method, path, body] of requests) {
+    const result = await apiRequest(outsider.token, path, {
+      method,
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+    assertStatus(result, 404, `cross-owner ${method} ${path}`);
+  }
+}
+
 async function runAuthenticatedRouteAcceptance() {
   const owner = await createClerkTestSession("owner");
   let viewer;
+  let outsider;
   try {
     viewer = await createClerkTestSession("viewer");
+    outsider = await createClerkTestSession("outsider");
 
     const unauthenticatedCreate = await apiRequest(undefined, "/pst/projects", {
       method: "POST",
@@ -253,6 +285,23 @@ async function runAuthenticatedRouteAcceptance() {
     assert.deepEqual(referencesPersisted.body.selectedRecipes.map((recipe) => recipe.id), ["recipe-assessment"]);
     assert.equal(referencesPersisted.body.status, "ARCHITECTED");
 
+    const outsiderProjects = await apiRequest(outsider.token, "/pst/projects");
+    assertStatus(outsiderProjects, 200, "cross-owner project list");
+    assert.equal(outsiderProjects.body.some((project) => project.id === projectId), false);
+    const outsiderActivity = await apiRequest(outsider.token, "/pst/dashboard/activity");
+    assertStatus(outsiderActivity, 200, "cross-owner activity");
+    assert.equal(outsiderActivity.body.some((event) => event.projectId === projectId), false);
+    const outsiderPatterns = await apiRequest(outsider.token, "/pst/patterns");
+    assertStatus(outsiderPatterns, 200, "cross-owner pattern usage");
+    const outsiderAssessmentPattern = outsiderPatterns.body.find((pattern) => pattern.id === "pattern-assessment");
+    assert.equal(outsiderAssessmentPattern.projectIds.includes(projectId), false);
+    assert.equal(outsiderAssessmentPattern.projects.some((project) => project.id === projectId), false);
+    const outsiderRecipes = await apiRequest(outsider.token, "/pst/recipes");
+    assertStatus(outsiderRecipes, 200, "cross-owner recipe usage");
+    const outsiderAssessmentRecipe = outsiderRecipes.body.find((recipe) => recipe.id === "recipe-assessment");
+    assert.equal(outsiderAssessmentRecipe.projectIds.includes(projectId), false);
+    assert.equal(outsiderAssessmentRecipe.projects.some((project) => project.id === projectId), false);
+
     const membership = await apiRequest(owner.token, `/pst/projects/${projectId}/members`, {
       method: "POST",
       body: JSON.stringify({ userId: viewer.userId, role: "viewer" }),
@@ -307,6 +356,8 @@ async function runAuthenticatedRouteAcceptance() {
     assert.equal(published.body.status, "PUBLISHED");
     assert.equal(published.body.publicationStatus, "PUBLISHED");
 
+    await assertCrossOwnerIsolation(outsider, projectId, (await apiRequest(owner.token, `/pst/projects/${projectId}/releases`)).body[0].id);
+
     const afterPublish = await apiRequest(undefined, `/pst/public/workspaces/${slug}`);
     assertStatus(afterPublish, 200, "public workspace after publish");
     assert.equal(afterPublish.body.project.slug, slug);
@@ -360,6 +411,7 @@ async function runAuthenticatedRouteAcceptance() {
     };
   } finally {
     await deleteClerkTestUser(viewer?.userId);
+    await deleteClerkTestUser(outsider?.userId);
     await deleteClerkTestUser(owner.userId);
   }
 }
@@ -371,6 +423,6 @@ console.log(JSON.stringify({
   blueprints: 2,
   assessmentSteps: assessment.workflow.map((step) => step.title),
   decisionSteps: decision.workflow.map((step) => step.title),
-  checks: ["configuration-driven build", "different customer journeys/outcomes", "QA failure", "missing dependency", "duplicate isolation", "publish gate", "customer access boundary", "authenticated create-to-publish route lifecycle"],
+  checks: ["configuration-driven build", "different customer journeys/outcomes", "QA failure", "missing dependency", "duplicate isolation", "publish gate", "customer access boundary", "cross-owner route isolation", "scoped library usage", "authenticated create-to-publish route lifecycle"],
   authenticatedRoute: authenticatedRouteResult,
 }, null, 2));
