@@ -25,6 +25,7 @@ import type {
   BuildInput,
   BuildResult,
   DashboardSummary,
+  ErrorResponse,
   FactoryEvent,
   HealthStatus,
   ListPstAssetsParams,
@@ -1523,7 +1524,7 @@ export const publishPstProject = async (projectId: string, options?: Parameters<
 
 
 
-export const getPublishPstProjectMutationOptions = <TError = ErrorType<unknown>,
+export const getPublishPstProjectMutationOptions = <TError = ErrorType<ErrorResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof publishPstProject>>, TError,{projectId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof publishPstProject>>, TError,{projectId: string}, TContext> => {
 
@@ -1552,12 +1553,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type PublishPstProjectMutationResult = NonNullable<Awaited<ReturnType<typeof publishPstProject>>>
 
-    export type PublishPstProjectMutationError = ErrorType<unknown>
+    export type PublishPstProjectMutationError = ErrorType<ErrorResponse>
 
     /**
  * @summary Publish an approved PST
  */
-export const usePublishPstProject = <TError = ErrorType<unknown>,
+export const usePublishPstProject = <TError = ErrorType<ErrorResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof publishPstProject>>, TError,{projectId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof publishPstProject>>,

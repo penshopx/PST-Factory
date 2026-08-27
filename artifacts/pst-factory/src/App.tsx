@@ -315,6 +315,7 @@ function ProjectWorkspace() {
   };
   const refreshProject = () => {
     setPublishNotice(null);
+    publish.reset();
     void Promise.all([
       projectQuery.refetch(),
       blueprintQuery.refetch(),
@@ -338,7 +339,7 @@ function ProjectWorkspace() {
       },
       onError: (error) => {
         setPublishNotice(isRetryablePublishConflict(error)
-          ? 'Another publish finished first. Refresh this project before trying again.'
+          ? 'This release was already published by another admin. Refresh the project data before trying again.'
           : 'Publishing could not be completed. Refresh this project and try again.');
       },
     });

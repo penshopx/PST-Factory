@@ -488,6 +488,7 @@ export interface DashboardSummary {
 
 export interface ErrorResponse {
   error: string;
+  retryable?: boolean;
 }
 
 /**

@@ -346,6 +346,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PstProject"
+        "409":
+          description: Publish conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /pst/projects/{projectId}/workspace:
     get:
       operationId: getPstWorkspace
@@ -886,4 +892,5 @@ components:
       required: [error]
       properties:
         error: { type: string }
+        retryable: { type: boolean }
 
