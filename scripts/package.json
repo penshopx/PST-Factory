@@ -6,6 +6,7 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "test:pst-acceptance": "node --import tsx ./src/pst-factory-acceptance.mjs",
+    "test:pst-routing": "node --import tsx ./src/pst-factory-acceptance.mjs --check-routing",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {

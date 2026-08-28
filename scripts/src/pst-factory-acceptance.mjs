@@ -126,7 +126,79 @@ const publicSteps = publicCustomerWorkspaceSteps(assessment.workflow);
 assert.equal("configuration" in publicSteps[0], false);
 assert.deepEqual(publicSteps.map((step) => step.title), assessment.workflow.map((step) => step.title));
 
-const apiBaseUrl = (process.env.PST_API_URL ?? `http://127.0.0.1:${process.env.PORT ?? "8080"}/api`).replace(/\/$/, "");
+function trimTrailingSlash(value) {
+  return value.replace(/\/$/, "");
+}
+
+function resolveApiBaseUrl({ configuredUrl, port = "8080" } = {}) {
+  const apiUrl = configuredUrl?.trim() || `http://127.0.0.1:${port}/api`;
+  return trimTrailingSlash(apiUrl);
+}
+
+function resolveBrowserBaseUrl({
+  configuredUrl,
+  developmentDomain,
+  webPort = "21409",
+} = {}) {
+  const browserUrl = configuredUrl?.trim();
+  if (browserUrl) return trimTrailingSlash(browserUrl);
+
+  const sharedDomain = developmentDomain?.trim();
+  if (sharedDomain) {
+    return `https://${sharedDomain.replace(/^https?:\/\//, "").replace(/\/$/, "")}`;
+  }
+
+  return `http://127.0.0.1:${webPort}`;
+}
+
+function runRoutingChecks() {
+  assert.equal(
+    resolveBrowserBaseUrl({
+      configuredUrl: "https://browser.example.test/",
+      developmentDomain: "shared.example.test",
+    }),
+    "https://browser.example.test",
+    "PST_BROWSER_URL must take precedence over REPLIT_DEV_DOMAIN",
+  );
+  assert.equal(
+    resolveBrowserBaseUrl({
+      configuredUrl: "",
+      developmentDomain: "https://shared.example.test/",
+    }),
+    "https://shared.example.test",
+    "REPLIT_DEV_DOMAIN must resolve to the shared HTTPS proxy",
+  );
+  assert.equal(
+    resolveBrowserBaseUrl({
+      configuredUrl: undefined,
+      developmentDomain: undefined,
+    }),
+    "http://127.0.0.1:21409",
+    "browser URL must have a local fallback when no shared URL is available",
+  );
+
+  const configuredApiUrl = resolveApiBaseUrl({
+    configuredUrl: "https://api.example.test/api/",
+    port: "9999",
+  });
+  assert.equal(
+    configuredApiUrl,
+    "https://api.example.test/api",
+    "PST_API_URL must be normalized independently of the browser URL",
+  );
+  assert.equal(
+    resolveApiBaseUrl({ configuredUrl: undefined, port: "9999" }),
+    "http://127.0.0.1:9999/api",
+    "API-only fallback must use the API port",
+  );
+
+  console.log("PST acceptance routing checks: PASS");
+}
+
+const apiBaseUrl = resolveApiBaseUrl({
+  configuredUrl: process.env.PST_API_URL,
+  port: process.env.PORT ?? "8080",
+});
 const directApiBaseUrl = apiBaseUrl.endsWith("/api") ? apiBaseUrl.slice(0, -4) : undefined;
 
 async function clerkRequest(path, init = {}) {
@@ -179,18 +251,17 @@ async function createClerkTestSession(label) {
   }
 }
 
+if (process.argv.includes("--check-routing")) {
+  runRoutingChecks();
+  process.exit(0);
+}
+
 const browserAcceptanceEnabled = process.env.PST_BROWSER_ACCEPTANCE === "1";
-const browserBaseUrl = (() => {
-  const configuredUrl = process.env.PST_BROWSER_URL?.trim();
-  if (configuredUrl) return configuredUrl.replace(/\/$/, "");
-
-  const developmentDomain = process.env.REPLIT_DEV_DOMAIN?.trim();
-  if (developmentDomain) {
-    return `https://${developmentDomain.replace(/^https?:\/\//, "").replace(/\/$/, "")}`;
-  }
-
-  return `http://127.0.0.1:${process.env.PST_WEB_PORT ?? "21409"}`;
-})();
+const browserBaseUrl = resolveBrowserBaseUrl({
+  configuredUrl: process.env.PST_BROWSER_URL,
+  developmentDomain: process.env.REPLIT_DEV_DOMAIN,
+  webPort: process.env.PST_WEB_PORT ?? "21409",
+});
 const workspaceRoot = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const acceptanceScreenshotDirectory = process.env.PST_ACCEPTANCE_SCREENSHOT_DIR
   ?? process.env.PST_ACCEPTANCE_EVIDENCE_DIR
