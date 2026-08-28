@@ -27,6 +27,8 @@ if (!basePath) {
   );
 }
 
+const apiProxyPort = process.env.PST_API_PORT ?? '8080';
+
 export default defineConfig({
   base: basePath,
   plugins: [
@@ -69,6 +71,12 @@ export default defineConfig({
     strictPort: true,
     host: '0.0.0.0',
     allowedHosts: true,
+    proxy: {
+      '/api': {
+        target: `http://127.0.0.1:${apiProxyPort}`,
+        changeOrigin: false,
+      },
+    },
     fs: {
       strict: true,
     },

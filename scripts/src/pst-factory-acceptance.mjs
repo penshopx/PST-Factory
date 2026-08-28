@@ -312,6 +312,7 @@ async function runBrowserPublishConflictAcceptance({ projectId, owner, viewer })
     assert.equal(await conflictPage.getByTestId("button-publish-pst").isDisabled(), true);
     await conflictPage.getByTestId("tab-versions").click();
     await conflictPage.getByText("Terbitan yang sedang dipakai", { exact: true }).waitFor();
+    await conflictPage.getByText("Riwayat versi", { exact: true }).waitFor();
     const releaseCards = conflictPage.locator('[data-testid^="card-release-"]:not([data-testid="card-release-comparison"])');
     assert.equal(await releaseCards.count(), 1);
     assert.match(await releaseCards.first().innerText(), /v1\.0/);
