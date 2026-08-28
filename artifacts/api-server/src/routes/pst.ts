@@ -724,7 +724,40 @@ async function releaseSnapshot(
     .select()
     .from(pstProjectComponentsTable)
     .where(eq(pstProjectComponentsTable.projectId, project.id));
+  const assetIds = components.map((component) => component.assetId);
+  const assets = assetIds.length
+    ? await query
+      .select({ id: pstAssetsTable.id, version: pstAssetsTable.version })
+      .from(pstAssetsTable)
+      .where(inArray(pstAssetsTable.id, assetIds))
+    : [];
+  const assetVersions = new Map(assets.map((asset) => [asset.id, asset.version]));
+  const [patternReference] = await query
+    .select({ patternId: pstProjectPatternsTable.patternId })
+    .from(pstProjectPatternsTable)
+    .where(eq(pstProjectPatternsTable.projectId, project.id))
+    .limit(1);
+  const [recipeReference] = await query
+    .select({ recipeId: pstProjectRecipesTable.recipeId })
+    .from(pstProjectRecipesTable)
+    .where(eq(pstProjectRecipesTable.projectId, project.id))
+    .limit(1);
+  const [pattern] = patternReference
+    ? await query
+      .select()
+      .from(pstPatternsTable)
+      .where(eq(pstPatternsTable.id, patternReference.patternId))
+      .limit(1)
+    : [];
+  const [recipe] = recipeReference
+    ? await query
+      .select()
+      .from(pstRecipesTable)
+      .where(eq(pstRecipesTable.id, recipeReference.recipeId))
+      .limit(1)
+    : [];
   return {
+    snapshotVersion: "pst-release-snapshot.v1",
     project: {
       name: project.name,
       description: project.description,
@@ -746,14 +779,34 @@ async function releaseSnapshot(
       updatedAt: blueprint.updatedAt.toISOString(),
     },
     workflow: blueprint.workflow,
-    components: components.map(({ assetId, name, type, source, status, required }) => ({
+    ...(pattern ? {
+      pattern: {
+        id: pattern.id,
+        name: pattern.name,
+        description: pattern.description,
+        steps: pattern.steps,
+      },
+    } : {}),
+    ...(recipe ? {
+      recipe: {
+        id: recipe.id,
+        name: recipe.name,
+        description: recipe.description,
+        components: recipe.components,
+      },
+    } : {}),
+    components: components.map(({ id, assetId, name, type, source, status, required }) => ({
+      id,
       assetId,
       name,
       type,
       source,
+      ...(assetVersions.get(assetId) ? { version: assetVersions.get(assetId) } : {}),
       status,
       required,
     })),
+    rules: [],
+    providers: [],
   };
 }
 
@@ -1761,11 +1814,11 @@ router.post("/pst/projects/:projectId/releases/:releaseId/restore", async (req, 
     }).where(eq(pstBlueprintsTable.projectId, access.project.id));
     await tx.delete(pstProjectComponentsTable).where(eq(pstProjectComponentsTable.projectId, access.project.id));
     if (snapshot.components.length) {
-      await tx.insert(pstProjectComponentsTable).values(snapshot.components.map((component) => ({
-        id: randomUUID(),
-        projectId: access.project.id,
-        ...component,
-      })));
+        await tx.insert(pstProjectComponentsTable).values(snapshot.components.map((component) => ({
+          ...component,
+          id: randomUUID(),
+          projectId: access.project.id,
+        })));
     }
   });
   await addEvent("PST_RELEASE_RESTORED", `${access.project.name} release ${release.version} was restored to the draft.`, access.project.id);

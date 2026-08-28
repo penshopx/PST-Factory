@@ -186,12 +186,47 @@ export const pstProjectComponentsTable = pgTable("pst_project_components", {
 });
 
 export type PstReleaseComponentSnapshot = {
+  id: string;
   assetId: string;
   name: string;
   type: string;
   source: string;
+  version?: string;
   status: string;
   required: boolean;
+  configuration?: Record<string, unknown>;
+};
+
+export type PstReleasePatternSnapshot = {
+  id: string;
+  name: string;
+  version?: string;
+  description?: string;
+  steps: string[];
+};
+
+export type PstReleaseRecipeSnapshot = {
+  id: string;
+  name: string;
+  version?: string;
+  description?: string;
+  components: string[];
+};
+
+export type PstReleaseRuleSnapshot = {
+  id: string;
+  version: string;
+  name: string;
+  kind: string;
+  when: Record<string, unknown>;
+  then: Array<Record<string, unknown>>;
+};
+
+export type PstReleaseProviderSnapshot = {
+  id: string;
+  capability: string;
+  mode: string;
+  configuration?: Record<string, unknown>;
 };
 
 export type PstReleaseProjectSnapshot = {
@@ -218,10 +253,15 @@ export type PstReleaseProjectSnapshot = {
 };
 
 export type PstReleaseSnapshot = {
+  snapshotVersion: "pst-release-snapshot.v1";
   project: PstReleaseProjectSnapshot;
   blueprint: Omit<PstBlueprint, "updatedAt"> & { version: string; updatedAt: string };
   workflow: WorkflowStep[];
+  pattern?: PstReleasePatternSnapshot;
+  recipe?: PstReleaseRecipeSnapshot;
   components: PstReleaseComponentSnapshot[];
+  rules: PstReleaseRuleSnapshot[];
+  providers: PstReleaseProviderSnapshot[];
 };
 
 export const pstReleasesTable = pgTable(
