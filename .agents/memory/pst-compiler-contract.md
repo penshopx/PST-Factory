@@ -46,3 +46,15 @@ Recipe, Rules, and Providers while the engine remains stable.
 **How to apply:** Before building a core task, require its title, description,
 and acceptance criteria. Reject product-specific implementation when the same
 result can be represented declaratively.
+
+The Architecture Review Checklist also requires backward compatibility: existing
+PSTs must continue to support Load → Validate → Run → Publish without manual
+rewrites after an engine change.
+
+**Why:** A manufacturing engine becomes more valuable as the catalog grows only
+when new capabilities do not strand previously published or reusable PSTs.
+
+**How to apply:** Review migrations, snapshot readers, validators, compiler
+normalization, and runtime adapters for legacy inputs. Prefer versioned
+normalization or compatibility adapters over forcing every old PST to be
+rewritten.
