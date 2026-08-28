@@ -151,13 +151,29 @@ function resolveBrowserBaseUrl({
   return `http://127.0.0.1:${webPort}`;
 }
 
-async function assertBrowserProxyApiResponse() {
-  const browserUrl = resolveBrowserBaseUrl({
-    configuredUrl: process.env.PST_BROWSER_URL,
-    developmentDomain: process.env.REPLIT_DEV_DOMAIN,
-    webPort: process.env.PST_WEB_PORT ?? "21409",
-  });
-  const probeUrl = `${browserUrl}/api/pst/dashboard/activity`;
+const browserProxyProbes = [
+  {
+    name: "health",
+    path: "/api/healthz",
+    expectedStatus: 200,
+    expectedBody: { status: "ok" },
+  },
+  {
+    name: "private PST route",
+    path: "/api/pst/dashboard/activity",
+    expectedStatus: 401,
+    expectedBody: { error: "Unauthorized" },
+  },
+  {
+    name: "public PST route",
+    path: "/api/pst/public/workspaces/__pst-browser-proxy-preflight__",
+    expectedStatus: 404,
+    expectedBody: { error: "Published customer workspace not found" },
+  },
+];
+
+async function assertBrowserProxyJsonResponse(browserUrl, probe) {
+  const probeUrl = `${browserUrl}${probe.path}`;
   const response = await fetch(probeUrl, {
     headers: { Accept: "application/json" },
     redirect: "manual",
@@ -167,33 +183,45 @@ async function assertBrowserProxyApiResponse() {
 
   assert.equal(
     response.status,
-    401,
-    `browser API proxy ${probeUrl}: expected 401, got ${response.status}`,
+    probe.expectedStatus,
+    `browser API proxy ${probe.name} ${probeUrl}: expected ${probe.expectedStatus}, got ${response.status}`,
   );
   assert.match(
     contentType,
     /application\/json/i,
-    `browser API proxy ${probeUrl}: expected JSON, got ${contentType || "no content type"}`,
+    `browser API proxy ${probe.name} ${probeUrl}: expected JSON, got ${contentType || "no content type"}`,
   );
   assert.doesNotMatch(
     bodyText,
     /<!doctype html|<html[\s>]/i,
-    `browser API proxy ${probeUrl}: must not return the frontend HTML fallback`,
+    `browser API proxy ${probe.name} ${probeUrl}: must not return the frontend HTML fallback`,
   );
 
   let body;
   try {
     body = JSON.parse(bodyText);
   } catch (error) {
-    throw new Error(`Browser API proxy ${probeUrl} returned a non-JSON body.`, { cause: error });
+    throw new Error(`Browser API proxy ${probe.name} ${probeUrl} returned a non-JSON body.`, { cause: error });
   }
   assert.deepEqual(
     body,
-    { error: "Unauthorized" },
-    `browser API proxy ${probeUrl}: unexpected unauthenticated response`,
+    probe.expectedBody,
+    `browser API proxy ${probe.name} ${probeUrl}: unexpected JSON response`,
   );
+}
 
-  console.log("PST browser API proxy check: PASS");
+async function assertBrowserProxyApiResponse() {
+  const browserUrl = resolveBrowserBaseUrl({
+    configuredUrl: process.env.PST_BROWSER_URL,
+    developmentDomain: process.env.REPLIT_DEV_DOMAIN,
+    webPort: process.env.PST_WEB_PORT ?? "21409",
+  });
+
+  for (const probe of browserProxyProbes) {
+    await assertBrowserProxyJsonResponse(browserUrl, probe);
+  }
+
+  console.log(`PST browser API proxy checks (${browserProxyProbes.length} routes): PASS`);
 }
 
 async function runRoutingChecks() {
