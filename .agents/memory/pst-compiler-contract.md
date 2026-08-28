@@ -58,3 +58,16 @@ when new capabilities do not strand previously published or reusable PSTs.
 normalization, and runtime adapters for legacy inputs. Prefer versioned
 normalization or compatibility adapters over forcing every old PST to be
 rewritten.
+
+The long-term boundary is a canonical PST schema shared by Pattern, Recipe,
+Blueprint, Compiler, and Runtime. Versioned PST inputs should flow through
+version-specific normalizers into that canonical schema before reaching the
+shared engine.
+
+**Why:** A stable canonical language lets the Factory evolve schema versions
+without linear technical debt or one-off product migrations.
+
+**How to apply:** Keep v1/v2/... normalization explicit and isolated from the
+engine. New schema versions may add normalizers, but the Compiler and Runtime
+should consume the canonical representation rather than branching on product
+or historical input shape.
