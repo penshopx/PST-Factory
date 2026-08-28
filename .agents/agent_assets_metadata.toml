@@ -1,0 +1,16 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "QMVMXgija3taS7z8_ONld"
+uri = "file://artifacts/pst-factory/acceptance-evidence/publish-conflict-274d379d-edd0-494c-85cd-c709ec6d67c5.png"
+type = "image"
+title = "Bukti konflik publish PST Factory"
+description = "Screenshot acceptance dua sesi browser saat notifikasi konflik publish tampil sebelum pemulihan melalui muat ulang data proyek."
+logical_id = "cda1fa7f-9b57-4631-9c34-799173912da0"
+content_hash = "sha256:b1ddf4e69912939f8810547792ec3d3e17130f4d262f16362e65872438693244"
+size = 97928
+mtime_ms = 1787879005575
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:b9c964a6-8e2c-4021-9426-fd478a93fec9/cda1fa7f-9b57-4631-9c34-799173912da0/42a3b8d6-2929-4b7f-86d0-3adfd3c160b1"
+storage_version_token = "1787879095698545"
+content_type = "image/png"

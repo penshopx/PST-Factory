@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import { relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { clerk, clerkSetup } from "@clerk/testing/playwright";
 import { chromium } from "playwright";
 import {
@@ -180,6 +181,7 @@ async function createClerkTestSession(label) {
 
 const browserAcceptanceEnabled = process.env.PST_BROWSER_ACCEPTANCE === "1";
 const browserBaseUrl = (process.env.PST_BROWSER_URL ?? `http://127.0.0.1:${process.env.PST_WEB_PORT ?? "21409"}`).replace(/\/$/, "");
+const workspaceRoot = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 
 async function signInBrowserPage(page, session) {
   await page.goto(browserBaseUrl, { waitUntil: "domcontentloaded" });
@@ -264,8 +266,8 @@ async function runBrowserPublishConflictAcceptance({ projectId, owner, viewer })
     assert.equal(await conflictPage.getByTestId("button-refresh-after-publish-conflict").isVisible(), true);
     assert.equal(await winnerPage.getByTestId("status-publish-conflict").isVisible().catch(() => false), false);
 
-    const evidenceDirectory = process.env.PST_ACCEPTANCE_EVIDENCE_DIR ?? "artifacts/pst-factory/acceptance-evidence";
-    await mkdir(resolve(evidenceDirectory), { recursive: true });
+    const evidenceDirectory = resolve(workspaceRoot, process.env.PST_ACCEPTANCE_EVIDENCE_DIR ?? "artifacts/pst-factory/acceptance-evidence");
+    await mkdir(evidenceDirectory, { recursive: true });
     const evidencePath = resolve(evidenceDirectory, `publish-conflict-${projectId}.png`);
     await conflictPage.screenshot({ path: evidencePath, fullPage: true });
 
@@ -280,7 +282,7 @@ async function runBrowserPublishConflictAcceptance({ projectId, owner, viewer })
     await conflictPage.getByTestId("status-publish-conflict").waitFor({ state: "hidden", timeout: 20_000 });
     assert.equal(await conflictPage.getByTestId("button-publish-pst").isDisabled(), true);
     await conflictPage.getByTestId("tab-versions").click();
-    await conflictPage.getByText(/Live customer release|Rilis customer aktif/).waitFor();
+    await conflictPage.getByText(/Live customer release|Rilis customer aktif|Terbitan yang sedang dipakai/).waitFor();
     const releaseCards = conflictPage.locator('[data-testid^="card-release-"]:not([data-testid="card-release-comparison"])');
     assert.equal(await releaseCards.count(), 1);
     assert.match(await releaseCards.first().innerText(), /v1\.0/);
@@ -292,7 +294,7 @@ async function runBrowserPublishConflictAcceptance({ projectId, owner, viewer })
       releaseVersion: "v1.0",
       visualEvidence: {
         kind: "screenshot",
-        path: relative(process.cwd(), evidencePath),
+        path: relative(workspaceRoot, evidencePath),
         state: "conflict notice visible before refresh",
       },
     };

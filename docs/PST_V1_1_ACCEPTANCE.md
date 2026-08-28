@@ -6,6 +6,20 @@ The tenth PST proof is an executable scenario, not a product-specific implementa
 pnpm --filter @workspace/scripts run test:pst-acceptance
 ```
 
+Untuk mengaktifkan acceptance dua sesi browser dan menyimpan bukti konflik
+publish, jalankan:
+
+```bash
+PST_BROWSER_ACCEPTANCE=1 \
+PST_BROWSER_URL="https://${REPLIT_DEV_DOMAIN}" \
+pnpm --filter @workspace/scripts run test:pst-acceptance
+```
+
+Saat mode browser aktif, hasil JSON mencantumkan
+`authenticatedRoute.browserPublishConflict.visualEvidence` dan screenshot
+disimpan di `artifacts/pst-factory/acceptance-evidence/`. Folder tujuan dapat
+diganti dengan `PST_ACCEPTANCE_EVIDENCE_DIR`.
+
 The scenario is accepted when all of these remain true:
 
 - Two materially different Blueprint configurations (assessment and vendor decision) produce different workflow steps and component sets through the same builder.
