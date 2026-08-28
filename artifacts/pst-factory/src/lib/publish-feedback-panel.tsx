@@ -23,7 +23,7 @@ export function PublishNoticePanel({
     >
       <TriangleAlert className="mt-0.5 shrink-0" size={18} />
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-bold">{isConflict ? 'Release already published' : 'Publishing failed'}</p>
+        <p className="text-sm font-bold">{isConflict ? 'Rilis sudah diterbitkan' : 'Penerbitan gagal'}</p>
         <p className="mt-1 text-xs leading-relaxed">{notice.message}</p>
         <button
           type="button"
@@ -31,7 +31,7 @@ export function PublishNoticePanel({
           onClick={onRefresh}
           data-testid={isConflict ? 'button-refresh-after-publish-conflict' : 'button-refresh-after-publish-error'}
         >
-          <RefreshCw size={14} /> {isConflict ? 'Refresh project data' : 'Refresh project'}
+          <RefreshCw size={14} /> {isConflict ? 'Segarkan data project' : 'Segarkan project'}
         </button>
       </div>
     </div>

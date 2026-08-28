@@ -7,4 +7,4 @@ Managed artifact web workflows inject `PORT` and `BASE_PATH`; manual Vite builds
 
 **Why:** A stale process can make a healthy Vite service fail with a port-in-use error, and a manual build otherwise fails before compiling because the project config intentionally requires both variables.
 
-**How to apply:** Diagnose the actual listener before changing ports, restart the existing artifact workflow rather than creating a replacement, and run acceptance scripts with `PST_API_URL` or the workflow's injected `PORT` instead of assuming the port in project prose.
+**How to apply:** Diagnose the actual listener before changing ports, restart the existing artifact workflow rather than creating a replacement, and run acceptance scripts with `PST_API_URL` or the workflow's injected `PORT` instead of assuming the port in project prose. After API client regeneration, rebuild its declaration output before typechecking consumers because workspace resolution can use the generated package declarations.

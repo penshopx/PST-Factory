@@ -19,15 +19,15 @@ test('retryable publish conflicts show release-published guidance', () => {
     notice,
     {
       kind: 'conflict',
-      message: 'This release was already published by another admin. Refresh the project data before trying again.',
+      message: 'Rilis ini sudah diterbitkan oleh admin lain. Segarkan data project sebelum mencoba lagi.',
     },
   );
 
   const markup = renderToStaticMarkup(
     <PublishNoticePanel notice={notice} onRefresh={() => undefined} />,
   );
-  assert.match(markup, /Release already published/);
-  assert.match(markup, /Refresh project data/);
+  assert.match(markup, /Rilis sudah diterbitkan/);
+  assert.match(markup, /Segarkan data project/);
   assert.match(markup, /status-publish-conflict/);
 });
 
@@ -41,15 +41,15 @@ test('ordinary publish errors keep the general failure guidance', () => {
     notice,
     {
       kind: 'error',
-      message: 'Publishing could not be completed. Refresh this project and try again.',
+      message: 'Penerbitan tidak dapat diselesaikan. Segarkan project ini lalu coba lagi.',
     },
   );
   const markup = renderToStaticMarkup(
     <PublishNoticePanel notice={notice} onRefresh={() => undefined} />,
   );
-  assert.match(markup, /Publishing failed/);
-  assert.match(markup, /Refresh project(?! data)/);
-  assert.doesNotMatch(markup, /Release already published/);
+  assert.match(markup, /Penerbitan gagal/);
+  assert.match(markup, /Segarkan project(?! data)/);
+  assert.doesNotMatch(markup, /Rilis sudah diterbitkan/);
   assert.equal(
     getPublishNoticeForError(new Error('network failure')).kind,
     'error',
