@@ -2,6 +2,7 @@
 - [PST manufacturing boundary](pst-manufacturing-acceptance.md) — New PST variants should be expressed through Blueprint/library configuration and remain covered by the v1.1 acceptance scenario.
 - [PST runtime boundaries](pst-runtime-boundaries.md) — Public customer payloads need an allowlist contract; seeded project references need idempotent reconciliation.
 - [PST release snapshots](pst-release-snapshots.md) — Published customer journeys must resolve immutable releases while factory drafts remain editable.
+- [PST Compiler boundary](pst-compiler-contract.md) — Compile only immutable release snapshots into versioned, data-only customer runtime contracts.
 - [PST acceptance fixtures](pst-acceptance-fixtures.md) — Keep authenticated acceptance runs to a small number of Clerk test accounts.
 - [PST browser acceptance routing](pst-browser-acceptance.md) — Browser acceptance needs the shared proxy URL so frontend `/api` calls reach the API artifact.
 - [Workspace test runner](workspace-test-runner.md) — Prefer workspace-provided test executables when a package does not directly depend on the loader.

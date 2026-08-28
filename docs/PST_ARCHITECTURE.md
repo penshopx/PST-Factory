@@ -74,6 +74,12 @@ Workflow steps are explicit records inside a blueprint configuration with IDs, t
 inputs, outputs, dependencies, next-step links, and optional configuration. Builder
 and QA validate the graph rather than relying on hard-coded product logic.
 
+The normative Blueprint-to-runtime boundary is defined in
+[`PST_COMPILER_CONTRACT.md`](./PST_COMPILER_CONTRACT.md). A future Compiler consumes
+only an approved immutable release snapshot and emits a versioned, data-only
+executable contract for the customer workspace. It must not read mutable drafts,
+execute arbitrary configuration, or add product-specific branches.
+
 ## K. Security model
 
 Inputs are validated at the API boundary with generated Zod schemas. Provider
