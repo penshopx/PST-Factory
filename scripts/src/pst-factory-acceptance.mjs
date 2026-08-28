@@ -151,6 +151,9 @@ function resolveBrowserBaseUrl({
   return `http://127.0.0.1:${webPort}`;
 }
 
+const publishedWorkspaceFixtureSlug = "authenticated-lifecycle-0cd705e8-274d3";
+const publishedWorkspaceFixtureVersion = "v1.0";
+
 const browserProxyProbes = [
   {
     name: "health",
@@ -170,18 +173,29 @@ const browserProxyProbes = [
     expectedStatus: 404,
     expectedBody: { error: "Published customer workspace not found" },
   },
+  {
+    name: "published public PST fixture route",
+    path: `/api/pst/public/workspaces/${publishedWorkspaceFixtureSlug}`,
+    expectedStatus: 200,
+    assertBody: (body, probeUrl) => assertPublishedPublicWorkspacePayload(
+      body,
+      probeUrl,
+      publishedWorkspaceFixtureSlug,
+      publishedWorkspaceFixtureVersion,
+    ),
+  },
 ];
 
-function publishedWorkspaceProbe(slug) {
+function publishedWorkspaceProbe(slug, expectedVersion) {
   return {
     name: "published public PST route",
     path: `/api/pst/public/workspaces/${slug}`,
     expectedStatus: 200,
-    assertBody: (body, probeUrl) => assertPublishedPublicWorkspacePayload(body, probeUrl, slug),
+    assertBody: (body, probeUrl) => assertPublishedPublicWorkspacePayload(body, probeUrl, slug, expectedVersion),
   };
 }
 
-function assertPublishedPublicWorkspacePayload(body, probeUrl, expectedSlug) {
+function assertPublishedPublicWorkspacePayload(body, probeUrl, expectedSlug, expectedVersion) {
   assert.deepEqual(
     Object.keys(body).sort(),
     ["project", "steps"],
@@ -189,7 +203,15 @@ function assertPublishedPublicWorkspacePayload(body, probeUrl, expectedSlug) {
   );
   assert.equal(body.project.slug, expectedSlug);
   assert.equal(body.project.status, "PUBLISHED");
-  assert.match(body.project.version, /^v\d+\.\d+$/);
+  if (expectedVersion) {
+    assert.equal(
+      body.project.version,
+      expectedVersion,
+      "deterministic published PST fixture must resolve its v1.0 release",
+    );
+  } else {
+    assert.match(body.project.version, /^v\d+\.\d+$/);
+  }
   assert.ok(body.steps.length > 0, "published public PST must include customer steps");
   assert.deepEqual(
     body.steps.map((step) => step.title),
@@ -581,6 +603,7 @@ async function runBrowserPublicWorkspaceAcceptance({ slug, expectedProjectName }
     const body = JSON.parse(bodyText);
     assert.equal(body.project.slug, slug);
     assert.equal(body.project.status, "PUBLISHED");
+    assert.match(body.project.version, /^v\d+\.\d+$/);
     assert.ok(body.steps.length > 0, "published public workspace exposes customer steps");
     await page.getByTestId("link-workspace-brand").waitFor();
     await page.getByText("ruang kerja terpandu", { exact: true }).waitFor();

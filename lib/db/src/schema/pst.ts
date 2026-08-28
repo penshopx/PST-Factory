@@ -197,7 +197,7 @@ export type PstReleaseComponentSnapshot = {
 export type PstReleaseProjectSnapshot = {
   name: string;
   description: string;
-  status: string;
+  status: "PUBLISHED";
   version: string;
   domain: string;
   family: string;
@@ -214,7 +214,7 @@ export type PstReleaseProjectSnapshot = {
     outcome: string;
   };
   qaStatus: string;
-  publicationStatus: string;
+  publicationStatus: "PUBLISHED";
 };
 
 export type PstReleaseSnapshot = {

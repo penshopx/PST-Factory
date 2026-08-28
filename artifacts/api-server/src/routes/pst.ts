@@ -161,13 +161,22 @@ const defaultDna = (problem: string, user: string, outcome: string) => ({
   outcome,
 });
 
+const publicWorkspaceFixture = {
+  projectId: "pst-public-fixture",
+  slug: "authenticated-lifecycle-0cd705e8-274d3",
+  blueprintId: "blueprint-pst-public-fixture",
+  releaseId: "release-pst-public-fixture-v1-0",
+  version: "v1.0",
+} as const;
+
 const makeBlueprint = (
   projectId: string,
   problem: string,
   user: string,
   outcome: string,
+  id: string = randomUUID(),
 ) => ({
-  id: randomUUID(),
+  id,
   projectId,
   problem,
   targetUser: user,
@@ -185,6 +194,23 @@ const makeBlueprint = (
 });
 
 let seedPromise: Promise<void> | undefined;
+
+function hasValidReleaseSnapshot(snapshot: unknown): snapshot is PstReleaseSnapshot {
+  if (!snapshot || typeof snapshot !== "object") return false;
+  const candidate = snapshot as {
+    project?: { status?: unknown; publicationStatus?: unknown };
+    blueprint?: { workflow?: unknown };
+    workflow?: unknown;
+    components?: unknown;
+  };
+  return candidate.project?.status === "PUBLISHED"
+    && candidate.project.publicationStatus === "PUBLISHED"
+    && Array.isArray(candidate.blueprint?.workflow)
+    && candidate.blueprint.workflow.length > 0
+    && Array.isArray(candidate.workflow)
+    && candidate.workflow.length > 0
+    && Array.isArray(candidate.components);
+}
 
 async function ensureSeedReferences() {
   const seedReferences = [
@@ -235,6 +261,134 @@ async function ensureSeedReferences() {
   }
 }
 
+async function ensurePublicWorkspaceFixture() {
+  let [project] = await db
+    .select()
+    .from(pstProjectsTable)
+    .where(eq(pstProjectsTable.slug, publicWorkspaceFixture.slug));
+
+  if (!project) {
+    const fixtureBlueprint = makeBlueprint(
+      publicWorkspaceFixture.projectId,
+      "Teams need a reliable way to assess operational choices.",
+      "Operations lead",
+      "Choose one justified next action.",
+      publicWorkspaceFixture.blueprintId,
+    );
+    await db.insert(pstProjectsTable).values({
+      id: publicWorkspaceFixture.projectId,
+      ownerId: "system",
+      name: "Authenticated Lifecycle Fixture",
+      slug: publicWorkspaceFixture.slug,
+      description: "Deterministic published workspace used by PST routing checks.",
+      status: "PUBLISHED",
+      version: publicWorkspaceFixture.version,
+      domain: "General",
+      family: "Problem Solving",
+      series: "Acceptance",
+      problemStatement: fixtureBlueprint.problem,
+      targetUser: fixtureBlueprint.targetUser,
+      desiredOutcome: fixtureBlueprint.desiredOutcome,
+      productDna: defaultDna(
+        fixtureBlueprint.problem,
+        fixtureBlueprint.targetUser,
+        fixtureBlueprint.desiredOutcome,
+      ),
+      qaStatus: "PASS",
+      publicationStatus: "PUBLISHED",
+    });
+    await db.insert(pstBlueprintsTable).values({
+      ...fixtureBlueprint,
+      version: publicWorkspaceFixture.version,
+    });
+    [project] = await db
+      .select()
+      .from(pstProjectsTable)
+      .where(eq(pstProjectsTable.id, publicWorkspaceFixture.projectId));
+  } else {
+    const [existingBlueprint] = await db
+      .select()
+      .from(pstBlueprintsTable)
+      .where(eq(pstBlueprintsTable.projectId, project.id));
+    if (!existingBlueprint) {
+      const fixtureBlueprint = makeBlueprint(
+        project.id,
+        project.problemStatement,
+        project.targetUser,
+        project.desiredOutcome,
+        publicWorkspaceFixture.blueprintId,
+      );
+      await db.insert(pstBlueprintsTable).values({
+        ...fixtureBlueprint,
+        version: publicWorkspaceFixture.version,
+      });
+    }
+
+    if (
+      project.status !== "PUBLISHED"
+      || project.version !== publicWorkspaceFixture.version
+      || project.qaStatus !== "PASS"
+      || project.publicationStatus !== "PUBLISHED"
+    ) {
+      [project] = await db
+        .update(pstProjectsTable)
+        .set({
+          status: "PUBLISHED",
+          version: publicWorkspaceFixture.version,
+          qaStatus: "PASS",
+          publicationStatus: "PUBLISHED",
+          updatedAt: new Date(),
+        })
+        .where(eq(pstProjectsTable.id, project.id))
+        .returning();
+    }
+  }
+
+  if (!project) {
+    throw new Error("Public PST fixture could not be initialized.");
+  }
+
+  const [blueprint] = await db
+    .select()
+    .from(pstBlueprintsTable)
+    .where(eq(pstBlueprintsTable.projectId, project.id));
+  if (!blueprint) {
+    throw new Error("Public PST fixture blueprint could not be initialized.");
+  }
+
+  const snapshot = await releaseSnapshot(
+    project,
+    blueprint,
+    publicWorkspaceFixture.version,
+  );
+  const [existingRelease] = await db
+    .select()
+    .from(pstReleasesTable)
+    .where(
+      and(
+        eq(pstReleasesTable.projectId, project.id),
+        eq(pstReleasesTable.version, publicWorkspaceFixture.version),
+      ),
+    );
+
+  if (!existingRelease) {
+    await db
+      .insert(pstReleasesTable)
+      .values({
+        id: publicWorkspaceFixture.releaseId,
+        projectId: project.id,
+        version: publicWorkspaceFixture.version,
+        snapshot,
+      })
+      .onConflictDoNothing();
+  } else if (!hasValidReleaseSnapshot(existingRelease.snapshot)) {
+    await db
+      .update(pstReleasesTable)
+      .set({ snapshot })
+      .where(eq(pstReleasesTable.id, existingRelease.id));
+  }
+}
+
 async function ensureSeedAssetCompatibility() {
   const [guidedAssessment] = await db
     .select({
@@ -263,6 +417,7 @@ async function ensureSeed(userId = "system") {
       if (Number(count) > 0) {
         await ensureSeedReferences();
         await ensureSeedAssetCompatibility();
+        await ensurePublicWorkspaceFixture();
         return;
       }
 
@@ -461,11 +616,13 @@ async function ensureSeed(userId = "system") {
         },
       ]);
       await ensureSeedReferences();
+      await ensurePublicWorkspaceFixture();
     })();
   }
   await seedPromise;
   await ensureSeedReferences();
   await ensureSeedAssetCompatibility();
+  await ensurePublicWorkspaceFixture();
 
   // Existing development databases were seeded before ownership existed.
   // Claim only the legacy seed project, never another user's project. The
@@ -552,6 +709,7 @@ async function nextReleaseVersion(projectId: string, query: PstSelectExecutor = 
 
 class PublishConflictError extends Error {}
 class PublishRequirementError extends Error {}
+class PublicWorkspaceConsistencyError extends Error {}
 
 const publishConflictMessage =
   "This PST was published by another request. Refresh the project before retrying.";
@@ -840,15 +998,22 @@ async function publicWorkspace(slug: string) {
   const [project] = await db
     .select()
     .from(pstProjectsTable)
-    .where(
-      and(
-        eq(pstProjectsTable.slug, slug),
-        eq(pstProjectsTable.publicationStatus, "PUBLISHED"),
-      ),
-    );
+    .where(eq(pstProjectsTable.slug, slug));
   if (!project) return undefined;
+  if (project.status !== "PUBLISHED" || project.publicationStatus !== "PUBLISHED") {
+    return undefined;
+  }
   const release = await latestRelease(project.id);
-  if (!release) return undefined;
+  if (!release) {
+    throw new PublicWorkspaceConsistencyError(
+      "Published customer workspace is missing its active release snapshot.",
+    );
+  }
+  if (release.version !== project.version || !hasValidReleaseSnapshot(release.snapshot)) {
+    throw new PublicWorkspaceConsistencyError(
+      "Published customer workspace has an invalid active release snapshot.",
+    );
+  }
   const snapshot = release.snapshot;
   const publicWorkflow = publicCustomerWorkspaceSteps(snapshot.workflow);
   return {
@@ -1781,7 +1946,16 @@ router.get("/pst/public/workspaces/:slug", async (req, res): Promise<void> => {
     res.status(400).json({ error: "Workspace slug is required" });
     return;
   }
-  const project = await publicWorkspace(slug);
+  let project;
+  try {
+    project = await publicWorkspace(slug);
+  } catch (error) {
+    if (error instanceof PublicWorkspaceConsistencyError) {
+      res.status(503).json({ error: error.message });
+      return;
+    }
+    throw error;
+  }
   if (!project) {
     res.status(404).json({ error: "Published customer workspace not found" });
     return;
@@ -1795,5 +1969,9 @@ router.get("/pst/public/workspaces/:slug", async (req, res): Promise<void> => {
     steps: project.blueprint.workflow,
   }));
 });
+
+export async function initializePstData() {
+  await ensureSeed();
+}
 
 export default router;
