@@ -31,7 +31,7 @@ export function PublishNoticePanel({
           onClick={onRefresh}
           data-testid={isConflict ? 'button-refresh-after-publish-conflict' : 'button-refresh-after-publish-error'}
         >
-          <RefreshCw size={14} /> {isConflict ? 'Segarkan data project' : 'Segarkan project'}
+          <RefreshCw size={14} /> {isConflict ? 'Muat ulang data proyek' : 'Muat ulang proyek'}
         </button>
       </div>
     </div>

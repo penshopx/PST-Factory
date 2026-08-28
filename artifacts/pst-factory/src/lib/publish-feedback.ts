@@ -16,11 +16,11 @@ export function getPublishNoticeForError(error: unknown): PublishNotice {
   return isRetryablePublishConflict(error)
     ? {
         kind: 'conflict',
-        message: 'Rilis ini sudah diterbitkan oleh admin lain. Segarkan data project sebelum mencoba lagi.',
+        message: 'Versi ini sudah diterbitkan oleh admin lain. Muat ulang data proyek sebelum mencoba lagi.',
       }
     : {
         kind: 'error',
-        message: 'Penerbitan tidak dapat diselesaikan. Segarkan project ini lalu coba lagi.',
+        message: 'Proyek belum bisa diterbitkan. Muat ulang proyek ini lalu coba lagi.',
       };
 }
 

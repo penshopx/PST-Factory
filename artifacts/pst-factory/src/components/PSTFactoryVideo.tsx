@@ -27,12 +27,12 @@ const VIDEO_ASPECT_RATIO = '16 / 9';
 const SCENES = [
   { id: 'signal', duration: 3300, label: 'Sinyal' },
   { id: 'problem', duration: 2700, label: 'Definisi masalah' },
-  { id: 'architect', duration: 3100, label: 'Arsitek' },
-  { id: 'blueprint', duration: 2900, label: 'Blueprint' },
-  { id: 'reuse', duration: 3000, label: 'Aset reusable' },
+  { id: 'architect', duration: 3100, label: 'Perancang' },
+  { id: 'blueprint', duration: 2900, label: 'Rancangan' },
+  { id: 'reuse', duration: 3000, label: 'Komponen siap pakai' },
   { id: 'assembly', duration: 3300, label: 'Perakitan' },
   { id: 'simulation', duration: 3200, label: 'Simulasi' },
-  { id: 'qa', duration: 2900, label: 'QA' },
+  { id: 'qa', duration: 2900, label: 'Pemeriksaan kualitas' },
   { id: 'approval', duration: 2600, label: 'Persetujuan' },
   { id: 'publish', duration: 3800, label: 'Terbitkan' },
 ] as const;
@@ -129,7 +129,7 @@ function SignalScene() {
           {[
             { text: 'tiket dukungan', x: '2%', y: '12%', rotate: -8, accent: 'cyan' },
             { text: 'catatan lapangan', x: '58%', y: '4%', rotate: 7, accent: 'amber' },
-            { text: 'panggilan customer', x: '72%', y: '64%', rotate: -5, accent: 'green' },
+            { text: 'percakapan pengguna', x: '72%', y: '64%', rotate: -5, accent: 'green' },
             { text: 'spreadsheet', x: '7%', y: '72%', rotate: 6, accent: 'muted' },
           ].map((item, index) => (
             <motion.div
@@ -175,12 +175,12 @@ function ProblemScene() {
 function ArchitectScene() {
   const blocks = [
     { icon: Target, label: 'Hasil', value: 'lebih sedikit pengerjaan ulang', accent: 'cyan' },
-    { icon: Workflow, label: 'Pola', value: 'pilihan terpandu', accent: 'amber' },
+    { icon: Workflow, label: 'Pola kerja', value: 'pilihan terpandu', accent: 'amber' },
     { icon: Users, label: 'Pengguna', value: 'pemimpin tim', accent: 'green' },
   ];
   return (
     <SceneShell id="architect">
-      <SceneTitle eyebrow="02 / arsitektur" title={<>Beri masalah itu <em>bentuk.</em></>} detail="Arsitek menghubungkan niat, audiens, dan intervensi terkecil yang berguna." />
+      <SceneTitle eyebrow="02 / rancang solusi" title={<>Beri masalah itu <em>bentuk.</em></>} detail="Perancang menghubungkan tujuan, pengguna, dan langkah paling sederhana yang bisa membantu." />
       <div className="architect-map">
         <div className="map-lines"><span /><span /><span /></div>
         <motion.div className="architect-node architect-origin" initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2, duration: 0.7, ease }}>
@@ -194,7 +194,7 @@ function ArchitectScene() {
             </motion.div>
           ))}
         </div>
-        <motion.div className="architect-stamp" initial={{ opacity: 0, rotate: -10, scale: 1.3 }} animate={{ opacity: 1, rotate: -6, scale: 1 }} transition={{ delay: 1.2, duration: 0.55, ease }}>SELARAS<br /><span>berdasarkan rancangan</span></motion.div>
+        <motion.div className="architect-stamp" initial={{ opacity: 0, rotate: -10, scale: 1.3 }} animate={{ opacity: 1, rotate: -6, scale: 1 }} transition={{ delay: 1.2, duration: 0.55, ease }}>SELARAS<br /><span>siap dibuat</span></motion.div>
       </div>
     </SceneShell>
   );
@@ -204,10 +204,10 @@ function BlueprintScene() {
   return (
     <SceneShell id="blueprint">
       <div className="scene-split blueprint-layout">
-        <SceneTitle eyebrow="03 / blueprint" title={<>Buat langkah berikutnya <em>jelas.</em></>} detail="Blueprint adalah kontrak antara ide bagus dan pengalaman yang dapat dibangun." />
+        <SceneTitle eyebrow="03 / buat rancangan" title={<>Buat langkah berikutnya <em>jelas.</em></>} detail="Rancangan mengubah ide bagus menjadi pengalaman yang bisa dibuat." />
         <motion.div className="blueprint-sheet" initial={{ opacity: 0, rotateY: 18, x: 40 }} animate={{ opacity: 1, rotateY: 0, x: 0 }} transition={{ delay: 0.18, duration: 0.9, ease }}>
           <div className="sheet-ruler"><span>00</span><span>12</span><span>24</span><span>36</span><span>48</span></div>
-          <div className="sheet-header"><div><TinyLabel tone="cyan">PST / blueprint</TinyLabel><h3>Cashflow clarity</h3></div><FileCode2 size={19} /></div>
+          <div className="sheet-header"><div><TinyLabel tone="cyan">PST / rancangan</TinyLabel><h3>Cashflow clarity</h3></div><FileCode2 size={19} /></div>
           <div className="blueprint-flow">
             {['notice', 'choose', 'commit'].map((label, index) => <motion.div className="blueprint-step" key={label} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.52 + index * 0.16, duration: 0.5, ease }}><span className="step-number">0{index + 1}</span><strong>{label}</strong><span className="step-line" /></motion.div>)}
           </div>
@@ -223,13 +223,13 @@ function ReuseScene() {
   const assets = [
     { icon: Package, label: 'kartu keputusan', version: 'v2.4', color: 'cyan' },
     { icon: Layers3, label: 'pola sinyal', version: 'v1.8', color: 'amber' },
-    { icon: FlaskConical, label: 'resep refleksi', version: 'v3.1', color: 'green' },
+    { icon: FlaskConical, label: 'panduan refleksi', version: 'v3.1', color: 'green' },
   ];
   return (
     <SceneShell id="reuse">
-      <SceneTitle eyebrow="04 / gunakan kembali" title={<>Jangan bangun ulang <em>bagian yang bagus.</em></>} detail="Aset, pola, dan resep terus bertambah manfaatnya. Setiap toolkit baru dimulai lebih maju." />
+      <SceneTitle eyebrow="04 / pakai lagi" title={<>Jangan buat ulang <em>bagian yang sudah bagus.</em></>} detail="Komponen, pola, dan panduan bisa dipakai lagi. Setiap alat bantu baru dimulai lebih cepat." />
       <div className="asset-tray">
-        <div className="tray-top"><TinyLabel tone="cyan">kecerdasan reusable</TinyLabel><span className="tray-count">03 / 28</span></div>
+        <div className="tray-top"><TinyLabel tone="cyan">komponen siap pakai</TinyLabel><span className="tray-count">03 / 28</span></div>
         <div className="asset-stack">
           {assets.map(({ icon: Icon, label, version, color }, index) => (
             <motion.div className={`asset-tile tile-${color}`} key={label} initial={{ opacity: 0, y: 45, rotate: index === 1 ? 3 : -3 }} animate={{ opacity: 1, y: index * 4, rotate: index === 1 ? 1 : index === 2 ? 4 : -2 }} transition={{ delay: 0.18 + index * 0.18, duration: 0.72, ease }}>
@@ -238,7 +238,7 @@ function ReuseScene() {
           ))}
         </div>
         <motion.div className="asset-connector" initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ delay: 0.9, duration: 0.65, ease }}><span /><span /><span /></motion.div>
-        <motion.div className="asset-note" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 1.15, duration: 0.5, ease }}><Sparkles size={14} /> Setiap penggunaan kembali memperpendek jalan menuju nilai.</motion.div>
+        <motion.div className="asset-note" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 1.15, duration: 0.5, ease }}><Sparkles size={14} /> Semakin sering dipakai, semakin cepat solusi berikutnya dibuat.</motion.div>
       </div>
     </SceneShell>
   );
@@ -248,11 +248,11 @@ function AssemblyScene() {
   const pieces = [
     { label: 'masalah', x: '-5%', y: '12%', rotate: -9, color: 'cyan' },
     { label: 'pola', x: '56%', y: '2%', rotate: 8, color: 'amber' },
-    { label: 'resep', x: '70%', y: '68%', rotate: -6, color: 'green' },
+    { label: 'panduan', x: '70%', y: '68%', rotate: -6, color: 'green' },
   ];
   return (
     <SceneShell id="assembly">
-        <SceneTitle eyebrow="05 / rakit" title={<>Ubah rencana menjadi <em>toolkit.</em></>} detail="Pabrik merakit bagian-bagian menjadi satu pengalaman terpandu yang dapat digunakan kembali." />
+        <SceneTitle eyebrow="05 / rakit" title={<>Ubah rencana menjadi <em>alat bantu.</em></>} detail="Pabrik menggabungkan semua bagian menjadi satu panduan yang bisa dipakai pengguna." />
       <div className="assembly-floor">
         <div className="assembly-grid" />
         <motion.div className="assembly-rail" animate={{ x: ['-5%', '105%'] }} transition={{ duration: 2.5, repeat: Infinity, ease: 'linear', repeatDelay: 0.35 }} />
@@ -262,7 +262,7 @@ function AssemblyScene() {
           </motion.div>
         ))}
         <motion.div className="assembly-core" initial={{ opacity: 0, scale: 0.4, rotate: -15 }} animate={{ opacity: 1, scale: 1, rotate: 0 }} transition={{ delay: 0.72, duration: 0.9, ease }}>
-          <div className="core-mark"><Hammer size={24} /></div><TinyLabel tone="cyan">PST dirakit</TinyLabel><h3>Kejernihan arus kas</h3><div className="core-row"><span>5 langkah</span><span>3 aset</span><span>1 hasil</span></div>
+          <div className="core-mark"><Hammer size={24} /></div><TinyLabel tone="cyan">PST dirakit</TinyLabel><h3>Kejernihan arus kas</h3><div className="core-row"><span>5 langkah</span><span>3 komponen</span><span>1 hasil</span></div>
         </motion.div>
       </div>
     </SceneShell>
@@ -273,9 +273,9 @@ function SimulationScene() {
   return (
     <SceneShell id="simulation">
       <div className="scene-split simulation-layout">
-        <SceneTitle eyebrow="06 / simulasi" title={<>Lihat melalui <em>mata customer.</em></>} detail="Sebelum dirilis, jalani alurnya seolah-olah Anda adalah orang yang membutuhkan jawabannya." />
+        <SceneTitle eyebrow="06 / uji coba" title={<>Lihat dari sudut pandang <em>pengguna.</em></>} detail="Sebelum diterbitkan, jalani alurnya seolah-olah Anda adalah orang yang membutuhkan bantuan." />
         <motion.div className="workspace-window" initial={{ opacity: 0, y: 40, rotateX: 12 }} animate={{ opacity: 1, y: 0, rotateX: 0 }} transition={{ delay: 0.2, duration: 0.85, ease }}>
-          <div className="window-chrome"><div className="window-dots"><i /><i /><i /></div><span>workspace / kejernihan-arus-kas</span><TinyLabel tone="green">pratinjau</TinyLabel></div>
+          <div className="window-chrome"><div className="window-dots"><i /><i /><i /></div><span>ruang-kerja / kejernihan-arus-kas</span><TinyLabel tone="green">pratinjau</TinyLabel></div>
           <div className="workspace-body">
             <div className="workspace-sidebar"><div className="workspace-logo">P</div><span /><span /><span /><div className="workspace-avatar">MC</div></div>
             <div className="workspace-content"><TinyLabel tone="cyan">langkah 02 dari 05</TinyLabel><h3>Apa yang berubah<br /><em>minggu ini?</em></h3><p>Pilih satu sinyal sebelum memilih respons.</p><div className="workspace-options"><span className="selected"><Check size={12} /> Pendapatan</span><span>Biaya</span><span>Waktu</span></div><div className="workspace-progress"><span /><span /><span className="active" /><span /><span /></div></div>
@@ -296,9 +296,9 @@ function QAScene() {
   ];
   return (
     <SceneShell id="qa">
-      <SceneTitle eyebrow="07 / qa" title={<>Temukan titik patah <em>sebelum customer.</em></>} detail="Simulasi mengubah asumsi menjadi bukti. QA membuat bukti itu dapat ditindaklanjuti." />
+       <SceneTitle eyebrow="07 / periksa kualitas" title={<>Temukan masalah <em>sebelum pengguna.</em></>} detail="Uji coba menunjukkan apa yang benar-benar terjadi. Pemeriksaan kualitas membantu menentukan perbaikannya." />
       <div className="qa-panel">
-        <div className="qa-header"><div><TinyLabel tone="cyan">kandidat rilis 0.9.7</TinyLabel><h3>Gerbang kualitas</h3></div><ScanLine size={21} /></div>
+        <div className="qa-header"><div><TinyLabel tone="cyan">calon terbitan 0.9.7</TinyLabel><h3>Pemeriksaan kualitas</h3></div><ScanLine size={21} /></div>
         <div className="qa-progress"><span /><strong>75%</strong><TinyLabel>terverifikasi</TinyLabel></div>
         <div className="qa-rows">
           {rows.map(({ label, state, icon: Icon }, index) => (
@@ -317,12 +317,12 @@ function ApprovalScene() {
   return (
     <SceneShell id="approval">
       <div className="approval-stage">
-        <SceneTitle eyebrow="08 / setujui" title={<>Terbitkan sesuatu yang dapat <em>Anda pertanggungjawabkan.</em></>} detail="Tanda tangan manusia menutup lingkaran antara produksi dan janji." />
+     <SceneTitle eyebrow="08 / setujui" title={<>Terbitkan sesuatu yang dapat <em>Anda pertanggungjawabkan.</em></>} detail="Persetujuan manusia memastikan hasilnya benar-benar siap digunakan." />
         <motion.div className="approval-seal" initial={{ opacity: 0, scale: 1.5, rotate: -18 }} animate={{ opacity: 1, scale: 1, rotate: -8 }} transition={{ delay: 0.25, duration: 0.8, ease }}>
           <div className="seal-ring"><ShieldCheck size={34} /><span>disetujui</span><small>diverifikasi manusia</small></div>
           <div className="seal-rays">{Array.from({ length: 8 }).map((_, i) => <i key={i} style={{ transform: `rotate(${i * 45}deg)` }} />)}</div>
         </motion.div>
-        <motion.div className="approval-signature" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.95, duration: 0.55, ease }}><span>ditandatangani oleh</span><strong>Mara Chen</strong><small>Arsitek produk · 09:42</small></motion.div>
+        <motion.div className="approval-signature" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.95, duration: 0.55, ease }}><span>disetujui oleh</span><strong>Mara Chen</strong><small>Perancang produk · 09:42</small></motion.div>
       </div>
     </SceneShell>
   );
@@ -336,11 +336,11 @@ function PublishScene() {
         <motion.div className="publish-lockup" initial={{ opacity: 0, y: 25, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ delay: 0.15, duration: 0.85, ease }}>
           <img src={`${BASE_URL}logo.svg`} alt="PST Factory" className="video-logo" />
           <div className="publish-rule" />
-          <TinyLabel tone="cyan">masalah → workspace</TinyLabel>
-          <h1>Jadikan masalah<br /><em>siap diluncurkan.</em></h1>
+           <TinyLabel tone="cyan">masalah → ruang kerja</TinyLabel>
+           <h1>Ubah masalah menjadi<br /><em>solusi siap pakai.</em></h1>
         </motion.div>
-        <motion.div className="publish-workspace" initial={{ opacity: 0, x: 75, rotate: 5 }} animate={{ opacity: 1, x: 0, rotate: 3 }} transition={{ delay: 0.52, duration: 0.9, ease }}>
-          <div className="mini-window-top"><span /><span /><span /></div><div className="mini-window-body"><div className="mini-sidebar"><b>P</b><i /><i /><i /></div><div><TinyLabel tone="green">workspace aktif</TinyLabel><strong>Kejernihan arus kas</strong><div className="mini-bar"><span /></div><p>01 / amati · 02 / pilih · 03 / komitmen</p></div></div>
+           <motion.div className="publish-workspace" initial={{ opacity: 0, x: 75, rotate: 5 }} animate={{ opacity: 1, x: 0, rotate: 3 }} transition={{ delay: 0.52, duration: 0.9, ease }}>
+           <div className="mini-window-top"><span /><span /><span /></div><div className="mini-window-body"><div className="mini-sidebar"><b>P</b><i /><i /><i /></div><div><TinyLabel tone="green">ruang kerja aktif</TinyLabel><strong>Kejernihan arus kas</strong><div className="mini-bar"><span /></div><p>01 / amati · 02 / pilih · 03 / lakukan</p></div></div>
         </motion.div>
         <motion.div className="publish-path" initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ delay: 1, duration: 0.9, ease }}><span /><span /><span /><span /><span /></motion.div>
         <motion.div className="publish-caption" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.28, duration: 0.55, ease }}>Satu pabrik. Jalan ke depan yang lebih jelas.</motion.div>
@@ -373,7 +373,7 @@ function PersistentStage({ sceneIndex }: { sceneIndex: number }) {
       <motion.div className="ambient-orb orb-cyan" animate={{ x: sceneIndex % 2 ? '12vw' : '-4vw', y: sceneIndex > 6 ? '20vh' : '-6vh', scale: sceneIndex === 9 ? 1.25 : 1 }} transition={{ duration: 1.8, ease }} />
       <motion.div className="ambient-orb orb-amber" animate={{ x: sceneIndex > 4 ? '-8vw' : '8vw', y: sceneIndex % 3 === 0 ? '9vh' : '-3vh', scale: sceneIndex === 6 ? 1.2 : 0.9 }} transition={{ duration: 2.2, ease }} />
       <motion.div className="route-line" animate={{ rotate: sceneIndex > 6 ? -4 : 3, scaleX: sceneIndex === 9 ? 1.08 : 1 }} transition={{ duration: 1.4, ease }}><span /><span /><span /><span /></motion.div>
-      <div className="video-brand"><div className="brand-mark">P</div><span>PST pabrik</span></div>
+       <div className="video-brand"><div className="brand-mark">P</div><span>PST Factory</span></div>
       <div className="video-sequence"><span className="sequence-current">{String(sceneIndex + 1).padStart(2, '0')}</span><span className="sequence-slash"> / </span><span>{String(SCENES.length).padStart(2, '0')}</span><span className="sequence-name">{activeScene.label}</span></div>
       <div className="video-progress" aria-hidden="true"><motion.span animate={{ width: `${progress}%` }} transition={{ duration: 0.8, ease }} /></div>
     </>
@@ -397,7 +397,7 @@ export default function PSTFactoryVideo() {
         <AnimatePresence mode="sync" initial={false}>
           <Scene key={`${currentScene.id}-${sceneIndex}`} />
         </AnimatePresence>
-        <div className="video-footer"><span>sistem produksi untuk pemecah masalah</span><span>selalu bergerak</span></div>
+        <div className="video-footer"><span>sistem produksi untuk membuat solusi</span><span>selalu bergerak</span></div>
       </div>
     </main>
   );
