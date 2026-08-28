@@ -180,7 +180,17 @@ async function createClerkTestSession(label) {
 }
 
 const browserAcceptanceEnabled = process.env.PST_BROWSER_ACCEPTANCE === "1";
-const browserBaseUrl = (process.env.PST_BROWSER_URL ?? `http://127.0.0.1:${process.env.PST_WEB_PORT ?? "21409"}`).replace(/\/$/, "");
+const browserBaseUrl = (() => {
+  const configuredUrl = process.env.PST_BROWSER_URL?.trim();
+  if (configuredUrl) return configuredUrl.replace(/\/$/, "");
+
+  const developmentDomain = process.env.REPLIT_DEV_DOMAIN?.trim();
+  if (developmentDomain) {
+    return `https://${developmentDomain.replace(/^https?:\/\//, "").replace(/\/$/, "")}`;
+  }
+
+  return `http://127.0.0.1:${process.env.PST_WEB_PORT ?? "21409"}`;
+})();
 const workspaceRoot = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const acceptanceScreenshotDirectory = process.env.PST_ACCEPTANCE_SCREENSHOT_DIR
   ?? process.env.PST_ACCEPTANCE_EVIDENCE_DIR
@@ -301,7 +311,7 @@ async function runBrowserPublishConflictAcceptance({ projectId, owner, viewer })
     await conflictPage.getByTestId("status-publish-conflict").waitFor({ state: "hidden", timeout: 20_000 });
     assert.equal(await conflictPage.getByTestId("button-publish-pst").isDisabled(), true);
     await conflictPage.getByTestId("tab-versions").click();
-    await conflictPage.getByText(/Live customer release|Rilis customer aktif|Terbitan yang sedang dipakai|Riwayat versi/).waitFor();
+    await conflictPage.getByText("Terbitan yang sedang dipakai", { exact: true }).waitFor();
     const releaseCards = conflictPage.locator('[data-testid^="card-release-"]:not([data-testid="card-release-comparison"])');
     assert.equal(await releaseCards.count(), 1);
     assert.match(await releaseCards.first().innerText(), /v1\.0/);

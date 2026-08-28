@@ -14,3 +14,31 @@ mtime_ms = 1787879005575
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:b9c964a6-8e2c-4021-9426-fd478a93fec9/cda1fa7f-9b57-4631-9c34-799173912da0/42a3b8d6-2929-4b7f-86d0-3adfd3c160b1"
 storage_version_token = "1787879095698545"
 content_type = "image/png"
+
+[[outputs]]
+id = "5q49nIaYysacJ32OUasgL"
+uri = "file://artifacts/pst-factory/acceptance-evidence/publish-conflict-notice.png"
+type = "image"
+title = "Konflik publish melalui proxy"
+description = "Bukti browser acceptance saat notifikasi konflik publish tampil melalui URL proxy Replit sebelum data proyek dimuat ulang."
+logical_id = "417deb10-8cf0-4aa8-90af-e23e7b0be3e8"
+content_hash = "sha256:11e4fe7342f53f133df684e8fc8bdd175439f26dfc9b0cbbc0f5094aa111174c"
+size = 10494
+mtime_ms = 1787880608111
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:b9c964a6-8e2c-4021-9426-fd478a93fec9/417deb10-8cf0-4aa8-90af-e23e7b0be3e8/c60c8240-631b-44b1-8dee-642e9c145682"
+storage_version_token = "1787880632061411"
+content_type = "image/png"
+
+[[outputs]]
+id = "qqi71EPucXzZSoYUWZhaI"
+uri = "file://artifacts/pst-factory/acceptance-evidence/publish-release-history-after-refresh.png"
+type = "image"
+title = "Pemulihan publish setelah refresh"
+description = "Bukti browser acceptance setelah refresh: riwayat terbitan berhasil dimuat dan versi v1.0 tersedia."
+logical_id = "e6274b69-d4de-4336-9717-8a0d59e20bc1"
+content_hash = "sha256:3585758c695ff7b788465d049c7bc945195ef610cb2e357b9c88e567307d62a4"
+size = 10024
+mtime_ms = 1787880608327
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:b9c964a6-8e2c-4021-9426-fd478a93fec9/e6274b69-d4de-4336-9717-8a0d59e20bc1/7bd26b16-b668-4253-b785-309a1959cfef"
+storage_version_token = "1787880633401500"
+content_type = "image/png"

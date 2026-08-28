@@ -11,11 +11,13 @@ publish, jalankan:
 
 ```bash
 PST_BROWSER_ACCEPTANCE=1 \
-PST_BROWSER_URL="https://${REPLIT_DEV_DOMAIN}" \
 pnpm --filter @workspace/scripts run test:pst-acceptance
 ```
 
-Saat mode browser aktif, hasil JSON mencantumkan
+Saat mode browser aktif di Replit, script otomatis memakai URL proxy
+`https://${REPLIT_DEV_DOMAIN}` agar request frontend ke `/api` diteruskan ke
+API artifact. `PST_BROWSER_URL` tetap dapat dipakai sebagai override untuk
+lingkungan lain. Hasil JSON mencantumkan
 `authenticatedRoute.browserPublishConflict.visualEvidence` dan screenshot
 disimpan di `artifacts/pst-factory/acceptance-evidence/`. Folder tujuan dapat
 diganti dengan `PST_ACCEPTANCE_EVIDENCE_DIR`.
