@@ -163,23 +163,37 @@ async function assertBrowserProxyApiResponse() {
     redirect: "manual",
   });
   const contentType = response.headers.get("content-type") ?? "";
-  const body = await response.text();
+  const bodyText = await response.text();
 
   assert.equal(
     response.status,
     401,
-    `browser proxy API probe must reach the API artifact at ${probeUrl}`,
+    `browser API proxy ${probeUrl}: expected 401, got ${response.status}`,
   );
   assert.match(
     contentType,
     /application\/json/i,
-    `browser proxy API probe must return JSON, got ${contentType || "no content type"}`,
+    `browser API proxy ${probeUrl}: expected JSON, got ${contentType || "no content type"}`,
   );
   assert.doesNotMatch(
-    body,
+    bodyText,
     /<!doctype html|<html[\s>]/i,
-    "browser proxy API probe must not return the frontend HTML fallback",
+    `browser API proxy ${probeUrl}: must not return the frontend HTML fallback`,
   );
+
+  let body;
+  try {
+    body = JSON.parse(bodyText);
+  } catch (error) {
+    throw new Error(`Browser API proxy ${probeUrl} returned a non-JSON body.`, { cause: error });
+  }
+  assert.deepEqual(
+    body,
+    { error: "Unauthorized" },
+    `browser API proxy ${probeUrl}: unexpected unauthenticated response`,
+  );
+
+  console.log("PST browser API proxy check: PASS");
 }
 
 async function runRoutingChecks() {
@@ -294,6 +308,16 @@ const browserBaseUrl = resolveBrowserBaseUrl({
   developmentDomain: process.env.REPLIT_DEV_DOMAIN,
   webPort: process.env.PST_WEB_PORT ?? "21409",
 });
+
+if (process.argv.includes("--check-browser-proxy")) {
+  await assertBrowserProxyApiResponse();
+  process.exit(0);
+}
+
+if (browserAcceptanceEnabled) {
+  await assertBrowserProxyApiResponse();
+}
+
 const workspaceRoot = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const acceptanceScreenshotDirectory = process.env.PST_ACCEPTANCE_SCREENSHOT_DIR
   ?? process.env.PST_ACCEPTANCE_EVIDENCE_DIR

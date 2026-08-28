@@ -9,6 +9,12 @@ Browser acceptance must use the shared Replit development proxy URL when the fro
 
 **How to apply:** Set `PST_BROWSER_URL` to the shared development domain for local browser acceptance runs; keep API-only acceptance pointed at the API artifact URL.
 
+The browser proxy preflight should call a private API route without credentials and require the API's JSON `401` response; a `502` means the API artifact is unavailable, while HTML indicates frontend fallback.
+
+**Why:** A no-session request distinguishes a working shared proxy from an unavailable API service or a Vite SPA fallback without creating Clerk sessions or acceptance data.
+
+**How to apply:** Run the preflight before creating Clerk test users, and keep the expected unauthenticated response tied to a stable private route.
+
 Browser assertions for localized release content should target the exact visible label or a stable test id rather than a broad regex that also matches the surrounding card heading.
 
 **Why:** A broad fallback regex matched both the release-history heading and its localized live-release label, triggering Playwright strict-mode failure after routing was corrected.
