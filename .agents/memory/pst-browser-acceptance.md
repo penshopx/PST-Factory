@@ -26,3 +26,9 @@ The routing validation should probe an unauthenticated JSON API endpoint through
 **Why:** A successful page load does not prove that frontend `/api` calls are proxied; the Vite fallback can still return `200` HTML for an API path.
 
 **How to apply:** Expect the API's unauthenticated status and JSON content type, and explicitly reject HTML markers in the probe body.
+
+Published-route preflights must use a release created by the current acceptance run (or an explicitly supplied fixture slug), never a hard-coded slug left in the database by an earlier run.
+
+**Why:** A fresh database can have no active release for the old slug, making a valid proxy fail before the authenticated lifecycle has provisioned its own published workspace.
+
+**How to apply:** Run stable health/auth/not-found probes before Clerk setup, then append the published-workspace probe after the current project reaches `PUBLISHED` and assert its release version and customer steps.
