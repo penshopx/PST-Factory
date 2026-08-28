@@ -776,7 +776,7 @@ async function releaseSnapshot(
       .where(eq(pstRecipesTable.id, recipeReference.recipeId))
       .limit(1)
     : [];
-  const snapshot = {
+  const snapshot: Omit<PstReleaseSnapshot, "snapshotHash"> = {
     sourceSchemaVersion: "pst-release-snapshot.v1" as const,
     project: {
       name: project.name,
