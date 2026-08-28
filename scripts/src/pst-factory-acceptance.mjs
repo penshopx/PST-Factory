@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+import { clerk, clerkSetup } from "@clerk/testing/playwright";
+import { chromium } from "playwright";
 import {
   buildFromConfiguration,
   canApprove,
@@ -137,18 +139,20 @@ async function clerkRequest(path, init = {}) {
     },
   });
   if (!response.ok) {
-    throw new Error(`Clerk API ${init.method ?? "GET"} ${path} returned ${response.status}.`);
+    const detail = await response.text();
+    throw new Error(`Clerk API ${init.method ?? "GET"} ${path} returned ${response.status}: ${detail.slice(0, 300)}`);
   }
   return response.json();
 }
 
 async function createClerkTestSession(label) {
-  const email = `pst-factory-acceptance-${label}-${randomUUID().replaceAll("-", "")}@example.com`;
+  const email = `pst-${label}-${randomUUID().slice(0, 8)}+clerk_test@example.com`;
+  const password = `PstAcceptance-${randomUUID()}-aB9!`;
   const user = await clerkRequest("/users", {
     method: "POST",
     body: JSON.stringify({
       email_address: [email],
-      password: `PstAcceptance-${randomUUID()}-aB9!`,
+      password,
       skip_password_checks: true,
     }),
   });
@@ -165,10 +169,125 @@ async function createClerkTestSession(label) {
     if (!token) {
       throw new Error(`Clerk session token was not returned for ${label}.`);
     }
-    return { userId: user.id, token };
+    return { userId: user.id, token, email, password };
   } catch (error) {
     await clerkRequest(`/users/${user.id}`, { method: "DELETE" }).catch(() => {});
     throw error;
+  }
+}
+
+const browserAcceptanceEnabled = process.env.PST_BROWSER_ACCEPTANCE === "1";
+const browserBaseUrl = (process.env.PST_BROWSER_URL ?? `http://127.0.0.1:${process.env.PST_WEB_PORT ?? "21409"}`).replace(/\/$/, "");
+
+async function signInBrowserPage(page, session) {
+  await page.goto(browserBaseUrl, { waitUntil: "domcontentloaded" });
+  await clerk.signIn({ page, emailAddress: session.email });
+  await page.waitForFunction(() => Boolean(window.Clerk?.session), undefined, { timeout: 20_000 });
+  await page.goto(`${browserBaseUrl}/factory`, { waitUntil: "networkidle" });
+  try {
+    await page.getByTestId("sidebar").waitFor({ timeout: 20_000 });
+  } catch (error) {
+    const clerkState = await page.evaluate(() => ({
+      loaded: window.Clerk?.loaded ?? false,
+      sessionId: window.Clerk?.session?.id ?? null,
+      userId: window.Clerk?.user?.id ?? null,
+    }));
+    throw new Error(`Browser session did not reach the factory (url: ${page.url()}, clerk: ${JSON.stringify(clerkState)}, body: ${(await page.locator("body").innerText()).slice(0, 500)})`, { cause: error });
+  }
+}
+
+async function runBrowserPublishConflictAcceptance({ projectId, owner, viewer }) {
+  if (!browserAcceptanceEnabled) return;
+
+  await clerkSetup();
+  const browser = await chromium.launch({ headless: true });
+  const ownerContext = await browser.newContext();
+  const viewerContext = await browser.newContext();
+  const ownerPage = await ownerContext.newPage();
+  const viewerPage = await viewerContext.newPage();
+  const publishPath = `/api/pst/projects/${projectId}/publish`;
+  const publishRoutes = [];
+  let releasePublishRoutes;
+  const publishBarrier = new Promise((resolve) => {
+    releasePublishRoutes = resolve;
+  });
+
+  try {
+    await Promise.all([
+      signInBrowserPage(ownerPage, owner),
+      signInBrowserPage(viewerPage, viewer),
+    ]);
+    const projectUrl = `${browserBaseUrl}/factory/projects/${projectId}`;
+    await Promise.all([
+      ownerPage.goto(projectUrl, { waitUntil: "networkidle" }),
+      viewerPage.goto(projectUrl, { waitUntil: "networkidle" }),
+    ]);
+    await Promise.all([
+      ownerPage.getByTestId("heading-project-name").waitFor(),
+      viewerPage.getByTestId("heading-project-name").waitFor(),
+    ]);
+    await Promise.all([
+      ownerPage.getByTestId("tab-publish").click(),
+      viewerPage.getByTestId("tab-publish").click(),
+    ]);
+    await Promise.all([
+      ownerPage.getByTestId("button-publish-pst").waitFor(),
+      viewerPage.getByTestId("button-publish-pst").waitFor(),
+    ]);
+
+    for (const page of [ownerPage, viewerPage]) {
+      await page.route(`**${publishPath}`, async (route) => {
+        publishRoutes.push(route);
+        if (publishRoutes.length === 2) releasePublishRoutes();
+        await publishBarrier;
+        await route.continue();
+      });
+    }
+
+    await Promise.all([
+      ownerPage.getByTestId("button-publish-pst").click(),
+      viewerPage.getByTestId("button-publish-pst").click(),
+    ]);
+    assert.equal(publishRoutes.length, 2, "browser publish has two concurrent requests");
+
+    const conflictPages = [];
+    await Promise.race([
+      ownerPage.getByTestId("status-publish-conflict").waitFor({ state: "visible", timeout: 20_000 }).then(() => conflictPages.push(ownerPage)),
+      viewerPage.getByTestId("status-publish-conflict").waitFor({ state: "visible", timeout: 20_000 }).then(() => conflictPages.push(viewerPage)),
+    ]);
+    const conflictPage = conflictPages[0];
+    const winnerPage = conflictPage === ownerPage ? viewerPage : ownerPage;
+    assert.equal(conflictPages.length, 1, "browser publish has one conflict notice");
+    assert.match(await conflictPage.getByTestId("status-publish-conflict").innerText(), /already published by another admin|admin lain/i);
+    assert.equal(await conflictPage.getByTestId("button-refresh-after-publish-conflict").isVisible(), true);
+    assert.equal(await winnerPage.getByTestId("status-publish-conflict").isVisible().catch(() => false), false);
+
+    const projectResponse = conflictPage.waitForResponse((response) =>
+      response.request().method() === "GET" && response.url().endsWith(`/api/pst/projects/${projectId}`));
+    const blueprintResponse = conflictPage.waitForResponse((response) =>
+      response.request().method() === "GET" && response.url().endsWith(`/api/pst/projects/${projectId}/blueprint`));
+    const releasesResponse = conflictPage.waitForResponse((response) =>
+      response.request().method() === "GET" && response.url().endsWith(`/api/pst/projects/${projectId}/releases`));
+    await conflictPage.getByTestId("button-refresh-after-publish-conflict").click();
+    await Promise.all([projectResponse, blueprintResponse, releasesResponse]);
+    await conflictPage.getByTestId("status-publish-conflict").waitFor({ state: "hidden", timeout: 20_000 });
+    assert.equal(await conflictPage.getByTestId("button-publish-pst").isDisabled(), true);
+    await conflictPage.getByTestId("tab-versions").click();
+    await conflictPage.getByText(/Live customer release|Rilis customer aktif/).waitFor();
+    const releaseCards = conflictPage.locator('[data-testid^="card-release-"]:not([data-testid="card-release-comparison"])');
+    assert.equal(await releaseCards.count(), 1);
+    assert.match(await releaseCards.first().innerText(), /v1\.0/);
+    return {
+      projectId,
+      conflictNotice: true,
+      refreshedEndpoints: ["project", "blueprint", "release history"],
+      conflictNoticeCleared: true,
+      releaseVersion: "v1.0",
+    };
+  } finally {
+    await ownerContext.close();
+    await viewerContext.close();
+    await browser.close();
   }
 }
 
@@ -407,12 +526,73 @@ async function runAuthenticatedRouteAcceptance() {
       method: "POST",
       body: JSON.stringify({ userId: viewer.userId, role: "admin" }),
     });
-    assertStatus(secondAdminMembership, 201, "add concurrent publish admin");
+    assertStatus(secondAdminMembership, 201, "add browser publish admin");
+
+    const browserPublishConflict = await runBrowserPublishConflictAcceptance({ projectId, owner, viewer });
+
+    let published;
+    if (browserAcceptanceEnabled) {
+      published = await apiRequest(owner.token, `/pst/projects/${projectId}`);
+      assertStatus(published, 200, "browser publish winner");
+    } else {
+      published = await apiRequest(owner.token, `/pst/projects/${projectId}/publish`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+      assertStatus(published, 200, "publish");
+    }
+    assert.equal(published.body.status, "PUBLISHED");
+    assert.equal(published.body.publicationStatus, "PUBLISHED");
+
+    const removedBrowserAdmin = await apiRequest(owner.token, `/pst/projects/${projectId}/members/${viewer.userId}`, {
+      method: "DELETE",
+    });
+    assertStatus(removedBrowserAdmin, 204, "remove browser publish admin");
+
+    const concurrentProject = await apiRequest(owner.token, `/pst/projects/${projectId}/duplicate`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    assertStatus(concurrentProject, 201, "duplicate concurrent publish project");
+    const concurrentProjectId = concurrentProject.body.id;
+    const concurrentBuild = await apiRequest(owner.token, `/pst/projects/${concurrentProjectId}/builder`, {
+      method: "POST",
+      body: JSON.stringify({
+        assetIds: [
+          "asset-guided-assessment",
+          "asset-scoring-framework",
+          "asset-outcome-guide",
+          "asset-ai-recommendation",
+          "asset-action-plan",
+        ],
+        patternId: "pattern-assessment",
+        recipeId: "recipe-assessment",
+      }),
+    });
+    assertStatus(concurrentBuild, 200, "concurrent project builder");
+    assert.equal(concurrentBuild.body.status, "READY");
+    const concurrentQa = await apiRequest(owner.token, `/pst/projects/${concurrentProjectId}/qa`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    assertStatus(concurrentQa, 200, "concurrent project QA");
+    assert.equal(concurrentQa.body.status, "PASS");
+    const concurrentApproval = await apiRequest(owner.token, `/pst/projects/${concurrentProjectId}/approve`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    assertStatus(concurrentApproval, 200, "concurrent project approval");
+    assert.equal(concurrentApproval.body.status, "APPROVED");
+    const concurrentAdminMembership = await apiRequest(owner.token, `/pst/projects/${concurrentProjectId}/members`, {
+      method: "POST",
+      body: JSON.stringify({ userId: viewer.userId, role: "admin" }),
+    });
+    assertStatus(concurrentAdminMembership, 201, "add concurrent publish admin");
 
     const concurrentPublishes = await Promise.all(
       [owner, viewer].map(async (admin) => ({
         ...admin,
-        ...(await apiRequest(admin.token, `/pst/projects/${projectId}/publish`, {
+        ...(await apiRequest(admin.token, `/pst/projects/${concurrentProjectId}/publish`, {
           method: "POST",
           body: JSON.stringify({}),
         })),
@@ -426,12 +606,12 @@ async function runAuthenticatedRouteAcceptance() {
     assert.equal(successfulPublishes[0].body.publicationStatus, "PUBLISHED");
     assert.equal(rejectedPublishes[0].body.retryable, true);
     assert.match(rejectedPublishes[0].body.error, /published by another request/i);
-    const published = successfulPublishes[0];
+    const concurrentPublished = successfulPublishes[0];
 
     const [refreshedProject, refreshedBlueprint, refreshedReleases] = await Promise.all([
-      apiRequest(rejectedPublishes[0].token, `/pst/projects/${projectId}`),
-      apiRequest(rejectedPublishes[0].token, `/pst/projects/${projectId}/blueprint`),
-      apiRequest(rejectedPublishes[0].token, `/pst/projects/${projectId}/releases`),
+      apiRequest(rejectedPublishes[0].token, `/pst/projects/${concurrentProjectId}`),
+      apiRequest(rejectedPublishes[0].token, `/pst/projects/${concurrentProjectId}/blueprint`),
+      apiRequest(rejectedPublishes[0].token, `/pst/projects/${concurrentProjectId}/releases`),
     ]);
     assertStatus(refreshedProject, 200, "losing admin refresh project");
     assertStatus(refreshedBlueprint, 200, "losing admin refresh blueprint");
@@ -442,7 +622,7 @@ async function runAuthenticatedRouteAcceptance() {
     assert.equal(refreshedBlueprint.body.version, "v1.0");
     assert.deepEqual(refreshedReleases.body.map((release) => release.version), ["v1.0"]);
 
-    const removedConcurrentAdmin = await apiRequest(owner.token, `/pst/projects/${projectId}/members/${viewer.userId}`, {
+    const removedConcurrentAdmin = await apiRequest(owner.token, `/pst/projects/${concurrentProjectId}/members/${viewer.userId}`, {
       method: "DELETE",
     });
     assertStatus(removedConcurrentAdmin, 204, "remove concurrent publish admin");
@@ -571,6 +751,7 @@ async function runAuthenticatedRouteAcceptance() {
       qaStatus: qa.body.status,
       publicStatus: afterPublish.body.project.status,
       releaseVersion: releases.body[0].version,
+      browserPublishConflict,
     };
   } finally {
     await deleteClerkTestUser(outsider?.userId);

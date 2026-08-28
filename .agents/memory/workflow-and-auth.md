@@ -7,4 +7,10 @@ Managed artifact web workflows inject `PORT` and `BASE_PATH`; manual Vite builds
 
 **Why:** A stale process can make a healthy Vite service fail with a port-in-use error, and a manual build otherwise fails before compiling because the project config intentionally requires both variables.
 
-**How to apply:** Diagnose the actual listener before changing ports, restart the existing artifact workflow rather than creating a replacement, and run acceptance scripts with `PST_API_URL` or the workflow's injected `PORT` instead of assuming the port in project prose. After API client regeneration, rebuild its declaration output before typechecking consumers because workspace resolution can use the generated package declarations.
+**How to apply:** Diagnose the actual listener before changing ports, restart the existing artifact workflow rather than creating a replacement, and run acceptance scripts with `PST_API_URL` or the workflow's injected `PORT` instead of assuming the port in project prose.
+
+Browser acceptance must use the Replit development domain rather than the raw Vite port so `/api` requests cross the managed frontend/API proxy; authenticate test contexts with `@clerk/testing` server-side sign-in and `+clerk_test` fixture addresses.
+
+**Why:** Direct requests to the Vite port return the frontend fallback for `/api`, and password sign-in from fresh Playwright contexts triggers Clerk Device Trust email verification.
+
+**How to apply:** Set `PST_BROWSER_URL=https://$REPLIT_DEV_DOMAIN`, call `clerkSetup()` once, and use `clerk.signIn({ page, emailAddress })` for each isolated browser context.
