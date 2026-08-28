@@ -85,7 +85,7 @@ import {
   qaStatus,
   workflowFromStructure,
 } from "../lib/services/pst/manufacturing";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 const router: IRouter = Router();
 
@@ -210,6 +210,26 @@ function hasValidReleaseSnapshot(snapshot: unknown): snapshot is PstReleaseSnaps
     && Array.isArray(candidate.workflow)
     && candidate.workflow.length > 0
     && Array.isArray(candidate.components);
+}
+
+function hasCompleteReleaseSnapshot(snapshot: unknown): snapshot is PstReleaseSnapshot {
+  if (!hasValidReleaseSnapshot(snapshot)) return false;
+  const candidate = snapshot as {
+    sourceSchemaVersion?: unknown;
+    snapshotHash?: unknown;
+    rules?: unknown;
+    providers?: unknown;
+    components?: Array<{ id?: unknown; version?: unknown }>;
+  };
+  return candidate.sourceSchemaVersion === "pst-release-snapshot.v1"
+    && typeof candidate.snapshotHash === "string"
+    && /^[a-f0-9]{64}$/.test(candidate.snapshotHash)
+    && Array.isArray(candidate.rules)
+    && Array.isArray(candidate.providers)
+    && candidate.components?.every((component) => typeof component.id === "string"
+      && component.id.length > 0
+      && typeof component.version === "string"
+      && component.version.length > 0) === true;
 }
 
 async function ensureSeedReferences() {
@@ -381,7 +401,7 @@ async function ensurePublicWorkspaceFixture() {
         snapshot,
       })
       .onConflictDoNothing();
-  } else if (!hasValidReleaseSnapshot(existingRelease.snapshot)) {
+  } else if (!hasCompleteReleaseSnapshot(existingRelease.snapshot)) {
     await db
       .update(pstReleasesTable)
       .set({ snapshot })
@@ -756,8 +776,8 @@ async function releaseSnapshot(
       .where(eq(pstRecipesTable.id, recipeReference.recipeId))
       .limit(1)
     : [];
-  return {
-    snapshotVersion: "pst-release-snapshot.v1",
+  const snapshot = {
+    sourceSchemaVersion: "pst-release-snapshot.v1" as const,
     project: {
       name: project.name,
       description: project.description,
@@ -807,6 +827,10 @@ async function releaseSnapshot(
     })),
     rules: [],
     providers: [],
+  };
+  return {
+    ...snapshot,
+    snapshotHash: createHash("sha256").update(JSON.stringify(snapshot)).digest("hex"),
   };
 }
 
@@ -1053,7 +1077,7 @@ async function publicWorkspace(slug: string) {
     .from(pstProjectsTable)
     .where(eq(pstProjectsTable.slug, slug));
   if (!project) return undefined;
-  if (project.status !== "PUBLISHED" || project.publicationStatus !== "PUBLISHED") {
+  if (project.publicationStatus !== "PUBLISHED") {
     return undefined;
   }
   const release = await latestRelease(project.id);
@@ -1815,7 +1839,12 @@ router.post("/pst/projects/:projectId/releases/:releaseId/restore", async (req, 
     await tx.delete(pstProjectComponentsTable).where(eq(pstProjectComponentsTable.projectId, access.project.id));
     if (snapshot.components.length) {
         await tx.insert(pstProjectComponentsTable).values(snapshot.components.map((component) => ({
-          ...component,
+          assetId: component.assetId,
+          name: component.name,
+          type: component.type,
+          source: component.source,
+          status: component.status,
+          required: component.required,
           id: randomUUID(),
           projectId: access.project.id,
         })));

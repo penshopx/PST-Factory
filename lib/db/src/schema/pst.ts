@@ -253,7 +253,8 @@ export type PstReleaseProjectSnapshot = {
 };
 
 export type PstReleaseSnapshot = {
-  snapshotVersion: "pst-release-snapshot.v1";
+  sourceSchemaVersion?: "pst-release-snapshot.v1";
+  snapshotHash?: string;
   project: PstReleaseProjectSnapshot;
   blueprint: Omit<PstBlueprint, "updatedAt"> & { version: string; updatedAt: string };
   workflow: WorkflowStep[];

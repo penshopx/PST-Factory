@@ -5,12 +5,16 @@
  * PST Factory product manufacturing platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { PstReleaseComponentConfiguration } from './pstReleaseComponentConfiguration';
 
 export interface PstReleaseComponent {
+  id?: string;
   assetId: string;
   name: string;
   type: string;
   source: string;
+  version?: string;
   status: string;
   required: boolean;
+  configuration?: PstReleaseComponentConfiguration;
 }

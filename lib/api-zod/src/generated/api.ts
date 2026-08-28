@@ -1197,11 +1197,16 @@ export const GetPstReleasesParams = zod.object({
   "projectId": zod.coerce.string()
 })
 
+export const getPstReleasesResponseSnapshotSnapshotHashRegExp = new RegExp('^[a-f0-9]{64}$');
+
+
 export const GetPstReleasesResponseItem = zod.object({
   "id": zod.string(),
   "projectId": zod.string(),
   "version": zod.string(),
   "snapshot": zod.object({
+  "sourceSchemaVersion": zod.enum(['pst-release-snapshot.v1']).optional(),
+  "snapshotHash": zod.string().regex(getPstReleasesResponseSnapshotSnapshotHashRegExp).optional(),
   "project": zod.object({
   "name": zod.string(),
   "description": zod.string(),
@@ -1252,14 +1257,45 @@ export const GetPstReleasesResponseItem = zod.object({
   "nextStep": zod.string(),
   "configuration": zod.record(zod.string(), zod.unknown()).optional()
 })),
+  "pattern": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "version": zod.string().optional(),
+  "description": zod.string().optional(),
+  "steps": zod.array(zod.string())
+}).optional(),
+  "recipe": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "version": zod.string().optional(),
+  "description": zod.string().optional(),
+  "components": zod.array(zod.string())
+}).optional(),
   "components": zod.array(zod.object({
+  "id": zod.string().optional(),
   "assetId": zod.string(),
   "name": zod.string(),
   "type": zod.string(),
   "source": zod.string(),
+  "version": zod.string().optional(),
   "status": zod.string(),
-  "required": zod.boolean()
-}))
+  "required": zod.boolean(),
+  "configuration": zod.record(zod.string(), zod.unknown()).optional()
+})),
+  "rules": zod.array(zod.object({
+  "id": zod.string(),
+  "version": zod.string(),
+  "name": zod.string(),
+  "kind": zod.string(),
+  "when": zod.record(zod.string(), zod.unknown()),
+  "then": zod.array(zod.record(zod.string(), zod.unknown()))
+})).optional(),
+  "providers": zod.array(zod.object({
+  "id": zod.string(),
+  "capability": zod.string(),
+  "mode": zod.string(),
+  "configuration": zod.record(zod.string(), zod.unknown()).optional()
+})).optional()
 }),
   "createdAt": zod.coerce.date()
 })

@@ -9,6 +9,18 @@ Published customer workspaces must resolve an immutable release snapshot. Factor
 
 **How to apply:** Create the release snapshot atomically with publication, version it independently from draft edits, expose release history to factory users, and keep restore operations draft-only until the next publish gate.
 
+Public delivery must remain available while a published project is edited into a
+new draft. The internal project `status` may move to a blueprint or QA state;
+the public route should rely on `publicationStatus` plus a matching valid release
+snapshot.
+
+**Why:** Draft preparation after publication must not make an already-delivered
+customer URL disappear or expose the mutable draft in place of its release.
+
+**How to apply:** Keep the live release lookup and snapshot consistency checks at
+the public boundary, but do not require the mutable draft status to remain
+`PUBLISHED`.
+
 Concurrent publish conflicts must be user-visible and retry-safe: the factory should tell the operator another request won, offer a refresh, and reload the current project, blueprint, and release history before retrying.
 
 **Why:** The API can correctly reject a stale second publish, but a silent mutation error leaves the operator with stale approval state and no safe recovery path.

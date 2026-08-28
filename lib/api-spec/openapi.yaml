@@ -606,14 +606,62 @@ components:
       type: object
       required: [project, blueprint, workflow, components]
       properties:
+        sourceSchemaVersion: { type: string, enum: [pst-release-snapshot.v1] }
+        snapshotHash: { type: string, pattern: "^[a-f0-9]{64}$" }
         project: { $ref: "#/components/schemas/PstReleaseProject" }
         blueprint: { $ref: "#/components/schemas/PstReleaseBlueprint" }
         workflow:
           type: array
           items: { $ref: "#/components/schemas/WorkflowStep" }
+        pattern: { $ref: "#/components/schemas/PstReleasePattern" }
+        recipe: { $ref: "#/components/schemas/PstReleaseRecipe" }
         components:
           type: array
           items: { $ref: "#/components/schemas/PstReleaseComponent" }
+        rules:
+          type: array
+          items: { $ref: "#/components/schemas/PstReleaseRule" }
+        providers:
+          type: array
+          items: { $ref: "#/components/schemas/PstReleaseProvider" }
+    PstReleasePattern:
+      type: object
+      required: [id, name, steps]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        version: { type: string }
+        description: { type: string }
+        steps: { type: array, items: { type: string } }
+    PstReleaseRecipe:
+      type: object
+      required: [id, name, components]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        version: { type: string }
+        description: { type: string }
+        components: { type: array, items: { type: string } }
+    PstReleaseRule:
+      type: object
+      required: [id, version, name, kind, when, then]
+      properties:
+        id: { type: string }
+        version: { type: string }
+        name: { type: string }
+        kind: { type: string }
+        when: { type: object, additionalProperties: true }
+        then:
+          type: array
+          items: { type: object, additionalProperties: true }
+    PstReleaseProvider:
+      type: object
+      required: [id, capability, mode]
+      properties:
+        id: { type: string }
+        capability: { type: string }
+        mode: { type: string }
+        configuration: { type: object, additionalProperties: true }
     PstReleaseProject:
       type: object
       required: [name, description, status, version, domain, family, series, problemStatement, targetUser, desiredOutcome, productDna, qaStatus, publicationStatus]
@@ -654,12 +702,15 @@ components:
       type: object
       required: [assetId, name, type, source, status, required]
       properties:
+        id: { type: string }
         assetId: { type: string }
         name: { type: string }
         type: { type: string }
         source: { type: string }
+        version: { type: string }
         status: { type: string }
         required: { type: boolean }
+        configuration: { type: object, additionalProperties: true }
     PstProjectInput:
       type: object
       required: [name, problemStatement, targetUser, desiredOutcome]

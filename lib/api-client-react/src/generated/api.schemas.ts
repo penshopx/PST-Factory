@@ -187,6 +187,13 @@ export interface PstProjectMemberInput {
   role: PstProjectMemberInputRole;
 }
 
+export type PstReleaseSnapshotSourceSchemaVersion = typeof PstReleaseSnapshotSourceSchemaVersion[keyof typeof PstReleaseSnapshotSourceSchemaVersion];
+
+
+export const PstReleaseSnapshotSourceSchemaVersion = {
+  'pst-release-snapshotv1': 'pst-release-snapshot.v1',
+} as const;
+
 export type PstReleaseProjectPublicationStatus = typeof PstReleaseProjectPublicationStatus[keyof typeof PstReleaseProjectPublicationStatus];
 
 
@@ -230,20 +237,70 @@ export interface PstReleaseBlueprint {
   updatedAt: string;
 }
 
+export interface PstReleasePattern {
+  id: string;
+  name: string;
+  version?: string;
+  description?: string;
+  steps: string[];
+}
+
+export interface PstReleaseRecipe {
+  id: string;
+  name: string;
+  version?: string;
+  description?: string;
+  components: string[];
+}
+
+export type PstReleaseComponentConfiguration = { [key: string]: unknown };
+
 export interface PstReleaseComponent {
+  id?: string;
   assetId: string;
   name: string;
   type: string;
   source: string;
+  version?: string;
   status: string;
   required: boolean;
+  configuration?: PstReleaseComponentConfiguration;
+}
+
+export type PstReleaseRuleWhen = { [key: string]: unknown };
+
+export type PstReleaseRuleThenItem = { [key: string]: unknown };
+
+export interface PstReleaseRule {
+  id: string;
+  version: string;
+  name: string;
+  kind: string;
+  when: PstReleaseRuleWhen;
+  then: PstReleaseRuleThenItem[];
+}
+
+export type PstReleaseProviderConfiguration = { [key: string]: unknown };
+
+export interface PstReleaseProvider {
+  id: string;
+  capability: string;
+  mode: string;
+  configuration?: PstReleaseProviderConfiguration;
 }
 
 export interface PstReleaseSnapshot {
+  sourceSchemaVersion?: PstReleaseSnapshotSourceSchemaVersion;
+  /** @pattern ^[a-f0-9]{64}$ */
+  snapshotHash?: string;
   project: PstReleaseProject;
   blueprint: PstReleaseBlueprint;
   workflow: WorkflowStep[];
+  pattern?: PstReleasePattern;
+  recipe?: PstReleaseRecipe;
   components: PstReleaseComponent[];
+  rules?: PstReleaseRule[];
+  providers?: PstReleaseProvider[];
 }
 
 export interface PstRelease {

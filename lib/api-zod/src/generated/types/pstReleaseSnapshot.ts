@@ -7,12 +7,24 @@
  */
 import type { PstReleaseBlueprint } from './pstReleaseBlueprint';
 import type { PstReleaseComponent } from './pstReleaseComponent';
+import type { PstReleasePattern } from './pstReleasePattern';
 import type { PstReleaseProject } from './pstReleaseProject';
+import type { PstReleaseProvider } from './pstReleaseProvider';
+import type { PstReleaseRecipe } from './pstReleaseRecipe';
+import type { PstReleaseRule } from './pstReleaseRule';
+import type { PstReleaseSnapshotSourceSchemaVersion } from './pstReleaseSnapshotSourceSchemaVersion';
 import type { WorkflowStep } from './workflowStep';
 
 export interface PstReleaseSnapshot {
+  sourceSchemaVersion?: PstReleaseSnapshotSourceSchemaVersion;
+  /** @pattern ^[a-f0-9]{64}$ */
+  snapshotHash?: string;
   project: PstReleaseProject;
   blueprint: PstReleaseBlueprint;
   workflow: WorkflowStep[];
+  pattern?: PstReleasePattern;
+  recipe?: PstReleaseRecipe;
   components: PstReleaseComponent[];
+  rules?: PstReleaseRule[];
+  providers?: PstReleaseProvider[];
 }
