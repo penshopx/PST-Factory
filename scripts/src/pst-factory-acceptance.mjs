@@ -498,6 +498,50 @@ async function runBrowserPublishConflictAcceptance({ projectId, owner, viewer })
   }
 }
 
+async function runBrowserPublicWorkspaceAcceptance({ slug, expectedProjectName }) {
+  if (!browserAcceptanceEnabled) return;
+
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const publicWorkspacePath = `/api/pst/public/workspaces/${slug}`;
+
+  try {
+    const publicWorkspaceResponse = page.waitForResponse((response) =>
+      response.request().method() === "GET" && response.url().endsWith(publicWorkspacePath));
+    const documentResponse = await page.goto(`${browserBaseUrl}/workspace/${encodeURIComponent(slug)}`, {
+      waitUntil: "networkidle",
+    });
+    const apiResponse = await publicWorkspaceResponse;
+    const contentType = apiResponse.headers()["content-type"] ?? "";
+    const bodyText = await apiResponse.text();
+
+    assert.equal(documentResponse?.status(), 200, "public workspace document loads through browser proxy");
+    assert.equal(apiResponse.status(), 200, "published public workspace API loads through browser proxy");
+    assert.match(contentType, /application\/json/i, "published public workspace API returns JSON");
+    assert.doesNotMatch(bodyText, /<!doctype html|<html[\s>]/i, "published public workspace API must not return HTML");
+
+    const body = JSON.parse(bodyText);
+    assert.equal(body.project.slug, slug);
+    assert.equal(body.project.status, "PUBLISHED");
+    assert.ok(body.steps.length > 0, "published public workspace exposes customer steps");
+    await page.getByTestId("link-workspace-brand").waitFor();
+    await page.getByText("ruang kerja terpandu", { exact: true }).waitFor();
+    await page.getByText(expectedProjectName, { exact: true }).waitFor();
+
+    return {
+      path: `/workspace/${slug}`,
+      apiPath: publicWorkspacePath,
+      apiStatus: apiResponse.status(),
+      rendered: true,
+      releaseVersion: body.project.version,
+    };
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+}
+
 async function deleteClerkTestUser(userId) {
   if (!userId) return;
   await clerkRequest(`/users/${userId}`, { method: "DELETE" }).catch(() => {});
@@ -909,6 +953,10 @@ async function runAuthenticatedRouteAcceptance() {
     assert.equal("selectedPatterns" in afterPublish.body.project, false);
     assert.equal("qaStatus" in afterPublish.body.project, false);
     assert.equal("configuration" in afterPublish.body.steps[0], false);
+    const browserPublicWorkspace = await runBrowserPublicWorkspaceAcceptance({
+      slug,
+      expectedProjectName: afterPublish.body.project.name,
+    });
 
     const releases = await apiRequest(owner.token, `/pst/projects/${projectId}/releases`);
     assertStatus(releases, 200, "release history");
@@ -959,6 +1007,7 @@ async function runAuthenticatedRouteAcceptance() {
       publicStatus: afterPublish.body.project.status,
       releaseVersion: releases.body[0].version,
       browserPublishConflict,
+      browserPublicWorkspace,
     };
   } finally {
     await deleteClerkTestUser(outsider?.userId);
@@ -974,6 +1023,6 @@ console.log(JSON.stringify({
   blueprints: 2,
   assessmentSteps: assessment.workflow.map((step) => step.title),
   decisionSteps: decision.workflow.map((step) => step.title),
-  checks: ["configuration-driven build", "different customer journeys/outcomes", "QA failure", "missing dependency", "duplicate isolation", "publish gate", "customer access boundary", "public metadata allowlist", "private route authentication sweep", "router isolation outside /api", "cross-owner route isolation", "cross-owner access boundary", "scoped library usage", "authenticated create-to-publish route lifecycle", "safe project membership revocation", "concurrent publish version guard"],
+  checks: ["configuration-driven build", "different customer journeys/outcomes", "QA failure", "missing dependency", "duplicate isolation", "publish gate", "customer access boundary", "public metadata allowlist", "private route authentication sweep", "router isolation outside /api", "cross-owner route isolation", "cross-owner access boundary", "scoped library usage", "authenticated create-to-publish route lifecycle", "safe project membership revocation", "concurrent publish version guard", "published public workspace through browser proxy"],
   authenticatedRoute: authenticatedRouteResult,
 }, null, 2));
