@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+import { mkdir } from "node:fs/promises";
+import { relative, resolve } from "node:path";
 import { clerk, clerkSetup } from "@clerk/testing/playwright";
 import { chromium } from "playwright";
 import {
@@ -262,6 +264,11 @@ async function runBrowserPublishConflictAcceptance({ projectId, owner, viewer })
     assert.equal(await conflictPage.getByTestId("button-refresh-after-publish-conflict").isVisible(), true);
     assert.equal(await winnerPage.getByTestId("status-publish-conflict").isVisible().catch(() => false), false);
 
+    const evidenceDirectory = process.env.PST_ACCEPTANCE_EVIDENCE_DIR ?? "artifacts/pst-factory/acceptance-evidence";
+    await mkdir(resolve(evidenceDirectory), { recursive: true });
+    const evidencePath = resolve(evidenceDirectory, `publish-conflict-${projectId}.png`);
+    await conflictPage.screenshot({ path: evidencePath, fullPage: true });
+
     const projectResponse = conflictPage.waitForResponse((response) =>
       response.request().method() === "GET" && response.url().endsWith(`/api/pst/projects/${projectId}`));
     const blueprintResponse = conflictPage.waitForResponse((response) =>
@@ -283,6 +290,11 @@ async function runBrowserPublishConflictAcceptance({ projectId, owner, viewer })
       refreshedEndpoints: ["project", "blueprint", "release history"],
       conflictNoticeCleared: true,
       releaseVersion: "v1.0",
+      visualEvidence: {
+        kind: "screenshot",
+        path: relative(process.cwd(), evidencePath),
+        state: "conflict notice visible before refresh",
+      },
     };
   } finally {
     await ownerContext.close();
