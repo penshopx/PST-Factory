@@ -1675,7 +1675,14 @@ router.get("/pst/projects/:projectId/members", async (req, res): Promise<void> =
 
 router.post("/pst/projects/:projectId/members", async (req, res): Promise<void> => {
   const params = GetPstProjectParams.safeParse(req.params);
-  const body = UpsertPstProjectMemberBody.safeParse(req.body);
+  const requestBody =
+    req.body && typeof req.body === "object" && !Array.isArray(req.body)
+      ? {
+          ...req.body,
+          userId: typeof req.body.userId === "string" ? req.body.userId.trim() : req.body.userId,
+        }
+      : req.body;
+  const body = UpsertPstProjectMemberBody.safeParse(requestBody);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
@@ -1686,6 +1693,10 @@ router.post("/pst/projects/:projectId/members", async (req, res): Promise<void> 
   }
   const access = await authorizeProject(req, res, params.data.projectId, adminRoles);
   if (!access) return;
+  if (body.data.userId === access.project.ownerId) {
+    res.status(409).json({ error: "The project owner already has protected admin access." });
+    return;
+  }
   const [existing] = await db
     .select({ id: pstProjectMembersTable.id })
     .from(pstProjectMembersTable)
@@ -1704,16 +1715,26 @@ router.post("/pst/projects/:projectId/members", async (req, res): Promise<void> 
     res.json(updated);
     return;
   }
-  const [member] = await db
-    .insert(pstProjectMembersTable)
-    .values({
-      id: randomUUID(),
-      projectId: access.project.id,
-      userId: body.data.userId,
-      role: body.data.role,
-    })
-    .returning();
-  res.status(201).json(member);
+  try {
+    const [member] = await db
+      .insert(pstProjectMembersTable)
+      .values({
+        id: randomUUID(),
+        projectId: access.project.id,
+        userId: body.data.userId,
+        role: body.data.role,
+      })
+      .returning();
+    res.status(201).json(member);
+  } catch (error) {
+    const errorCode =
+      typeof error === "object" && error !== null && "code" in error
+        ? error.code
+        : undefined;
+    if (errorCode !== "23505") throw error;
+    req.log.warn({ err: error, projectId: access.project.id }, "Project member add conflicted");
+    res.status(409).json({ error: "That user already has access to this project." });
+  }
 });
 
 router.delete("/pst/projects/:projectId/members/:userId", async (req, res): Promise<void> => {

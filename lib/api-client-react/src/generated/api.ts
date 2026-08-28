@@ -1900,7 +1900,7 @@ export const upsertPstProjectMember = async (projectId: string,
 
 
 
-export const getUpsertPstProjectMemberMutationOptions = <TError = ErrorType<unknown>,
+export const getUpsertPstProjectMemberMutationOptions = <TError = ErrorType<ErrorResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertPstProjectMember>>, TError,{projectId: string;data: BodyType<PstProjectMemberInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof upsertPstProjectMember>>, TError,{projectId: string;data: BodyType<PstProjectMemberInput>}, TContext> => {
 
@@ -1929,12 +1929,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpsertPstProjectMemberMutationResult = NonNullable<Awaited<ReturnType<typeof upsertPstProjectMember>>>
     export type UpsertPstProjectMemberMutationBody = BodyType<PstProjectMemberInput>
-    export type UpsertPstProjectMemberMutationError = ErrorType<unknown>
+    export type UpsertPstProjectMemberMutationError = ErrorType<ErrorResponse>
 
     /**
  * @summary Add or update a project member role
  */
-export const useUpsertPstProjectMember = <TError = ErrorType<unknown>,
+export const useUpsertPstProjectMember = <TError = ErrorType<ErrorResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertPstProjectMember>>, TError,{projectId: string;data: BodyType<PstProjectMemberInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof upsertPstProjectMember>>,

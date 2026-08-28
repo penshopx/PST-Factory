@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { Link, Redirect, Route, Router as WouterRouter, Switch, useLocation, useParams } from 'wouter';
 import { ClerkProvider, Show, SignIn, SignUp, useClerk, useUser } from '@clerk/react';
@@ -22,6 +22,7 @@ import {
   useGetDashboardActivity, useGetDashboardSummary, useGetPstBlueprint,
   useGetPstProject, useGetPstReleases, useGetPublicPstWorkspace, useListPstAssets, useListPstPatterns,
   useListPstProjectMembers, useListPstProjects, useListPstRecipes, usePublishPstProject, useRemovePstProjectMember, useRunPstArchitect,
+  useUpsertPstProjectMember,
   useRestorePstRelease, useRunPstQa, useSimulatePstProject, useUpdatePstBlueprint, useUpdatePstProject,
 } from '@workspace/api-client-react';
 import type {
@@ -161,12 +162,14 @@ function apiErrorStatus(error: unknown) {
 
 function memberAccessError(error: unknown) {
   switch (apiErrorStatus(error)) {
+    case 400:
+      return 'Enter a user ID and choose a valid project role.';
     case 403:
       return 'Only project owners and admins can manage member access.';
     case 404:
       return 'This project or member is no longer available. Refresh the list and try again.';
     case 409:
-      return 'The project owner cannot be removed.';
+      return 'This access change conflicts with protected project ownership or an existing membership.';
     default:
       return 'We could not update project access. Refresh the list and try again.';
   }
@@ -470,12 +473,44 @@ function MembersTab({ projectId }: { projectId: string }) {
   const membersQuery = useListPstProjectMembers(projectId, {
     query: { queryKey: getListPstProjectMembersQueryKey(projectId) },
   });
+  const addMember = useUpsertPstProjectMember();
   const removeMember = useRemovePstProjectMember();
   const qc = useQueryClient();
   const [selectedMember, setSelectedMember] = useState<PstProjectMember | null>(null);
+  const [newMemberUserId, setNewMemberUserId] = useState('');
+  const [newMemberRole, setNewMemberRole] = useState<'admin' | 'editor' | 'viewer'>('viewer');
   const [notice, setNotice] = useState<string | null>(null);
   const queryKey = getListPstProjectMembersQueryKey(projectId);
   const members = membersQuery.data ?? [];
+
+  const add = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const userId = newMemberUserId.trim();
+    if (!userId) {
+      setNotice('Enter a user ID before adding project access.');
+      return;
+    }
+    setNotice(null);
+    addMember.mutate({ projectId, data: { userId, role: newMemberRole } }, {
+      onSuccess: (member) => {
+        qc.setQueryData<PstProjectMember[]>(queryKey, (current) => {
+          const existing = current?.find((item) => item.userId === member.userId);
+          if (existing) {
+            return current?.map((item) => item.userId === member.userId ? { ...item, ...member } : item) ?? [member];
+          }
+          return [...(current ?? []), member];
+        });
+        setNewMemberUserId('');
+        setNewMemberRole('viewer');
+        setNotice(null);
+        void qc.invalidateQueries({ queryKey });
+      },
+      onError: (error) => {
+        setNotice(memberAccessError(error));
+        if (apiErrorStatus(error) === 404) void membersQuery.refetch();
+      },
+    });
+  };
 
   const confirmRemoval = () => {
     if (!selectedMember) return;
@@ -503,6 +538,44 @@ function MembersTab({ projectId }: { projectId: string }) {
   }
 
   return <div className="max-w-4xl space-y-5">
+    <Card data-testid="card-add-project-member">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base"><Plus className="text-accent" size={18} /> Add project member</CardTitle>
+        <CardDescription>Grant a Clerk user access to this workspace. Adding an existing member updates their role.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form className="grid gap-4 md:grid-cols-[1fr_180px_auto] md:items-end" onSubmit={add}>
+          <label className="block">
+            <span className="mb-2 block font-mono text-[10px] uppercase tracking-[.16em] text-muted-foreground">User ID</span>
+            <Input
+              value={newMemberUserId}
+              onChange={(event) => setNewMemberUserId(event.target.value)}
+              placeholder="user_..."
+              className="bg-background"
+              disabled={addMember.isPending}
+              data-testid="input-member-user-id"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-2 block font-mono text-[10px] uppercase tracking-[.16em] text-muted-foreground">Role</span>
+            <select
+              value={newMemberRole}
+              onChange={(event) => setNewMemberRole(event.target.value as typeof newMemberRole)}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              disabled={addMember.isPending}
+              data-testid="select-member-role"
+            >
+              <option value="admin">Admin</option>
+              <option value="editor">Editor</option>
+              <option value="viewer">Viewer</option>
+            </select>
+          </label>
+          <Button type="submit" disabled={addMember.isPending} data-testid="button-add-member">
+            <Plus size={15} /> {addMember.isPending ? 'Adding...' : 'Add member'}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
     <Card data-testid="card-project-members">
       <CardHeader className="flex-row items-start justify-between border-b border-border/70">
         <div><CardTitle className="flex items-center gap-2 text-base"><Users className="text-accent" size={18} /> Project access</CardTitle><CardDescription className="mt-1">Review who can open this workspace and what they can do.</CardDescription></div>
