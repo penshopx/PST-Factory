@@ -22,6 +22,13 @@ lingkungan lain. Hasil JSON mencantumkan
 disimpan di `artifacts/pst-factory/acceptance-evidence/`. Folder tujuan dapat
 diganti dengan `PST_ACCEPTANCE_EVIDENCE_DIR`.
 
+Pemeriksaan routing proxy dapat dijalankan secara terpisah saat workflow
+frontend dan API aktif:
+
+```bash
+pnpm --filter @workspace/scripts run test:pst-routing
+```
+
 The scenario is accepted when all of these remain true:
 
 - Two materially different Blueprint configurations (assessment and vendor decision) produce different workflow steps and component sets through the same builder.

@@ -151,7 +151,38 @@ function resolveBrowserBaseUrl({
   return `http://127.0.0.1:${webPort}`;
 }
 
-function runRoutingChecks() {
+async function assertBrowserProxyApiResponse() {
+  const browserUrl = resolveBrowserBaseUrl({
+    configuredUrl: process.env.PST_BROWSER_URL,
+    developmentDomain: process.env.REPLIT_DEV_DOMAIN,
+    webPort: process.env.PST_WEB_PORT ?? "21409",
+  });
+  const probeUrl = `${browserUrl}/api/pst/dashboard/activity`;
+  const response = await fetch(probeUrl, {
+    headers: { Accept: "application/json" },
+    redirect: "manual",
+  });
+  const contentType = response.headers.get("content-type") ?? "";
+  const body = await response.text();
+
+  assert.equal(
+    response.status,
+    401,
+    `browser proxy API probe must reach the API artifact at ${probeUrl}`,
+  );
+  assert.match(
+    contentType,
+    /application\/json/i,
+    `browser proxy API probe must return JSON, got ${contentType || "no content type"}`,
+  );
+  assert.doesNotMatch(
+    body,
+    /<!doctype html|<html[\s>]/i,
+    "browser proxy API probe must not return the frontend HTML fallback",
+  );
+}
+
+async function runRoutingChecks() {
   assert.equal(
     resolveBrowserBaseUrl({
       configuredUrl: "https://browser.example.test/",
@@ -192,6 +223,7 @@ function runRoutingChecks() {
     "API-only fallback must use the API port",
   );
 
+  await assertBrowserProxyApiResponse();
   console.log("PST acceptance routing checks: PASS");
 }
 
@@ -252,7 +284,7 @@ async function createClerkTestSession(label) {
 }
 
 if (process.argv.includes("--check-routing")) {
-  runRoutingChecks();
+  await runRoutingChecks();
   process.exit(0);
 }
 

@@ -14,3 +14,9 @@ Browser assertions for localized release content should target the exact visible
 **Why:** A broad fallback regex matched both the release-history heading and its localized live-release label, triggering Playwright strict-mode failure after routing was corrected.
 
 **How to apply:** Keep language alternatives narrow and use exact matching when the UI copy is controlled by the application.
+
+The routing validation should probe an unauthenticated JSON API endpoint through the shared browser URL and reject HTML responses.
+
+**Why:** A successful page load does not prove that frontend `/api` calls are proxied; the Vite fallback can still return `200` HTML for an API path.
+
+**How to apply:** Expect the API's unauthenticated status and JSON content type, and explicitly reject HTML markers in the probe body.
