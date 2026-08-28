@@ -151,6 +151,8 @@ function resolveBrowserBaseUrl({
   return `http://127.0.0.1:${webPort}`;
 }
 
+const publishedWorkspaceFixtureSlug = "authenticated-lifecycle-0cd705e8-274d3";
+
 const browserProxyProbes = [
   {
     name: "health",
@@ -170,7 +172,54 @@ const browserProxyProbes = [
     expectedStatus: 404,
     expectedBody: { error: "Published customer workspace not found" },
   },
+  {
+    name: "published public PST route",
+    path: `/api/pst/public/workspaces/${publishedWorkspaceFixtureSlug}`,
+    expectedStatus: 200,
+    assertBody: assertPublishedPublicWorkspacePayload,
+  },
 ];
+
+function assertPublishedPublicWorkspacePayload(body, probeUrl) {
+  assert.deepEqual(
+    Object.keys(body).sort(),
+    ["project", "steps"],
+    `browser API proxy published public PST ${probeUrl}: expected the public workspace envelope`,
+  );
+  assert.equal(body.project.slug, publishedWorkspaceFixtureSlug);
+  assert.equal(body.project.status, "PUBLISHED");
+  assert.match(body.project.version, /^v\d+\.\d+$/);
+  assert.ok(body.steps.length > 0, "published public PST must include customer steps");
+  assert.deepEqual(
+    body.steps.map((step) => step.title),
+    body.project.blueprint.workflow.map((step) => step.title),
+    "published public PST steps must match the public blueprint workflow",
+  );
+
+  const forbiddenPaths = [
+    ["project", "ownerId"],
+    ["project", "publicationStatus"],
+    ["project", "qaStatus"],
+    ["project", "createdAt"],
+    ["project", "updatedAt"],
+    ["project", "selectedPatterns"],
+    ["project", "selectedRecipes"],
+    ["project", "components"],
+    ["project", "productDna", "components"],
+    ["project", "productDna", "intelligence"],
+    ["project", "blueprint", "knowledgeRequirements"],
+    ["project", "blueprint", "componentRequirements"],
+    ["project", "blueprint", "aiRequirements"],
+  ];
+  for (const path of forbiddenPaths) {
+    let value = body;
+    for (const segment of path) value = value?.[segment];
+    assert.equal(value, undefined, `public PST payload must omit ${path.join(".")}`);
+  }
+  for (const step of body.steps) {
+    assert.equal("configuration" in step, false, "public PST steps must omit factory configuration");
+  }
+}
 
 async function assertBrowserProxyJsonResponse(browserUrl, probe) {
   const probeUrl = `${browserUrl}${probe.path}`;
@@ -203,11 +252,15 @@ async function assertBrowserProxyJsonResponse(browserUrl, probe) {
   } catch (error) {
     throw new Error(`Browser API proxy ${probe.name} ${probeUrl} returned a non-JSON body.`, { cause: error });
   }
-  assert.deepEqual(
-    body,
-    probe.expectedBody,
-    `browser API proxy ${probe.name} ${probeUrl}: unexpected JSON response`,
-  );
+  if (probe.assertBody) {
+    probe.assertBody(body, probeUrl);
+  } else {
+    assert.deepEqual(
+      body,
+      probe.expectedBody,
+      `browser API proxy ${probe.name} ${probeUrl}: unexpected JSON response`,
+    );
+  }
 }
 
 async function assertBrowserProxyApiResponse() {
