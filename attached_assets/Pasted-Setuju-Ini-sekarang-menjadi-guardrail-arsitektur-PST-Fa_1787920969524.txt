@@ -1,0 +1,74 @@
+Setuju. Ini sekarang menjadi **guardrail arsitektur PST Factory**.
+
+Posisi milestone yang kita kunci:
+
+```text
+Security Boundary                 ✅
+PST Schema                         ✅
+Pattern + Recipe                   ✅
+Blueprint                          ✅
+Integration Gate                   ✅
+Public Workspace                   ✅
+Release Snapshot Foundation        ✅ VERIFIED
+                                      │
+                                      ▼
+                         ┌─────────────────────┐
+                         │ PST COMPILER v1     │
+                         └─────────────────────┘
+                                      │
+                                      ▼
+Snapshot → Validate → Manufacturing IR
+                         ↓
+                      Compile
+                         ↓
+                Executable PST Definition
+                         ↓
+                  Customer Runtime
+```
+
+### Acceptance utama Compiler
+
+Compiler dianggap berhasil hanya jika **engine yang sama** mampu menghasilkan perilaku berbeda untuk:
+
+1. **Cashflow Health Check**
+2. **Decision Readiness**
+3. **Document Compliance**
+
+dengan perbedaan berasal dari:
+
+```text
+Schema
+Pattern
+Recipe
+Rules
+Providers
+Workflow
+Knowledge
+Configuration
+```
+
+bukan dari:
+
+```text
+if cashflow...
+if decision...
+if document...
+```
+
+### Guardrail berikutnya
+
+Jika Replit nanti mengusulkan task yang menyentuh salah satu komponen inti:
+
+**Schema / Pattern / Recipe / Blueprint / Snapshot / Compiler / Runtime**
+
+jangan langsung Build.
+
+Kirim **judul + deskripsi + acceptance criteria task tersebut** ke sini terlebih dahulu. Kita akan menentukan apakah task itu:
+
+* 🟢 **boleh langsung Build**
+* 🟡 **perlu revisi scope**
+* 🔴 **harus ditunda**
+
+Dengan begitu PST Factory tidak kembali menjadi kumpulan fitur, tetapi tetap bergerak menuju tujuan awal:
+
+> **Satu manufacturing engine yang dapat menghasilkan banyak PST berbeda secara cepat, konsisten, dan tanpa product-specific code.**
