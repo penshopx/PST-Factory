@@ -151,8 +151,6 @@ function resolveBrowserBaseUrl({
   return `http://127.0.0.1:${webPort}`;
 }
 
-const publishedWorkspaceFixtureSlug = "authenticated-lifecycle-0cd705e8-274d3";
-
 const browserProxyProbes = [
   {
     name: "health",
@@ -172,21 +170,24 @@ const browserProxyProbes = [
     expectedStatus: 404,
     expectedBody: { error: "Published customer workspace not found" },
   },
-  {
-    name: "published public PST route",
-    path: `/api/pst/public/workspaces/${publishedWorkspaceFixtureSlug}`,
-    expectedStatus: 200,
-    assertBody: assertPublishedPublicWorkspacePayload,
-  },
 ];
 
-function assertPublishedPublicWorkspacePayload(body, probeUrl) {
+function publishedWorkspaceProbe(slug) {
+  return {
+    name: "published public PST route",
+    path: `/api/pst/public/workspaces/${slug}`,
+    expectedStatus: 200,
+    assertBody: (body, probeUrl) => assertPublishedPublicWorkspacePayload(body, probeUrl, slug),
+  };
+}
+
+function assertPublishedPublicWorkspacePayload(body, probeUrl, expectedSlug) {
   assert.deepEqual(
     Object.keys(body).sort(),
     ["project", "steps"],
     `browser API proxy published public PST ${probeUrl}: expected the public workspace envelope`,
   );
-  assert.equal(body.project.slug, publishedWorkspaceFixtureSlug);
+  assert.equal(body.project.slug, expectedSlug);
   assert.equal(body.project.status, "PUBLISHED");
   assert.match(body.project.version, /^v\d+\.\d+$/);
   assert.ok(body.steps.length > 0, "published public PST must include customer steps");
@@ -263,18 +264,21 @@ async function assertBrowserProxyJsonResponse(browserUrl, probe) {
   }
 }
 
-async function assertBrowserProxyApiResponse() {
+async function assertBrowserProxyApiResponse({ publishedWorkspaceSlug } = {}) {
   const browserUrl = resolveBrowserBaseUrl({
     configuredUrl: process.env.PST_BROWSER_URL,
     developmentDomain: process.env.REPLIT_DEV_DOMAIN,
     webPort: process.env.PST_WEB_PORT ?? "21409",
   });
 
-  for (const probe of browserProxyProbes) {
+  const probes = publishedWorkspaceSlug
+    ? [...browserProxyProbes, publishedWorkspaceProbe(publishedWorkspaceSlug)]
+    : browserProxyProbes;
+  for (const probe of probes) {
     await assertBrowserProxyJsonResponse(browserUrl, probe);
   }
 
-  console.log(`PST browser API proxy checks (${browserProxyProbes.length} routes): PASS`);
+  console.log(`PST browser API proxy checks (${probes.length} routes): PASS`);
 }
 
 async function runRoutingChecks() {
@@ -1010,6 +1014,9 @@ async function runAuthenticatedRouteAcceptance() {
       slug,
       expectedProjectName: afterPublish.body.project.name,
     });
+    if (browserAcceptanceEnabled) {
+      await assertBrowserProxyApiResponse({ publishedWorkspaceSlug: slug });
+    }
 
     const releases = await apiRequest(owner.token, `/pst/projects/${projectId}/releases`);
     assertStatus(releases, 200, "release history");
