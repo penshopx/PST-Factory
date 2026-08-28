@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
-import { relative, resolve } from "node:path";
+import { basename, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { clerk, clerkSetup } from "@clerk/testing/playwright";
 import { chromium } from "playwright";
@@ -182,6 +182,21 @@ async function createClerkTestSession(label) {
 const browserAcceptanceEnabled = process.env.PST_BROWSER_ACCEPTANCE === "1";
 const browserBaseUrl = (process.env.PST_BROWSER_URL ?? `http://127.0.0.1:${process.env.PST_WEB_PORT ?? "21409"}`).replace(/\/$/, "");
 const workspaceRoot = resolve(fileURLToPath(new URL("../..", import.meta.url)));
+const acceptanceScreenshotDirectory = process.env.PST_ACCEPTANCE_SCREENSHOT_DIR
+  ?? process.env.PST_ACCEPTANCE_EVIDENCE_DIR
+  ?? "artifacts/pst-factory/acceptance-evidence";
+const acceptanceScreenshotRoot = resolve(workspaceRoot, acceptanceScreenshotDirectory);
+
+function acceptanceScreenshotPath(name) {
+  return join(acceptanceScreenshotRoot, name);
+}
+
+function acceptanceScreenshotOutputPath(filePath) {
+  const relativePath = relative(workspaceRoot, filePath);
+  return relativePath && !relativePath.startsWith("..") && !isAbsolute(relativePath)
+    ? relativePath
+    : basename(filePath);
+}
 
 async function signInBrowserPage(page, session) {
   await page.goto(browserBaseUrl, { waitUntil: "domcontentloaded" });
@@ -204,11 +219,16 @@ async function runBrowserPublishConflictAcceptance({ projectId, owner, viewer })
   if (!browserAcceptanceEnabled) return;
 
   await clerkSetup();
+  await mkdir(acceptanceScreenshotRoot, { recursive: true });
   const browser = await chromium.launch({ headless: true });
   const ownerContext = await browser.newContext();
   const viewerContext = await browser.newContext();
   const ownerPage = await ownerContext.newPage();
   const viewerPage = await viewerContext.newPage();
+  const screenshotPaths = {
+    conflictNotice: acceptanceScreenshotPath("publish-conflict-notice.png"),
+    releaseHistoryAfterRefresh: acceptanceScreenshotPath("publish-release-history-after-refresh.png"),
+  };
   const publishPath = `/api/pst/projects/${projectId}/publish`;
   const publishRoutes = [];
   let releasePublishRoutes;
@@ -265,11 +285,10 @@ async function runBrowserPublishConflictAcceptance({ projectId, owner, viewer })
     assert.match(await conflictPage.getByTestId("status-publish-conflict").innerText(), /already published by another admin|admin lain/i);
     assert.equal(await conflictPage.getByTestId("button-refresh-after-publish-conflict").isVisible(), true);
     assert.equal(await winnerPage.getByTestId("status-publish-conflict").isVisible().catch(() => false), false);
-
-    const evidenceDirectory = resolve(workspaceRoot, process.env.PST_ACCEPTANCE_EVIDENCE_DIR ?? "artifacts/pst-factory/acceptance-evidence");
-    await mkdir(evidenceDirectory, { recursive: true });
-    const evidencePath = resolve(evidenceDirectory, `publish-conflict-${projectId}.png`);
-    await conflictPage.screenshot({ path: evidencePath, fullPage: true });
+    await conflictPage.getByTestId("status-publish-conflict").screenshot({
+      path: screenshotPaths.conflictNotice,
+      animations: "disabled",
+    });
 
     const projectResponse = conflictPage.waitForResponse((response) =>
       response.request().method() === "GET" && response.url().endsWith(`/api/pst/projects/${projectId}`));
@@ -282,10 +301,14 @@ async function runBrowserPublishConflictAcceptance({ projectId, owner, viewer })
     await conflictPage.getByTestId("status-publish-conflict").waitFor({ state: "hidden", timeout: 20_000 });
     assert.equal(await conflictPage.getByTestId("button-publish-pst").isDisabled(), true);
     await conflictPage.getByTestId("tab-versions").click();
-    await conflictPage.getByText(/Live customer release|Rilis customer aktif|Terbitan yang sedang dipakai/).waitFor();
+    await conflictPage.getByText(/Live customer release|Rilis customer aktif|Terbitan yang sedang dipakai|Riwayat versi/).waitFor();
     const releaseCards = conflictPage.locator('[data-testid^="card-release-"]:not([data-testid="card-release-comparison"])');
     assert.equal(await releaseCards.count(), 1);
     assert.match(await releaseCards.first().innerText(), /v1\.0/);
+    await releaseCards.first().screenshot({
+      path: screenshotPaths.releaseHistoryAfterRefresh,
+      animations: "disabled",
+    });
     return {
       projectId,
       conflictNotice: true,
@@ -294,8 +317,12 @@ async function runBrowserPublishConflictAcceptance({ projectId, owner, viewer })
       releaseVersion: "v1.0",
       visualEvidence: {
         kind: "screenshot",
-        path: relative(workspaceRoot, evidencePath),
+        path: acceptanceScreenshotOutputPath(screenshotPaths.conflictNotice),
         state: "conflict notice visible before refresh",
+      },
+      screenshots: {
+        conflictNotice: acceptanceScreenshotOutputPath(screenshotPaths.conflictNotice),
+        releaseHistoryAfterRefresh: acceptanceScreenshotOutputPath(screenshotPaths.releaseHistoryAfterRefresh),
       },
     };
   } finally {

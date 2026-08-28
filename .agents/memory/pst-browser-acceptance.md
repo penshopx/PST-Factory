@@ -1,0 +1,10 @@
+---
+name: PST browser acceptance routing
+description: Environment-specific routing needed when the PST browser acceptance drives the Vite frontend and API together.
+---
+
+Browser acceptance must use the shared Replit development proxy URL when the frontend and API run as separate managed artifacts. The direct Vite port serves the frontend fallback for `/api` instead of forwarding API requests.
+
+**Why:** Direct navigation to the local Vite port made the dashboard receive HTML for an activity request, so the browser run failed before reaching the publish conflict flow.
+
+**How to apply:** Set `PST_BROWSER_URL` to the shared development domain for local browser acceptance runs; keep API-only acceptance pointed at the API artifact URL.
