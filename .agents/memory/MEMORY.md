@@ -7,3 +7,4 @@
 - [PST browser acceptance routing](pst-browser-acceptance.md) — Browser acceptance needs the shared proxy URL so frontend `/api` calls reach the API artifact.
 - [Workspace test runner](workspace-test-runner.md) — Prefer workspace-provided test executables when a package does not directly depend on the loader.
 - [Gustafta capability bridge](gustafta-capability-bridge.md) — Adopt relevant public capabilities via official links; direct API and API keys are not required.
+- [Canonical PST language](pst-canonical-language.md) — Normalize immutable snapshots into a product-neutral, namespaced Manufacturing IR before validation or compilation.

@@ -51,25 +51,21 @@ credentials, or arbitrary step configuration.
 
 ## 3. Compiler input
 
-The conceptual input is the following versioned envelope. Field names are
-normative for the contract even if the persistence layer stores some values in
-JSONB or relational columns.
+The canonical source and Manufacturing IR are defined by
+`PST_CANONICAL_SCHEMA.md` and the shared `@workspace/db/schema` contract. The
+Compiler invocation combines that immutable canonical source with the selected
+Compiler implementation version:
 
 ```ts
 type PstCompilerInput = {
-  contractVersion: "pst-compiler.v1";
   compilerVersion: string;
-  release: PstReleaseMetadata;
-  project: PstProjectDefinition;
-  blueprint: PstBlueprintDefinition;
-  workflow: PstWorkflowStep[];
-  pattern?: PstPatternDefinition;
-  recipe?: PstRecipeDefinition;
-  components: PstComponentDefinition[];
-  rules: PstRuleDefinition[];
-  providers?: PstProviderRequirement[];
+  source: PstCanonicalSourceV1;
 };
 ```
+
+`PstCanonicalSourceV1` is normalized into `PstManufacturingIrV1` before
+validation and compilation. The Compiler MUST NOT accept mutable draft rows as
+an alternative input.
 
 ### 3.1 Release metadata
 
@@ -81,7 +77,8 @@ type PstReleaseMetadata = {
   version: string;
   publishedAt: string; // ISO-8601 UTC
   snapshotHash: string;
-  sourceSchemaVersion: string;
+  snapshotHashAlgorithm: "sha256-canonical-json.v1";
+  sourceSchemaVersion: "pst-release-snapshot.v1";
 };
 ```
 
@@ -169,10 +166,11 @@ type PstWorkflowStep = {
 };
 ```
 
-The current persisted `WorkflowStep` shape is the minimum source shape. The
-Compiler normalizes legacy `STEP`, `OUTPUT`, and other known aliases into the
-runtime kinds above. Unknown types are an error unless a registered contract
-extension explicitly declares their input/output and execution semantics.
+The current persisted `WorkflowStep` shape is the minimum source shape.
+`OUTPUT` is the only direct legacy alias and normalizes to `OUTCOME`.
+`ASSESSMENT` and `STEP` require an explicit `configuration.canonical.kind`;
+their meaning is never inferred from labels. Every other unknown type is
+blocked in v1. Registered contract extensions are outside the v1 boundary.
 
 `configuration` is declarative data only. It may select a question schema,
 persisted field, rule set, scoring scale, analysis template, recommendation

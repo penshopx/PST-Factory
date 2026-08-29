@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { pstCanonicalJsonHash } from "@workspace/db/schema";
 import type {
   PstReleaseProviderSnapshot,
   PstReleaseRuleSnapshot,
@@ -12,20 +12,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
-function canonicalize(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonicalize);
-  if (!isRecord(value)) return value;
-  return Object.fromEntries(
-    Object.entries(value)
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([key, child]) => [key, canonicalize(child)]),
-  );
-}
-
 export function releaseSnapshotHash(snapshot: Omit<PstReleaseSnapshot, "snapshotHash">) {
-  return createHash("sha256")
-    .update(JSON.stringify(canonicalize(snapshot)))
-    .digest("hex");
+  return pstCanonicalJsonHash(snapshot);
 }
 
 export function releaseSnapshotHashMatches(snapshot: PstReleaseSnapshot) {
