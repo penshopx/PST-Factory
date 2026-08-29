@@ -1,7 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 48" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 148" role="img" aria-labelledby="title desc">
   <title id="title">PST Factory</title>
-  <desc id="desc">PST Factory logo mark and wordmark</desc>
-  <rect width="40" height="40" x="4" y="4" rx="10" fill="#16d9f5"/>
-  <path d="M15 13h10.5c5 0 8.5 2.7 8.5 7s-3.5 7-8.5 7H21v8h-6V13Zm6 5v4h4.2c1.8 0 2.8-.7 2.8-2s-1-2-2.8-2H21Z" fill="#07111d"/>
-  <text x="56" y="29" fill="#edf7ff" font-family="Arial, sans-serif" font-size="17" font-weight="700">PST Factory</text>
+  <desc id="desc">PST Factory logo: three connected production modules and wordmark</desc>
+  <defs>
+    <linearGradient id="mark" x1="18" y1="12" x2="126" y2="136" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#72edff"/>
+      <stop offset=".58" stop-color="#16d9f5"/>
+      <stop offset="1" stop-color="#0b9fc8"/>
+    </linearGradient>
+    <linearGradient id="spark" x1="78" y1="28" x2="118" y2="76" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffe19a"/>
+      <stop offset="1" stop-color="#f7aa3b"/>
+    </linearGradient>
+  </defs>
+  <rect width="132" height="132" x="8" y="8" rx="34" fill="#0d1b2b" stroke="#2a4054" stroke-width="4"/>
+  <path d="M34 89 64 59l18 18 29-29" fill="none" stroke="url(#mark)" stroke-linecap="round" stroke-linejoin="round" stroke-width="11"/>
+  <path d="m96 48 15 0-1 15" fill="none" stroke="url(#spark)" stroke-linecap="round" stroke-linejoin="round" stroke-width="8"/>
+  <rect width="26" height="12" x="25" y="101" rx="6" fill="#16d9f5" opacity=".32"/>
+  <rect width="26" height="12" x="55" y="101" rx="6" fill="#16d9f5" opacity=".58"/>
+  <rect width="26" height="12" x="85" y="101" rx="6" fill="#f7aa3b"/>
+  <text x="166" y="78" fill="#16d9f5" font-family="Manrope, Arial, sans-serif" font-size="56" font-weight="800" letter-spacing="-2">PST</text>
+  <text x="300" y="78" fill="#edf7ff" font-family="Manrope, Arial, sans-serif" font-size="56" font-weight="800" letter-spacing="-2">Factory</text>
+  <text x="170" y="112" fill="#91a9bd" font-family="DM Mono, monospace" font-size="13" font-weight="500" letter-spacing="3.4">PROBLEM-SOLVING TOOLKIT STUDIO</text>
 </svg>

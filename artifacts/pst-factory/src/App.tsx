@@ -247,9 +247,10 @@ function Shell({ children }: { children: ReactNode }) {
   const initials = displayName.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
   return <div className="min-h-[100dvh] bg-background text-foreground">
     <aside className={cn('fixed inset-y-0 left-0 z-30 flex w-[248px] flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-transform md:translate-x-0', mobile ? 'translate-x-0' : '-translate-x-full')} data-testid="sidebar">
-      <div className="flex h-[72px] items-center gap-3 border-b border-sidebar-border px-6">
-        <div className="grid h-8 w-8 place-items-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground"><span className="font-mono text-sm font-bold">P</span></div>
-         <div><p className="text-sm font-extrabold tracking-tight text-sidebar-foreground">PST Factory</p><p className="font-mono text-[9px] uppercase tracking-[.2em] text-sidebar-foreground/50">studio produk</p></div>
+      <div className="flex h-[104px] items-center border-b border-sidebar-border px-5">
+        <Link href="/" onClick={() => setMobile(false)} className="focus-ring block w-full rounded-lg" aria-label="PST Factory" data-testid="link-sidebar-logo">
+          <img src={`${basePath}/logo.svg`} alt="PST Factory" className="h-auto w-full max-w-[214px]" />
+        </Link>
       </div>
       <div className="px-4 pb-3 pt-7"><p className="px-3 pb-2 font-mono text-[10px] uppercase tracking-[.2em] text-sidebar-foreground/40">Area produksi</p>
         <nav className="space-y-1">{nav.map(({ href, label, testId, icon: Icon }) => <Link href={href} key={href} onClick={() => setMobile(false)} className={cn('focus-ring flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors', location === href ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground/65 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground')} data-testid={`link-nav-${testId}`}><Icon size={16} strokeWidth={1.8} /><span>{label}</span>{location === href && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-sidebar-primary" />}</Link>)}</nav>
@@ -739,7 +740,7 @@ function PublicHome() {
     <div className="relative mx-auto flex min-h-[100dvh] max-w-6xl flex-col px-6 py-6 sm:px-10">
       <header className="flex items-center justify-between">
         <Link href="/" className="flex items-center gap-3" data-testid="link-public-logo">
-          <img src={`${basePath}/logo.svg`} alt="PST Factory" className="h-10 w-auto" />
+         <img src={`${basePath}/logo.svg`} alt="PST Factory" className="h-16 w-auto sm:h-28" />
         </Link>
         <nav className="flex items-center gap-2">
            <Link href="/video" className="hidden rounded-lg px-4 py-2.5 text-sm font-semibold text-[#a9c1d3] transition-colors hover:text-[#edf7ff] sm:inline-flex" data-testid="link-process-film">Film proses</Link>
