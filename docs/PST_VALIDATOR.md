@@ -11,7 +11,21 @@ The shared implementation and types are exported by `@workspace/db/schema`.
 
 ```ts
 type PstValidationResultV1 =
-  | { status: "VALIDATED"; diagnostics: []; warnings: PstValidationDiagnosticV1[] }
+  | {
+      status: "VALIDATED";
+      diagnostics: [];
+      warnings: PstValidationDiagnosticV1[];
+      subject: {
+        kind: "manufacturing-ir";
+        version: "pst-manufacturing-ir.v1";
+        hash: string;
+        source?: {
+          kind: "canonical-source";
+          version: "pst-canonical-source.v1";
+          hash: string;
+        };
+      };
+    }
   | {
       status: "BLOCKED";
       diagnostics: PstValidationDiagnosticV1[];
@@ -26,6 +40,15 @@ not match prose.
 `diagnostics` are blocking errors. `warnings` are non-blocking findings and are
 kept separate so a future Compiler can accept only `status: "VALIDATED"` while
 preserving quality information.
+
+The validated subject binds the result to the exact canonical hash and version
+of the Manufacturing IR. A downstream lowering or Compiler must recompute that
+hash and reject a validation result created for a different IR payload.
+
+Canonical Source validation also binds the exact source hash. Compiler
+preparation must require this source proof because product metadata and typed
+executable configuration are read from Canonical Source after Manufacturing IR
+validation.
 
 ## 2. Diagnostic codes
 

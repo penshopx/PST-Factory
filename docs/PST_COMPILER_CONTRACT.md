@@ -60,14 +60,14 @@ implementation version:
 ```ts
 type PstCompilerInput = {
   compilerVersion: string;
-  ir: PstManufacturingIrV1;
-  validation: PstValidationResultV1 & { status: "VALIDATED" };
+  readyIr: PstCompilerReadyIrV1;
 };
 ```
 
-Canonical Source is normalized and validated before this input is created. The
-Compiler MUST NOT accept Canonical Source, mutable draft rows, or an unvalidated
-IR as an alternative input.
+Canonical Source is normalized, validated, and lowered into Compiler-Ready IR
+before this input is created. The Compiler MUST NOT accept Canonical Source,
+mutable draft rows, Manufacturing IR, or an unvalidated artifact as an
+alternative input.
 
 ### 3.1 Release metadata
 

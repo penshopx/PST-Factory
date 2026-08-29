@@ -1,8 +1,8 @@
 # Executable PST Definition v1
 
-Status: **contract only**. This document freezes the output language for a
-future Compiler. It does not implement Compiler emission, runtime execution,
-provider calls, customer persistence, or UI behavior.
+Status: **Compiler v1 implemented; Runtime not implemented**. This document
+freezes the output language emitted by the pure Compiler. It does not implement
+runtime execution, provider calls, customer persistence, or UI behavior.
 
 The shared TypeScript contract is exported by `@workspace/db/schema` as
 `ExecutablePstDefinitionV1`.
@@ -16,14 +16,35 @@ PstManufacturingIrV1
         ↓
 PstValidationResultV1 = VALIDATED
         ↓
+PstCompilerReadyIrV1
+        ↓
 PstCompilerInputV1
         ↓
 ExecutablePstDefinitionV1
 ```
 
-The Compiler accepts only validated Manufacturing IR. It does not normalize
-Canonical Source, query the database, read current library rows, call a
-provider, execute a customer session, or mutate a release.
+The pure preparation stage binds an exact validated IR hash to immutable
+Canonical Source metadata and lowers only typed
+`workflow[].configuration.compilerReady` operations into
+`PstCompilerReadyIrV1`. Opaque configuration is rejected.
+
+Compiler v1 accepts only Compiler-Ready IR. It does not normalize Canonical
+Source, query the database, read current library rows, call a provider, execute
+a customer session, or mutate a release.
+
+`compilePstV1` is a deterministic, side-effect-free projection. It validates
+supported versions, graph references, step/operation compatibility, context
+identity, and terminal outcomes before returning `COMPILED`.
+
+Compiler-Ready IR preserves Manufacturing IR V1 unchanged while supplying the
+customer-safe identity, product metadata, context fields, persistence policy,
+typed operations, rule-ID transitions, and outcome identities required by the
+executable contract.
+
+Every Compiler-Ready artifact carries a canonical SHA-256 integrity proof over
+its complete allowlisted payload. Compiler v1 verifies this proof before reading
+or projecting nested data. Mutation or forged additions after preparation are
+blocked with `INVALID_READY_INTEGRITY`.
 
 ## 2. Executable definition
 
@@ -61,6 +82,10 @@ Operation configuration is an allowlisted discriminated union, not arbitrary
 JSON. Every reference must resolve to a declaration or a namespaced state
 field. Provider IDs identify capability requirements only; the executable
 definition never carries provider credentials.
+
+Rules are also projected into an allowlisted runtime schema. Predicates contain
+only a namespaced field, supported operator, and simple literal value. Effects
+are limited to typed `set`, `add-score`, `emit`, and `goto` operations.
 
 ## 4. Transition contract
 

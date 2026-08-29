@@ -1,13 +1,8 @@
 import type {
-  PstCanonicalComponentV1,
   PstCanonicalPatternV1,
-  PstCanonicalProviderV1,
   PstCanonicalRecipeV1,
-  PstManufacturingIrV1,
   PstStateReference,
 } from "./pst-contract";
-import type { PstReleaseRuleSnapshot } from "./pst";
-import type { PstValidationResultV1 } from "./pst-validator";
 
 export const pstExecutableRuntimeVersion = "pst-runtime.v1" as const;
 export const pstCompilerName = "pst-compiler" as const;
@@ -48,7 +43,8 @@ export type PstExecutableStateContractV1 = {
 export type PstExecutableOperationV1 =
   | {
       type: "collect-context";
-      fields: PstStateReference[];
+      fields: PstExecutableContextFieldV1[];
+      sessionPersistence: "ephemeral" | "customer_session";
     }
   | {
       type: "collect-answers";
@@ -134,12 +130,113 @@ export type PstExecutableProductV1 = {
   expectedOutput: string[];
 };
 
+type PstExecutableComponentIdentityV1 = {
+  id: string;
+  assetId: string;
+  name: string;
+  version: string;
+};
+
+export type PstExecutableQuestionV1 = {
+  id: string;
+  label: string;
+  type: PstExecutableValueType;
+  required: boolean;
+  options?: Array<{ value: string; label: string }>;
+};
+
+export type PstExecutableComponentV1 =
+  | PstExecutableComponentIdentityV1 & {
+      capability: "question-schema";
+      definition: { questions: PstExecutableQuestionV1[] };
+    }
+  | PstExecutableComponentIdentityV1 & {
+      capability: "scoring-scale";
+      definition: {
+        minimum: number;
+        maximum: number;
+        bands: Array<{ minimum: number; label: string }>;
+      };
+    }
+  | PstExecutableComponentIdentityV1 & {
+      capability: "analysis-template";
+      definition: {
+        template: string;
+        outputFields: PstStateReference[];
+      };
+    }
+  | PstExecutableComponentIdentityV1 & {
+      capability: "recommendation-strategy";
+      definition: {
+        template: string;
+        outputFields: PstStateReference[];
+      };
+    }
+  | PstExecutableComponentIdentityV1 & {
+      capability: "action-template";
+      definition: {
+        items: Array<{ id: string; title: string; description: string }>;
+      };
+    }
+  | PstExecutableComponentIdentityV1 & {
+      capability: "outcome-mapping";
+      definition: { outputFields: PstStateReference[] };
+    };
+
+export type PstExecutableProviderV1 = {
+  id: string;
+  capability: string;
+  mode: "assistive";
+};
+
+export type PstExecutableLiteralV1 =
+  | string
+  | number
+  | boolean
+  | null
+  | string[]
+  | number[]
+  | boolean[];
+
+export type PstExecutablePredicateV1 = {
+  field: PstStateReference;
+  operator:
+    | "equals"
+    | "not_equals"
+    | "contains"
+    | "in"
+    | "greater_than"
+    | "greater_than_or_equal"
+    | "less_than"
+    | "less_than_or_equal"
+    | "exists";
+  value?: PstExecutableLiteralV1;
+};
+
+export type PstExecutableRuleEffectV1 =
+  | { type: "set"; field: PstStateReference; value: PstExecutableLiteralV1 }
+  | { type: "add-score"; scaleRef: string; value: number }
+  | { type: "emit"; event: string }
+  | { type: "goto"; stepId: string };
+
+export type PstExecutableRuleV1 = {
+  id: string;
+  version: string;
+  name: string;
+  kind: "RULE" | "SCORING";
+  when: {
+    all?: PstExecutablePredicateV1[];
+    any?: PstExecutablePredicateV1[];
+  };
+  then: PstExecutableRuleEffectV1[];
+};
+
 export type PstExecutableDeclarationsV1 = {
   pattern?: PstCanonicalPatternV1;
   recipe?: PstCanonicalRecipeV1;
-  components: PstCanonicalComponentV1[];
-  rules: PstReleaseRuleSnapshot[];
-  providers: PstCanonicalProviderV1[];
+  components: PstExecutableComponentV1[];
+  rules: PstExecutableRuleV1[];
+  providers: PstExecutableProviderV1[];
 };
 
 export type ExecutablePstDefinitionV1 = {
@@ -155,12 +252,6 @@ export type ExecutablePstDefinitionV1 = {
   steps: PstExecutableStepV1[];
   entryStepId: string;
   outcomeStepIds: string[];
-};
-
-export type PstCompilerInputV1 = {
-  compilerVersion: string;
-  ir: PstManufacturingIrV1;
-  validation: Extract<PstValidationResultV1, { status: "VALIDATED" }>;
 };
 
 export type PstCompileDiagnosticV1 = {

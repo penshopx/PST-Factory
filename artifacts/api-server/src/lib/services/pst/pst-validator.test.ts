@@ -128,11 +128,11 @@ function validCanonicalSource(): PstCanonicalSourceV1 {
 }
 
 test("Validator accepts a complete generic Manufacturing IR", () => {
-  assert.deepEqual(validateManufacturingIr(validIr()), {
-    status: "VALIDATED",
-    diagnostics: [],
-    warnings: [],
-  });
+  const result = validateManufacturingIr(validIr());
+  assert.equal(result.status, "VALIDATED");
+  assert.deepEqual(result.diagnostics, []);
+  assert.deepEqual(result.warnings, []);
+  assert.match(result.subject.hash, /^[a-f0-9]{64}$/);
 });
 
 test("Validator blocks graph integrity and data contract failures", () => {

@@ -109,3 +109,17 @@ action, and persistence semantics while appearing product-neutral.
 **How to apply:** Require full Cashflow, Decision, and Compliance graph fixtures,
 deterministic golden outputs, zero product branches, and zero DB/network/provider
 calls before declaring Compiler v1 ready.
+
+Compiler-Ready integrity is a freshness check, not permission to trust nested
+data. Compiler v1 must recursively revalidate the complete emitted envelope,
+declaration uniqueness, all references, terminal outcomes, and typed rule
+effects even when an artifact carries a matching canonical hash.
+
+**Why:** A caller can mutate or forge an in-memory ready artifact and recompute
+its hash; projection without full defensive validation can leak private fields,
+create ambiguous references, or let rules target undeclared runtime state.
+
+**How to apply:** Keep runtime rules and component configuration as exact
+allowlisted unions, reject unknown keys recursively, constrain rule effects to
+declared components/steps/state writes, sort diagnostics, and never fall back to
+raw snapshot objects during emission.

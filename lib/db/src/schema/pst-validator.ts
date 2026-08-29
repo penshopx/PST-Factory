@@ -1,5 +1,6 @@
 import {
   manufacturingIrFromCanonicalSource,
+  pstCanonicalJsonHash,
   pstCanonicalSourceContractVersion,
   pstCredentialConfigurationPaths,
   pstManufacturingIrVersion,
@@ -40,11 +41,31 @@ export type PstValidationResultV1 =
       status: "VALIDATED";
       diagnostics: [];
       warnings: PstValidationDiagnosticV1[];
+      subject: {
+        kind: "manufacturing-ir";
+        version: "pst-manufacturing-ir.v1";
+        hash: string;
+        source?: {
+          kind: "canonical-source";
+          version: "pst-canonical-source.v1";
+          hash: string;
+        };
+      };
     }
   | {
       status: "BLOCKED";
       diagnostics: PstValidationDiagnosticV1[];
       warnings: PstValidationDiagnosticV1[];
+      subject?: {
+        kind: "manufacturing-ir";
+        version: string;
+        hash: string;
+        source?: {
+          kind: "canonical-source";
+          version: string;
+          hash: string;
+        };
+      };
     };
 
 function diagnostic(
@@ -429,9 +450,14 @@ export function validateManufacturingIr(
 ): PstValidationResultV1 {
   const diagnostics = manufacturingIrDiagnostics(ir, true);
   const status = diagnostics.length ? "BLOCKED" : "VALIDATED";
+  const subject = {
+    kind: "manufacturing-ir" as const,
+    version: ir.irVersion,
+    hash: pstCanonicalJsonHash(ir),
+  };
   return status === "BLOCKED"
-    ? { status, diagnostics, warnings: [] }
-    : { status, diagnostics: [], warnings: [] };
+    ? { status, diagnostics, warnings: [], subject }
+    : { status, diagnostics: [], warnings: [], subject };
 }
 
 export function validateCanonicalSource(
@@ -491,6 +517,7 @@ export function validateCanonicalSource(
   diagnostics.push(...unsafeConfigurationDiagnostics(source));
 
   const normalized = manufacturingIrFromCanonicalSource(source);
+  let subject: Extract<PstValidationResultV1, { status: "VALIDATED" }>["subject"] | undefined;
   if (!normalized.ok) {
     diagnostics.push(...normalized.errors.map(normalizationDiagnostic));
     diagnostics.push(...declarationReadinessDiagnostics({
@@ -501,10 +528,20 @@ export function validateCanonicalSource(
       providers: source.providers,
     }));
   } else {
+    subject = {
+      kind: "manufacturing-ir",
+      version: normalized.value.irVersion,
+      hash: pstCanonicalJsonHash(normalized.value),
+      source: {
+        kind: "canonical-source",
+        version: source.contractVersion,
+        hash: pstCanonicalJsonHash(source),
+      },
+    };
     diagnostics.push(...manufacturingIrDiagnostics(normalized.value, false));
   }
   const status = diagnostics.length ? "BLOCKED" : "VALIDATED";
   return status === "BLOCKED"
-    ? { status, diagnostics, warnings: [] }
-    : { status, diagnostics: [], warnings: [] };
+    ? { status, diagnostics, warnings: [], ...(subject ? { subject } : {}) }
+    : { status, diagnostics: [], warnings: [], subject: subject! };
 }
