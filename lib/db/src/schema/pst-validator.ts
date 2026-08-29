@@ -36,8 +36,16 @@ export type PstValidationDiagnosticV1 = {
 };
 
 export type PstValidationResultV1 =
-  | { status: "VALIDATED"; diagnostics: [] }
-  | { status: "BLOCKED"; diagnostics: PstValidationDiagnosticV1[] };
+  | {
+      status: "VALIDATED";
+      diagnostics: [];
+      warnings: PstValidationDiagnosticV1[];
+    }
+  | {
+      status: "BLOCKED";
+      diagnostics: PstValidationDiagnosticV1[];
+      warnings: PstValidationDiagnosticV1[];
+    };
 
 function diagnostic(
   code: PstValidationDiagnosticCode,
@@ -421,7 +429,9 @@ export function validateManufacturingIr(
 ): PstValidationResultV1 {
   const diagnostics = manufacturingIrDiagnostics(ir, true);
   const status = diagnostics.length ? "BLOCKED" : "VALIDATED";
-  return status === "BLOCKED" ? { status, diagnostics } : { status, diagnostics: [] };
+  return status === "BLOCKED"
+    ? { status, diagnostics, warnings: [] }
+    : { status, diagnostics: [], warnings: [] };
 }
 
 export function validateCanonicalSource(
@@ -494,5 +504,7 @@ export function validateCanonicalSource(
     diagnostics.push(...manufacturingIrDiagnostics(normalized.value, false));
   }
   const status = diagnostics.length ? "BLOCKED" : "VALIDATED";
-  return status === "BLOCKED" ? { status, diagnostics } : { status, diagnostics: [] };
+  return status === "BLOCKED"
+    ? { status, diagnostics, warnings: [] }
+    : { status, diagnostics: [], warnings: [] };
 }

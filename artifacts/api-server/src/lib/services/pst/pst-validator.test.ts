@@ -131,6 +131,7 @@ test("Validator accepts a complete generic Manufacturing IR", () => {
   assert.deepEqual(validateManufacturingIr(validIr()), {
     status: "VALIDATED",
     diagnostics: [],
+    warnings: [],
   });
 });
 

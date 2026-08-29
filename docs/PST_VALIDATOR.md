@@ -11,16 +11,21 @@ The shared implementation and types are exported by `@workspace/db/schema`.
 
 ```ts
 type PstValidationResultV1 =
-  | { status: "VALIDATED"; diagnostics: [] }
+  | { status: "VALIDATED"; diagnostics: []; warnings: PstValidationDiagnosticV1[] }
   | {
       status: "BLOCKED";
       diagnostics: PstValidationDiagnosticV1[];
+      warnings: PstValidationDiagnosticV1[];
     };
 ```
 
 There is no executable output in a blocked result. Diagnostics are ordered
 deterministically and use stable codes so Factory and future Compiler flows do
 not match prose.
+
+`diagnostics` are blocking errors. `warnings` are non-blocking findings and are
+kept separate so a future Compiler can accept only `status: "VALIDATED"` while
+preserving quality information.
 
 ## 2. Diagnostic codes
 

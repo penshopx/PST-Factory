@@ -53,19 +53,21 @@ credentials, or arbitrary step configuration.
 
 The canonical source and Manufacturing IR are defined by
 `PST_CANONICAL_SCHEMA.md` and the shared `@workspace/db/schema` contract. The
-Compiler invocation combines that immutable canonical source with the selected
-Compiler implementation version:
+executable output contract is defined by `PST_EXECUTABLE_CONTRACT.md`. The
+Compiler invocation combines validated IR with the selected Compiler
+implementation version:
 
 ```ts
 type PstCompilerInput = {
   compilerVersion: string;
-  source: PstCanonicalSourceV1;
+  ir: PstManufacturingIrV1;
+  validation: PstValidationResultV1 & { status: "VALIDATED" };
 };
 ```
 
-`PstCanonicalSourceV1` is normalized into `PstManufacturingIrV1` before
-validation and compilation. The Compiler MUST NOT accept mutable draft rows as
-an alternative input.
+Canonical Source is normalized and validated before this input is created. The
+Compiler MUST NOT accept Canonical Source, mutable draft rows, or an unvalidated
+IR as an alternative input.
 
 ### 3.1 Release metadata
 
@@ -304,38 +306,10 @@ The output is a complete, self-contained runtime contract. It is not the raw
 factory aggregate and does not require a database lookup to discover the
 journey.
 
-```ts
-type PstExecutableRuntime = {
-  contractVersion: "pst-runtime.v1";
-  compiler: {
-    name: "pst-compiler";
-    version: string;
-  };
-  release: {
-    releaseId: string;
-    projectId: string;
-    slug: string;
-    version: string;
-    publishedAt: string;
-    snapshotHash: string;
-  };
-  product: {
-    name: string;
-    description: string;
-    problem: string;
-    targetUser: string;
-    desiredOutcome: string;
-    journey: string[];
-    expectedOutput: string[];
-  };
-  context: PstContextContract;
-  components: PstRuntimeComponent[];
-  rules: PstRuntimeRule[];
-  steps: PstExecutableStep[];
-  entryStepId: string;
-  outcomeStepIds: string[];
-};
-```
+The normative output type is `ExecutablePstDefinitionV1`, documented in
+`PST_EXECUTABLE_CONTRACT.md`. The older shape below remains a conceptual
+explanation of runtime concerns; implementations MUST use the shared versioned
+type and its typed operation union.
 
 The output MUST contain all data needed to validate and execute the release.
 It MUST be serializable JSON, deterministic, and safe to cache by

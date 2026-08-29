@@ -19,4 +19,5 @@
 
 export * from "./pst";
 export * from "./pst-contract";
+export * from "./pst-executable";
 export * from "./pst-validator";
