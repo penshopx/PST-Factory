@@ -738,11 +738,11 @@ function PublicHome() {
   return <main className="min-h-[100dvh] overflow-hidden bg-[#07111d] text-[#edf7ff]">
     <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_20%,rgba(22,217,245,.16),transparent_32%),linear-gradient(rgba(255,255,255,.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.035)_1px,transparent_1px)] bg-[size:auto,56px_56px,56px_56px]" />
     <div className="relative mx-auto flex min-h-[100dvh] max-w-6xl flex-col px-6 py-6 sm:px-10">
-      <header className="flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3" data-testid="link-public-logo">
-         <img src={`${basePath}/logo.svg`} alt="PST Factory" className="h-16 w-auto sm:h-28" />
+      <header className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <Link href="/" className="focus-ring block w-full max-w-[420px] shrink-0 rounded-xl sm:w-auto sm:max-w-none" data-testid="link-public-logo">
+         <img src={`${basePath}/logo.svg`} alt="PST Factory" className="h-auto w-full sm:h-28 sm:w-auto" />
         </Link>
-        <nav className="flex items-center gap-2">
+        <nav className="flex items-center justify-end gap-2">
            <Link href="/video" className="hidden rounded-lg px-4 py-2.5 text-sm font-semibold text-[#a9c1d3] transition-colors hover:text-[#edf7ff] sm:inline-flex" data-testid="link-process-film">Film proses</Link>
           <Link href="/sign-in" className="rounded-lg px-4 py-2.5 text-sm font-semibold text-[#a9c1d3] transition-colors hover:text-[#edf7ff]" data-testid="link-sign-in">Masuk</Link>
           <Link href="/sign-up" className="rounded-lg border border-[#16d9f5]/50 bg-[#16d9f5] px-4 py-2.5 text-sm font-bold text-[#07111d] transition-colors hover:bg-[#72edff]" data-testid="link-sign-up">Buat akun</Link>
