@@ -608,6 +608,7 @@ components:
       properties:
         sourceSchemaVersion: { type: string, enum: [pst-release-snapshot.v1] }
         snapshotHash: { type: string, pattern: "^[a-f0-9]{64}$" }
+        snapshotHashAlgorithm: { type: string, enum: [sha256-canonical-json.v1] }
         project: { $ref: "#/components/schemas/PstReleaseProject" }
         blueprint: { $ref: "#/components/schemas/PstReleaseBlueprint" }
         workflow:
@@ -817,10 +818,11 @@ components:
         updatedAt: { type: string, format: date-time }
     PstPattern:
       type: object
-      required: [id, name, description, steps, usageCount, projectIds, projects]
+      required: [id, name, version, description, steps, usageCount, projectIds, projects]
       properties:
         id: { type: string }
         name: { type: string }
+        version: { type: string }
         description: { type: string }
         steps: { type: array, items: { type: string } }
         usageCount: { type: number }
@@ -830,10 +832,11 @@ components:
           items: { $ref: "#/components/schemas/ReferenceProject" }
     PstRecipe:
       type: object
-      required: [id, name, description, components, usageCount, projectIds, projects]
+      required: [id, name, version, description, components, usageCount, projectIds, projects]
       properties:
         id: { type: string }
         name: { type: string }
+        version: { type: string }
         description: { type: string }
         components: { type: array, items: { type: string } }
         usageCount: { type: number }

@@ -113,6 +113,7 @@ export const pstAssetsTable = pgTable("pst_assets", {
 export const pstPatternsTable = pgTable("pst_patterns", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
+  version: text("version").notNull().default("v1.0"),
   description: text("description").notNull(),
   steps: text("steps").array().notNull(),
   usageCount: integer("usage_count").notNull().default(0),
@@ -121,6 +122,7 @@ export const pstPatternsTable = pgTable("pst_patterns", {
 export const pstRecipesTable = pgTable("pst_recipes", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
+  version: text("version").notNull().default("v1.0"),
   description: text("description").notNull(),
   components: text("components").array().notNull(),
   usageCount: integer("usage_count").notNull().default(0),
@@ -255,6 +257,7 @@ export type PstReleaseProjectSnapshot = {
 export type PstReleaseSnapshot = {
   sourceSchemaVersion?: "pst-release-snapshot.v1";
   snapshotHash?: string;
+  snapshotHashAlgorithm?: "sha256-canonical-json.v1";
   project: PstReleaseProjectSnapshot;
   blueprint: Omit<PstBlueprint, "updatedAt"> & { version: string; updatedAt: string };
   workflow: WorkflowStep[];

@@ -26,3 +26,21 @@ Concurrent publish conflicts must be user-visible and retry-safe: the factory sh
 **Why:** The API can correctly reject a stale second publish, but a silent mutation error leaves the operator with stale approval state and no safe recovery path.
 
 **How to apply:** Preserve a structured retryable conflict response at the API boundary and render an explicit refresh action in the Publish tab.
+
+Startup fixtures and reconciliation must never replace the payload of an existing release. A release may be created when absent, but historical snapshot content remains immutable.
+
+**Why:** Rebuilding a fixture release from current mutable rows silently changes a published customer contract and invalidates its audit history.
+
+**How to apply:** Repair fixtures by creating a new release or through an explicit controlled migration; never update a stored release snapshot during normal startup.
+
+Only snapshots carrying a declared canonical hash algorithm are integrity-verified. Legacy snapshots without that marker remain readable for compatibility but must not be represented as hash-verified.
+
+**Why:** A hash string alone does not prove which serialization algorithm produced it, and JSON key ordering cannot be reconstructed reliably from historical JSONB.
+
+**How to apply:** Canonicalize new snapshot payloads before hashing, retain the algorithm marker, and keep legacy readability separate from integrity verification.
+
+Release configuration must reject credential-like data and malformed rule/provider declarations before persistence instead of silently dropping them.
+
+**Why:** Silent omission makes compilation depend on live defaults, while retained credentials would leak secrets into release history.
+
+**How to apply:** Recursively inspect declarative configuration, block credential-bearing keys, and fail publication when a configured rule or provider is incomplete.

@@ -1,0 +1,160 @@
+Nah, **di titik ini saya sarankan berhenti sebelum patch benar-benar diterapkan** dan lakukan Architecture Review kecil terhadap perubahan Task #35.
+
+Dari uraian tersebut, arahnya **masih benar**, tetapi ada satu hal yang harus kita jaga:
+
+> **Task #35 boleh memperkaya Release Snapshot, tetapi jangan sampai ia diam-diam mendefinisikan Canonical Schema atau Manufacturing IR.**
+
+### Yang boleh dilakukan di #35 🟢
+
+Snapshot memang harus membawa bahan mentah yang nantinya dibutuhkan Compiler:
+
+```text
+Release Snapshot
+├── sourceSchemaVersion
+├── snapshotHash
+├── Pattern
+│   ├── identity
+│   └── version
+├── Recipe
+│   ├── identity
+│   └── version
+├── Components
+│   ├── identity
+│   └── assetVersion
+├── Workflow Configuration
+├── Rules
+└── Providers
+```
+
+Jadi tiga perubahan yang disebutkan:
+
+* versi eksplisit Pattern/Recipe;
+* resolved component configuration;
+* canonical snapshot hash;
+
+**secara arsitektur masuk scope #35.**
+
+Dan keputusan:
+
+> `rules/providers` tetap kosong bila memang belum dikonfigurasi.
+
+Itu **sangat tepat**. Jangan membuat default provider atau rules hanya agar snapshot terlihat lengkap.
+
+---
+
+## Tetapi ada satu red flag
+
+Kalimat:
+
+> "konfigurasi komponen yang ter-resolve dari asset"
+
+perlu diperiksa implementasinya.
+
+Kita harus memastikan yang disimpan adalah:
+
+**identity + version + configuration yang memang menjadi bagian release**, bukan seluruh mutable asset secara sembarangan.
+
+Karena tujuan snapshot adalah:
+
+```text
+Mutable Library
+       ↓
+     RESOLVE
+       ↓
+Immutable Release Snapshot
+```
+
+Setelah snapshot dibuat:
+
+```text
+Asset berubah
+     ✕
+Published PST berubah
+```
+
+Published PST harus tetap menggunakan konfigurasi yang sudah disnapshot.
+
+---
+
+# Setelah #35 selesai
+
+Jangan langsung masuk Compiler.
+
+Urutan yang saya setujui tetap:
+
+```text
+#35
+Release Snapshot lengkap
+       ↓
+#40
+Canonical PST Schema
++
+Manufacturing IR
+       ↓
+Validator
+       ↓
+Compiler v1
+       ↓
+#39
+Three-PST Proof
+       ↓
+#34
+Generic Runtime
+```
+
+### Dan saya ingin memperketat acceptance #35
+
+Task #35 dianggap benar bukan hanya jika field-field tersebut **ada**, tetapi jika:
+
+1. Pattern identity + version tersimpan.
+2. Recipe identity + version tersimpan.
+3. Component identity + asset version tersimpan.
+4. Rules/providers yang dikonfigurasi benar-benar tersimpan.
+5. `sourceSchemaVersion` tersedia.
+6. Hash deterministik terhadap isi snapshot.
+7. Published release **tidak berubah ketika draft/library berubah**.
+8. Snapshot lama masih dapat dibaca oleh sistem berikutnya.
+
+---
+
+## Yang paling penting
+
+**Jangan membuat Task #35 terlalu pintar.**
+
+Ia bukan:
+
+```text
+Snapshot
+→ memahami bisnis
+→ menjalankan rules
+→ menentukan workflow
+→ menghasilkan PST
+```
+
+Itu pekerjaan Compiler.
+
+Task #35 hanya:
+
+```text
+              RELEASE
+                 ↓
+             RESOLVE
+                 ↓
+        FREEZE CONFIGURATION
+                 ↓
+        IMMUTABLE SNAPSHOT
+```
+
+Setelah itu **Task #40 menjadi pekerjaan konseptual paling penting**:
+
+```text
+Snapshot
+     ↓
+Canonical PST Schema
+     ↓
+Manufacturing IR
+```
+
+Barulah Compiler mempunyai bahasa yang jelas untuk bekerja.
+
+**Jadi keputusan saya untuk perubahan yang sedang akan dilakukan: 🟢 BUILD, tetapi dengan scope ketat seperti di atas.** Jangan memperluas #35 ke Canonical Schema, IR, atau Compiler behavior.

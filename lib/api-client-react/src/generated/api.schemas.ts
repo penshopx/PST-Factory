@@ -100,6 +100,7 @@ export interface ReferenceProject {
 export interface PstPattern {
   id: string;
   name: string;
+  version: string;
   description: string;
   steps: string[];
   usageCount: number;
@@ -110,6 +111,7 @@ export interface PstPattern {
 export interface PstRecipe {
   id: string;
   name: string;
+  version: string;
   description: string;
   components: string[];
   usageCount: number;
@@ -192,6 +194,13 @@ export type PstReleaseSnapshotSourceSchemaVersion = typeof PstReleaseSnapshotSou
 
 export const PstReleaseSnapshotSourceSchemaVersion = {
   'pst-release-snapshotv1': 'pst-release-snapshot.v1',
+} as const;
+
+export type PstReleaseSnapshotSnapshotHashAlgorithm = typeof PstReleaseSnapshotSnapshotHashAlgorithm[keyof typeof PstReleaseSnapshotSnapshotHashAlgorithm];
+
+
+export const PstReleaseSnapshotSnapshotHashAlgorithm = {
+  'sha256-canonical-jsonv1': 'sha256-canonical-json.v1',
 } as const;
 
 export type PstReleaseProjectPublicationStatus = typeof PstReleaseProjectPublicationStatus[keyof typeof PstReleaseProjectPublicationStatus];
@@ -293,6 +302,7 @@ export interface PstReleaseSnapshot {
   sourceSchemaVersion?: PstReleaseSnapshotSourceSchemaVersion;
   /** @pattern ^[a-f0-9]{64}$ */
   snapshotHash?: string;
+  snapshotHashAlgorithm?: PstReleaseSnapshotSnapshotHashAlgorithm;
   project: PstReleaseProject;
   blueprint: PstReleaseBlueprint;
   workflow: WorkflowStep[];

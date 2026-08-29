@@ -85,7 +85,12 @@ import {
   qaStatus,
   workflowFromStructure,
 } from "../lib/services/pst/manufacturing";
-import { createHash, randomUUID } from "node:crypto";
+import {
+  releaseSnapshotHash,
+  releaseSnapshotHashAlgorithm,
+  resolveReleaseDeclarations,
+} from "../lib/services/pst/release-snapshot";
+import { randomUUID } from "node:crypto";
 
 const router: IRouter = Router();
 
@@ -210,26 +215,6 @@ function hasValidReleaseSnapshot(snapshot: unknown): snapshot is PstReleaseSnaps
     && Array.isArray(candidate.workflow)
     && candidate.workflow.length > 0
     && Array.isArray(candidate.components);
-}
-
-function hasCompleteReleaseSnapshot(snapshot: unknown): snapshot is PstReleaseSnapshot {
-  if (!hasValidReleaseSnapshot(snapshot)) return false;
-  const candidate = snapshot as {
-    sourceSchemaVersion?: unknown;
-    snapshotHash?: unknown;
-    rules?: unknown;
-    providers?: unknown;
-    components?: Array<{ id?: unknown; version?: unknown }>;
-  };
-  return candidate.sourceSchemaVersion === "pst-release-snapshot.v1"
-    && typeof candidate.snapshotHash === "string"
-    && /^[a-f0-9]{64}$/.test(candidate.snapshotHash)
-    && Array.isArray(candidate.rules)
-    && Array.isArray(candidate.providers)
-    && candidate.components?.every((component) => typeof component.id === "string"
-      && component.id.length > 0
-      && typeof component.version === "string"
-      && component.version.length > 0) === true;
 }
 
 async function ensureSeedReferences() {
@@ -401,11 +386,6 @@ async function ensurePublicWorkspaceFixture() {
         snapshot,
       })
       .onConflictDoNothing();
-  } else if (!hasCompleteReleaseSnapshot(existingRelease.snapshot)) {
-    await db
-      .update(pstReleasesTable)
-      .set({ snapshot })
-      .where(eq(pstReleasesTable.id, existingRelease.id));
   }
 }
 
@@ -747,11 +727,11 @@ async function releaseSnapshot(
   const assetIds = components.map((component) => component.assetId);
   const assets = assetIds.length
     ? await query
-      .select({ id: pstAssetsTable.id, version: pstAssetsTable.version })
+      .select()
       .from(pstAssetsTable)
       .where(inArray(pstAssetsTable.id, assetIds))
     : [];
-  const assetVersions = new Map(assets.map((asset) => [asset.id, asset.version]));
+  const assetsById = new Map(assets.map((asset) => [asset.id, asset]));
   const [patternReference] = await query
     .select({ patternId: pstProjectPatternsTable.patternId })
     .from(pstProjectPatternsTable)
@@ -776,8 +756,15 @@ async function releaseSnapshot(
       .where(eq(pstRecipesTable.id, recipeReference.recipeId))
       .limit(1)
     : [];
+  const declarations = resolveReleaseDeclarations(blueprint.workflow);
+  if (declarations.errors.length) {
+    throw new PublishRequirementError(
+      `Release configuration is incomplete or unsafe: ${declarations.errors.join(" ")}`,
+    );
+  }
   const snapshot: Omit<PstReleaseSnapshot, "snapshotHash"> = {
     sourceSchemaVersion: "pst-release-snapshot.v1" as const,
+    snapshotHashAlgorithm: releaseSnapshotHashAlgorithm,
     project: {
       name: project.name,
       description: project.description,
@@ -803,6 +790,7 @@ async function releaseSnapshot(
       pattern: {
         id: pattern.id,
         name: pattern.name,
+        version: pattern.version,
         description: pattern.description,
         steps: pattern.steps,
       },
@@ -811,26 +799,40 @@ async function releaseSnapshot(
       recipe: {
         id: recipe.id,
         name: recipe.name,
+        version: recipe.version,
         description: recipe.description,
         components: recipe.components,
       },
     } : {}),
-    components: components.map(({ id, assetId, name, type, source, status, required }) => ({
-      id,
-      assetId,
-      name,
-      type,
-      source,
-      ...(assetVersions.get(assetId) ? { version: assetVersions.get(assetId) } : {}),
-      status,
-      required,
-    })),
-    rules: [],
-    providers: [],
+    components: components
+      .map(({ id, assetId, name, type, source, status, required }) => {
+        const asset = assetsById.get(assetId);
+        return {
+          id,
+          assetId,
+          name,
+          type,
+          source,
+          ...(asset ? {
+            version: asset.version,
+            configuration: {
+              description: asset.description,
+              tags: asset.tags,
+              domain: asset.domain,
+              compatibility: asset.compatibility,
+            },
+          } : {}),
+          status,
+          required,
+        };
+      })
+      .sort((left, right) => left.id.localeCompare(right.id)),
+    rules: declarations.rules,
+    providers: declarations.providers,
   };
   return {
     ...snapshot,
-    snapshotHash: createHash("sha256").update(JSON.stringify(snapshot)).digest("hex"),
+    snapshotHash: releaseSnapshotHash(snapshot),
   };
 }
 

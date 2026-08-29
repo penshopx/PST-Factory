@@ -1049,17 +1049,24 @@ async function runAuthenticatedRouteAcceptance() {
     const releaseSnapshot = releases.body[0].snapshot;
     assert.equal(releaseSnapshot.sourceSchemaVersion, "pst-release-snapshot.v1");
     assert.match(releaseSnapshot.snapshotHash, /^[a-f0-9]{64}$/);
+    assert.equal(releaseSnapshot.snapshotHashAlgorithm, "sha256-canonical-json.v1");
     assert.equal(releaseSnapshot.project.status, "PUBLISHED");
     assert.equal(releaseSnapshot.project.publicationStatus, "PUBLISHED");
     assert.equal(releaseSnapshot.blueprint.projectId, projectId);
     assert.equal(releaseSnapshot.workflow[0].title, afterPublish.body.steps[0].title);
     assert.equal(releaseSnapshot.workflow[0].configuration.sourceId, "pattern-assessment");
     assert.equal(releaseSnapshot.pattern.id, "pattern-assessment");
+    assert.equal(releaseSnapshot.pattern.version, "v1.0");
     assert.deepEqual(releaseSnapshot.pattern.steps, ["Questions", "Scoring", "Analysis", "Recommendation"]);
     assert.equal(releaseSnapshot.recipe.id, "recipe-assessment");
+    assert.equal(releaseSnapshot.recipe.version, "v1.0");
     assert.deepEqual(releaseSnapshot.recipe.components, ["Questions", "Scoring", "Analysis", "Recommendation"]);
     assert.equal(releaseSnapshot.components.length, published.body.components.length);
-    assert.equal(releaseSnapshot.components.every((component) => component.id && component.version), true);
+    assert.equal(releaseSnapshot.components.every((component) =>
+      component.id
+      && component.version
+      && component.configuration
+      && Array.isArray(component.configuration.compatibility)), true);
     assert.deepEqual(releaseSnapshot.rules, []);
     assert.deepEqual(releaseSnapshot.providers, []);
 

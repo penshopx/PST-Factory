@@ -10,6 +10,7 @@ import type { ReferenceProject } from './referenceProject';
 export interface PstPattern {
   id: string;
   name: string;
+  version: string;
   description: string;
   steps: string[];
   usageCount: number;

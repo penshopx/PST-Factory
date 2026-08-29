@@ -219,10 +219,10 @@ PST variant should add or select configuration and reusable library records,
 not add a `switch` or renderer branch named after that product.
 
 The current `PstReleaseSnapshot` persistence type contains project, Blueprint,
-workflow, and component snapshots. Pattern/Recipe definitions and rule/provider
-configuration are not yet first-class fields in that type. That is a
-source-contract dependency for the future release assembler: until those values
-are included in a versioned snapshot, a Compiler input that needs them is
+workflow, resolved Pattern/Recipe definitions, component definitions and
+configuration, plus rule/provider declarations. Newly published snapshots carry
+explicit Pattern/Recipe and asset versions and a canonical SHA-256 source hash.
+If a required declaration is absent, a Compiler input that needs it is
 `MISSING_DEPENDENCY` and must be blocked rather than resolved from live rows.
 
 ### 3.5 Components

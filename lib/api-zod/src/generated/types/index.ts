@@ -52,6 +52,7 @@ export * from './pstReleaseRule';
 export * from './pstReleaseRuleThenItem';
 export * from './pstReleaseRuleWhen';
 export * from './pstReleaseSnapshot';
+export * from './pstReleaseSnapshotSnapshotHashAlgorithm';
 export * from './pstReleaseSnapshotSourceSchemaVersion';
 export * from './pstWorkspace';
 export * from './publicProductDna';

@@ -110,6 +110,7 @@ export const ListPstProjectsResponseItem = zod.object({
   "selectedPatterns": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
+  "version": zod.string(),
   "description": zod.string(),
   "steps": zod.array(zod.string()),
   "usageCount": zod.number(),
@@ -122,6 +123,7 @@ export const ListPstProjectsResponseItem = zod.object({
   "selectedRecipes": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
+  "version": zod.string(),
   "description": zod.string(),
   "components": zod.array(zod.string()),
   "usageCount": zod.number(),
@@ -218,6 +220,7 @@ export const CreatePstProjectResponse = zod.object({
   "selectedPatterns": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
+  "version": zod.string(),
   "description": zod.string(),
   "steps": zod.array(zod.string()),
   "usageCount": zod.number(),
@@ -230,6 +233,7 @@ export const CreatePstProjectResponse = zod.object({
   "selectedRecipes": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
+  "version": zod.string(),
   "description": zod.string(),
   "components": zod.array(zod.string()),
   "usageCount": zod.number(),
@@ -312,6 +316,7 @@ export const GetPstProjectResponse = zod.object({
   "selectedPatterns": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
+  "version": zod.string(),
   "description": zod.string(),
   "steps": zod.array(zod.string()),
   "usageCount": zod.number(),
@@ -324,6 +329,7 @@ export const GetPstProjectResponse = zod.object({
   "selectedRecipes": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
+  "version": zod.string(),
   "description": zod.string(),
   "components": zod.array(zod.string()),
   "usageCount": zod.number(),
@@ -420,6 +426,7 @@ export const UpdatePstProjectResponse = zod.object({
   "selectedPatterns": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
+  "version": zod.string(),
   "description": zod.string(),
   "steps": zod.array(zod.string()),
   "usageCount": zod.number(),
@@ -432,6 +439,7 @@ export const UpdatePstProjectResponse = zod.object({
   "selectedRecipes": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
+  "version": zod.string(),
   "description": zod.string(),
   "components": zod.array(zod.string()),
   "usageCount": zod.number(),
@@ -514,6 +522,7 @@ export const DuplicatePstProjectResponse = zod.object({
   "selectedPatterns": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
+  "version": zod.string(),
   "description": zod.string(),
   "steps": zod.array(zod.string()),
   "usageCount": zod.number(),
@@ -526,6 +535,7 @@ export const DuplicatePstProjectResponse = zod.object({
   "selectedRecipes": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
+  "version": zod.string(),
   "description": zod.string(),
   "components": zod.array(zod.string()),
   "usageCount": zod.number(),
@@ -608,6 +618,7 @@ export const ArchivePstProjectResponse = zod.object({
   "selectedPatterns": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
+  "version": zod.string(),
   "description": zod.string(),
   "steps": zod.array(zod.string()),
   "usageCount": zod.number(),
@@ -620,6 +631,7 @@ export const ArchivePstProjectResponse = zod.object({
   "selectedRecipes": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
+  "version": zod.string(),
   "description": zod.string(),
   "components": zod.array(zod.string()),
   "usageCount": zod.number(),
@@ -797,6 +809,7 @@ export const ListPstAssetsResponse = zod.array(ListPstAssetsResponseItem)
 export const ListPstPatternsResponseItem = zod.object({
   "id": zod.string(),
   "name": zod.string(),
+  "version": zod.string(),
   "description": zod.string(),
   "steps": zod.array(zod.string()),
   "usageCount": zod.number(),
@@ -815,6 +828,7 @@ export const ListPstPatternsResponse = zod.array(ListPstPatternsResponseItem)
 export const ListPstRecipesResponseItem = zod.object({
   "id": zod.string(),
   "name": zod.string(),
+  "version": zod.string(),
   "description": zod.string(),
   "components": zod.array(zod.string()),
   "usageCount": zod.number(),
@@ -961,6 +975,7 @@ export const ApprovePstProjectResponse = zod.object({
   "selectedPatterns": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
+  "version": zod.string(),
   "description": zod.string(),
   "steps": zod.array(zod.string()),
   "usageCount": zod.number(),
@@ -973,6 +988,7 @@ export const ApprovePstProjectResponse = zod.object({
   "selectedRecipes": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
+  "version": zod.string(),
   "description": zod.string(),
   "components": zod.array(zod.string()),
   "usageCount": zod.number(),
@@ -1055,6 +1071,7 @@ export const PublishPstProjectResponse = zod.object({
   "selectedPatterns": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
+  "version": zod.string(),
   "description": zod.string(),
   "steps": zod.array(zod.string()),
   "usageCount": zod.number(),
@@ -1067,6 +1084,7 @@ export const PublishPstProjectResponse = zod.object({
   "selectedRecipes": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
+  "version": zod.string(),
   "description": zod.string(),
   "components": zod.array(zod.string()),
   "usageCount": zod.number(),
@@ -1150,6 +1168,7 @@ export const GetPstWorkspaceResponse = zod.object({
   "selectedPatterns": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
+  "version": zod.string(),
   "description": zod.string(),
   "steps": zod.array(zod.string()),
   "usageCount": zod.number(),
@@ -1162,6 +1181,7 @@ export const GetPstWorkspaceResponse = zod.object({
   "selectedRecipes": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
+  "version": zod.string(),
   "description": zod.string(),
   "components": zod.array(zod.string()),
   "usageCount": zod.number(),
@@ -1207,6 +1227,7 @@ export const GetPstReleasesResponseItem = zod.object({
   "snapshot": zod.object({
   "sourceSchemaVersion": zod.enum(['pst-release-snapshot.v1']).optional(),
   "snapshotHash": zod.string().regex(getPstReleasesResponseSnapshotSnapshotHashRegExp).optional(),
+  "snapshotHashAlgorithm": zod.enum(['sha256-canonical-json.v1']).optional(),
   "project": zod.object({
   "name": zod.string(),
   "description": zod.string(),
@@ -1369,6 +1390,7 @@ export const RestorePstReleaseResponse = zod.object({
   "selectedPatterns": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
+  "version": zod.string(),
   "description": zod.string(),
   "steps": zod.array(zod.string()),
   "usageCount": zod.number(),
@@ -1381,6 +1403,7 @@ export const RestorePstReleaseResponse = zod.object({
   "selectedRecipes": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
+  "version": zod.string(),
   "description": zod.string(),
   "components": zod.array(zod.string()),
   "usageCount": zod.number(),

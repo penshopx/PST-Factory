@@ -10,6 +10,7 @@ import type { ReferenceProject } from './referenceProject';
 export interface PstRecipe {
   id: string;
   name: string;
+  version: string;
   description: string;
   components: string[];
   usageCount: number;
