@@ -8,6 +8,7 @@ import {
   type ExecutablePstDefinitionV1,
   type PstReleaseSnapshot,
 } from "@workspace/db/schema";
+import { compileLegacyExecutableRelease } from "./legacy-executable-release";
 
 type PublishedRelease = {
   id: string;
@@ -31,6 +32,10 @@ export function compileExecutableRelease(
   slug: string,
   snapshot: PstReleaseSnapshot,
 ): ExecutableReleaseResult {
+  const legacy = compileLegacyExecutableRelease(release, slug, snapshot);
+  if (legacy.status === "COMPILED") return legacy;
+  if (legacy.status === "BLOCKED") return legacy;
+
   const canonical = canonicalSourceFromRelease({
     releaseId: release.id,
     projectId: release.projectId,

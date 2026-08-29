@@ -138,6 +138,19 @@ upgrade may recompile an unchanged release, but must never mutate the stored
 release or silently change its runtime definition in place. Unsupported IR or
 runtime versions produce `UNSUPPORTED_VERSION`.
 
+Published snapshots created before canonical provenance markers existed are
+handled by the bounded `pst-legacy-compat.v1` read adapter. The adapter accepts
+only the historical linear INPUT → ASSESSMENT/analysis/recommendation/action →
+OUTPUT grammar, translates legacy state names into the current namespaces, and
+validates the generated definition with Generic Runtime v1.
+
+The adapter never mutates or backfills the stored snapshot. Any source version,
+hash, hash-algorithm marker, typed configuration, rule/provider declaration, or
+unsupported graph commits the release to strict validation and disables legacy
+fallback. Legacy definitions identify their source as
+`pst-release-snapshot.legacy-v0`; this derived identity must not be represented
+as a historical v1 integrity proof.
+
 ## 7. Generic Runtime v1
 
 `createPstRuntime` defensively validates an executable definition before a

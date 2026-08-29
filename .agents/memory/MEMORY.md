@@ -8,3 +8,4 @@
 - [Workspace test runner](workspace-test-runner.md) — Prefer workspace-provided test executables when a package does not directly depend on the loader.
 - [Gustafta capability bridge](gustafta-capability-bridge.md) — Adopt relevant public capabilities via official links; direct API and API keys are not required.
 - [Canonical PST language](pst-canonical-language.md) — Normalize immutable snapshots into a product-neutral, namespaced Manufacturing IR before validation or compilation.
+- [Legacy PST release compatibility](pst-legacy-release-compatibility.md) — Only marker-free historical snapshots may use the bounded read adapter; modern snapshots never fall back.

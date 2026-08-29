@@ -6,6 +6,7 @@ import type {
 
 export const pstExecutableRuntimeVersion = "pst-runtime.v1" as const;
 export const pstCompilerName = "pst-compiler" as const;
+export const pstLegacyCompatibilityCompilerName = "pst-legacy-compat" as const;
 
 export type PstExecutableStepKind =
   | "input"
@@ -116,7 +117,7 @@ export type PstExecutableIdentityV1 = {
   releaseVersion: string;
   publishedAt: string;
   snapshotHash: string;
-  sourceSchemaVersion: "pst-release-snapshot.v1";
+  sourceSchemaVersion: "pst-release-snapshot.v1" | "pst-release-snapshot.legacy-v0";
   irVersion: "pst-manufacturing-ir.v1";
 };
 
@@ -242,7 +243,7 @@ export type PstExecutableDeclarationsV1 = {
 export type ExecutablePstDefinitionV1 = {
   runtimeVersion: typeof pstExecutableRuntimeVersion;
   compiler: {
-    name: typeof pstCompilerName;
+    name: typeof pstCompilerName | typeof pstLegacyCompatibilityCompilerName;
     version: string;
   };
   identity: PstExecutableIdentityV1;
