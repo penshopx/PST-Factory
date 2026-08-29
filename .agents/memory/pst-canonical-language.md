@@ -20,3 +20,15 @@ Canonical normalization remains pure and stops at Manufacturing IR.
 **Why:** Mixing validation policy, compilation, runtime behavior, provider calls, or persistence into normalization would blur version boundaries and make backward compatibility difficult to reason about.
 
 **How to apply:** Normalize one authoritative workflow into deterministic graph/state data only. Add Validator, Compiler emission, and execution as separate versioned stages.
+
+The Validator must enforce the same declaration, graph, state, and unsafe-configuration rules whether it receives Canonical Source or Manufacturing IR directly, without duplicating diagnostics.
+
+**Why:** A direct-IR path otherwise becomes a bypass around source validation, while running identical checks twice produces noisy and unstable diagnostics.
+
+**How to apply:** Share pure diagnostic collectors across both entry points. On Canonical Source success, validate the normalized IR once; use source-level fallback checks only when normalization is blocked.
+
+A valid journey terminates only at a reachable `OUTCOME` node with a `complete` transition.
+
+**Why:** Treating any completed action or rule node as a successful terminal would let incomplete customer journeys pass validation.
+
+**How to apply:** Require an explicit reachable terminal outcome, verify all transition paths and targets, and block cycles unless a future version defines a loop contract.

@@ -1,4 +1,7 @@
-import { pstCanonicalJsonHash } from "@workspace/db/schema";
+import {
+  pstCanonicalJsonHash,
+  pstCredentialConfigurationPaths,
+} from "@workspace/db/schema";
 import type {
   PstReleaseProviderSnapshot,
   PstReleaseRuleSnapshot,
@@ -110,33 +113,11 @@ function resolvedReleaseProviders(workflow: WorkflowStep[]) {
   };
 }
 
-const credentialKeySuffix =
-  /(?:api_?key|access_?token|refresh_?token|bearer_?token|auth_?token|client_?secret|private_?key|secret_?key|connection_?(?:string|url|uri)|database_?(?:url|uri)|db_?(?:url|uri)|authorization|credentials?|password|secret|token)$/;
-
-function isCredentialKey(key: string) {
-  const normalized = key
-    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
-    .replace(/[-\s]+/g, "_")
-    .toLowerCase();
-  return credentialKeySuffix.test(normalized);
-}
-
-function credentialPaths(value: unknown, path: string): string[] {
-  if (Array.isArray(value)) {
-    return value.flatMap((child, index) => credentialPaths(child, `${path}[${index}]`));
-  }
-  if (!isRecord(value)) return [];
-  return Object.entries(value).flatMap(([key, child]) => [
-    ...(isCredentialKey(key) ? [`${path}.${key}`] : []),
-    ...credentialPaths(child, `${path}.${key}`),
-  ]);
-}
-
 export function resolveReleaseDeclarations(workflow: WorkflowStep[]) {
   const rules = resolvedReleaseRules(workflow);
   const providers = resolvedReleaseProviders(workflow);
   const credentialErrors = workflow.flatMap((step, index) =>
-    credentialPaths(step.configuration, `workflow[${index}].configuration`)
+    pstCredentialConfigurationPaths(step.configuration, `workflow[${index}].configuration`)
       .map((path) => `${path} contains credential-like data.`),
   );
   return {

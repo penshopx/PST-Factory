@@ -17,7 +17,7 @@ immutable release snapshot + release identity
                     v
         PstManufacturingIrV1
                     |
-          future Validator/Compiler
+             Validator / Compiler
 ```
 
 Both contracts are product-neutral. Cashflow Health Check, Decision Readiness,
@@ -122,7 +122,9 @@ type PstManufacturingIrNodeV1 = {
 
 IR generation is deterministic and data-only. It does not evaluate a rule,
 perform scoring, call AI, generate UI, or decide whether the graph is safe to
-execute. Those checks belong to the future Validator and Compiler.
+execute. Graph and data-contract checks belong to the Validator boundary
+documented in `PST_VALIDATOR.md`; executable emission remains a Compiler
+responsibility.
 
 ## 6. Legacy and compatibility rules
 

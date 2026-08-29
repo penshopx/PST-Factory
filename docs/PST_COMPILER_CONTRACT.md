@@ -470,6 +470,10 @@ records as a side effect of compilation.
 
 ## 7. Validation and diagnostics
 
+The shared pure Validator boundary is documented in `PST_VALIDATOR.md`. The
+Compiler MUST run that boundary before emission and preserve its stable
+diagnostics.
+
 Compilation succeeds only when there are no `ERROR` diagnostics. Warnings may
 be emitted for non-blocking quality issues, but they remain visible to Factory
 operators and are included in compile metadata, not the public customer

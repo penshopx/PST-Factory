@@ -224,6 +224,27 @@ function structurallyEqual(left: unknown, right: unknown) {
   return JSON.stringify(canonicalize(left)) === JSON.stringify(canonicalize(right));
 }
 
+const credentialKeySuffix =
+  /(?:api_?key|access_?token|refresh_?token|bearer_?token|auth_?token|client_?secret|private_?key|secret_?key|connection_?(?:string|url|uri)|database_?(?:url|uri)|db_?(?:url|uri)|authorization|credentials?|password|secret|token)$/;
+
+export function pstCredentialConfigurationPaths(value: unknown, path: string): string[] {
+  if (Array.isArray(value)) {
+    return value.flatMap((child, index) =>
+      pstCredentialConfigurationPaths(child, `${path}[${index}]`));
+  }
+  if (!isRecord(value)) return [];
+  return Object.entries(value).flatMap(([key, child]) => {
+    const normalized = key
+      .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+      .replace(/[-\s]+/g, "_")
+      .toLowerCase();
+    return [
+      ...(credentialKeySuffix.test(normalized) ? [`${path}.${key}`] : []),
+      ...pstCredentialConfigurationPaths(child, `${path}.${key}`),
+    ];
+  });
+}
+
 function canonicalWorkflow(
   workflow: WorkflowStep[],
   errors: PstNormalizationIssueV1[],
