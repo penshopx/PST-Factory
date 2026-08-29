@@ -1,0 +1,197 @@
+Ya, **lanjutnya bukan menunggu secara pasif**, tetapi kita bisa menyiapkan *definition of done* untuk pekerjaan berikutnya tanpa menyentuh kode.
+
+Dari posisi sekarang, saya sarankan kita mengunci **specification target** untuk fase berikutnya:
+
+### Target 1 — Canonical PST Schema
+
+Kita perlu menentukan bahasa standar yang dipahami seluruh Factory:
+
+```text
+PST
+├── identity
+├── schemaVersion
+├── problem
+├── targetUser
+├── inputs
+├── knowledge
+├── workflow
+├── rules
+├── scoring
+├── analysis
+├── recommendations
+├── actions
+├── outputs
+├── providers
+└── completion
+```
+
+Ini **bukan berarti semua PST harus memakai semua field**. Schema harus mendukung komponen opsional dan capability-based.
+
+### Target 2 — Manufacturing IR
+
+Blueprint jangan langsung diterjemahkan menjadi UI.
+
+Alurnya:
+
+```text
+Blueprint
+    ↓
+Normalize
+    ↓
+Resolve Pattern
+    ↓
+Resolve Recipe
+    ↓
+Resolve Assets
+    ↓
+Manufacturing IR
+```
+
+IR menjadi **bahasa internal Compiler**.
+
+Contohnya secara konseptual:
+
+```text
+INPUT
+  ↓
+ASSESS
+  ↓
+SCORE
+  ↓
+ANALYZE
+  ↓
+RECOMMEND
+  ↓
+ACTION
+  ↓
+OUTPUT
+```
+
+Tetapi PST lain bisa mempunyai:
+
+```text
+INPUT
+  ↓
+CHECK DOCUMENT
+  ↓
+VALIDATE RULES
+  ↓
+FIND GAPS
+  ↓
+GENERATE REPORT
+```
+
+Keduanya tetap masuk ke **IR yang sama**.
+
+---
+
+## Kemudian Compiler v1
+
+Baru setelah kontrak IR cukup matang:
+
+```text
+Snapshot
+   ↓
+Validate
+   ↓
+Normalize
+   ↓
+Resolve
+   ↓
+Manufacturing IR
+   ↓
+Compile
+   ↓
+Executable PST Definition
+```
+
+Dan **Generic Runtime tidak boleh membaca Blueprint mentah**.
+
+Runtime hanya membaca:
+
+```text
+Executable PST Definition
+```
+
+Ini akan menjadi batas arsitektur yang sangat penting.
+
+---
+
+# Acceptance test yang saya sarankan
+
+Jangan hanya test apakah compiler menghasilkan JSON.
+
+Test harus membuktikan **behavioral differentiation**.
+
+### PST A
+
+Cashflow:
+
+```text
+input → questions → scoring → diagnosis → recommendation
+```
+
+### PST B
+
+Decision:
+
+```text
+input → criteria → weighting → comparison → recommendation
+```
+
+### PST C
+
+Document:
+
+```text
+document → checklist → validation → compliance → report
+```
+
+Lalu periksa:
+
+```text
+              SAME
+             COMPILER
+                │
+      ┌─────────┼─────────┐
+      ↓         ↓         ↓
+   Cashflow  Decision  Document
+      ↓         ↓         ↓
+  Behavior A  Behavior B  Behavior C
+```
+
+Dan repository/code audit harus memastikan **tidak ada**:
+
+```text
+if cashflow
+if decision
+if document
+```
+
+atau handler khusus yang setara.
+
+---
+
+## Jadi posisi kita sekarang
+
+```text
+Foundation              ████████████████████ 100%
+Snapshot                ████████████████████ 100%
+Security                ████████████████████ 100%
+Manufacturing Engine    ████████████░░░░░░░░ ~60%
+                            ↑
+                       KITA DI SINI
+                            ↓
+Canonical Schema
+Manufacturing IR
+Compiler v1
+Three-PST Proof
+```
+
+**Task #39 tetap jangan disentuh selama blocked.**
+
+Begitu #39 mendapatkan assignment, **jangan langsung Build**. Kirim detail task-nya ke sini. Kita cek apakah task tersebut benar-benar membawa kita ke:
+
+> **Canonical PST Schema → Manufacturing IR → Compiler v1**
+
+Kalau ternyata #39 sudah mencakup sebagian dari itu, kita tidak perlu membuat task duplikat—kita cukup **review dan mengarahkan implementasinya** agar tetap sesuai guardrail.
