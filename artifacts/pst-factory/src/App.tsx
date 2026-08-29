@@ -7,8 +7,8 @@ import { shadcn } from '@clerk/themes';
 import {
   Activity, Archive, ArrowLeft, ArrowRight, Bot, Box, Check, CheckCircle2,
   ChevronRight, CircleDot, ClipboardCheck, Copy, Database, ExternalLink,
-  FileCode2, FlaskConical, Gauge, Hammer, LayoutDashboard, Library, Menu,
-  MoreHorizontal, Package, Pencil, Plus, Rocket, Search, Settings2, ShieldCheck, Sparkles,
+  BriefcaseBusiness, FileCode2, FileSearch, FlaskConical, Gauge, Hammer, LayoutDashboard, Library, Menu,
+  MessageCircle, MoreHorizontal, Package, Pencil, Plus, Rocket, Search, Settings2, ShieldCheck, Sparkles,
   Target, Trash2, TriangleAlert, UserRound, Users, Workflow, X,
 } from 'lucide-react';
 import {
@@ -124,6 +124,14 @@ const nav = [
   { href: '/libraries/assets', label: 'Komponen siap pakai', testId: 'asset-library', icon: Package },
   { href: '/libraries/patterns', label: 'Pola kerja', testId: 'pattern-library', icon: Workflow },
   { href: '/libraries/recipes', label: 'Panduan kerja', testId: 'recipe-library', icon: FlaskConical },
+];
+
+const gustaftaBaseUrl = 'https://gustafta.my.id';
+const gustaftaLinks = [
+  { href: '/chat/8193', label: 'Panduan Gustafta', detail: 'Cari fitur dan alur yang tepat', icon: MessageCircle },
+  { href: '/chat/1', label: 'Help Desk Pekerjaan', detail: 'Tanya jalur SBU, SKK, tender, proyek', icon: Bot },
+  { href: '/bedah-dokumen', label: 'Bedah dokumen', detail: 'Baca konteks dan celah dokumen', icon: FileSearch },
+  { href: '/tender', label: 'Peluang tender', detail: 'Buka ruang kerja tender Gustafta', icon: BriefcaseBusiness },
 ];
 
 const stages = [
@@ -252,8 +260,14 @@ function Shell({ children }: { children: ReactNode }) {
           <img src={`${basePath}/logo.svg`} alt="PST Factory" className="h-auto w-full max-w-[214px]" />
         </Link>
       </div>
-      <div className="px-4 pb-3 pt-7"><p className="px-3 pb-2 font-mono text-[10px] uppercase tracking-[.2em] text-sidebar-foreground/40">Area produksi</p>
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-3 pt-7"><p className="px-3 pb-2 font-mono text-[10px] uppercase tracking-[.2em] text-sidebar-foreground/40">Area produksi</p>
         <nav className="space-y-1">{nav.map(({ href, label, testId, icon: Icon }) => <Link href={href} key={href} onClick={() => setMobile(false)} className={cn('focus-ring flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors', location === href ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground/65 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground')} data-testid={`link-nav-${testId}`}><Icon size={16} strokeWidth={1.8} /><span>{label}</span>{location === href && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-sidebar-primary" />}</Link>)}</nav>
+        <div className="mt-7 border-t border-sidebar-border/70 pt-5">
+          <p className="px-3 pb-2 font-mono text-[10px] uppercase tracking-[.2em] text-sidebar-foreground/40">Capability Gustafta</p>
+          <nav className="space-y-1">
+            {gustaftaLinks.map(({ href, label, icon: Icon }) => <a href={`${gustaftaBaseUrl}${href}`} key={href} target="_blank" rel="noreferrer" onClick={() => setMobile(false)} className="focus-ring flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-foreground" data-testid={`link-gustafta-${label.toLowerCase().replaceAll(' ', '-')}`}><Icon size={15} strokeWidth={1.8} /><span className="min-w-0 flex-1 truncate">{label}</span><ExternalLink size={12} className="shrink-0 opacity-60" /></a>)}
+          </nav>
+        </div>
       </div>
       <div className="mt-auto space-y-4 border-t border-sidebar-border p-4">
          <Link href="/create" onClick={() => setMobile(false)} className="focus-ring flex items-center justify-center gap-2 rounded-lg bg-sidebar-primary px-3 py-2.5 text-sm font-bold text-sidebar-primary-foreground transition-transform hover:translate-y-[-1px]" data-testid="link-create-pst"><Plus size={16} /> Buat PST</Link>
@@ -295,6 +309,7 @@ function Dashboard() {
         <Card><CardHeader className="border-b border-border/70 pb-4"><CardTitle className="text-base">Hasil pemeriksaan</CardTitle><CardDescription className="mt-1">Persentase proyek yang lolos pemeriksaan kualitas.</CardDescription></CardHeader><CardContent className="p-6"><div className="flex items-end gap-3"><span className="text-5xl font-extrabold tracking-[-.06em] text-accent">{s?.qaPassRate ?? 0}%</span><span className="mb-2 font-mono text-[10px] uppercase text-muted-foreground">Proyek yang lolos</span></div><div className="mt-5 h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-accent transition-all" style={{ width: `${Math.min(100, s?.qaPassRate ?? 0)}%` }} /></div><div className="mt-5 flex items-start gap-3 rounded-lg border border-border bg-muted/45 p-3"><CheckCircle2 className="mt-0.5 shrink-0 text-emerald-500" size={16} /><p className="text-xs leading-relaxed text-muted-foreground">PST yang baik membuat langkah berikutnya jelas dan hasilnya bisa diukur.</p></div></CardContent></Card>
     </div>
       <Card className="mt-6 animate-rise-3"><CardHeader className="flex-row items-center justify-between border-b border-border/70 pb-4"><div><CardTitle className="text-base">Aktivitas terbaru</CardTitle><CardDescription className="mt-1">Catatan pabrik, mulai dari yang paling baru.</CardDescription></div><Link href="/projects" className="text-xs font-semibold text-primary hover:underline" data-testid="link-view-projects">Lihat semua proyek <ArrowRight className="ml-1 inline" size={13} /></Link></CardHeader><CardContent className="p-0">{events.length === 0 ? <EmptyState icon={Activity} title="Belum ada aktivitas pabrik" detail="Aktivitas pertama dari Perancang akan muncul di sini." /> : events.slice(0, 7).map((event) => <ActivityRow event={event} key={event.id} />)}</CardContent></Card>
+      <GustaftaBridge />
   </div>;
 }
 
@@ -304,6 +319,24 @@ function Metric({ label, testId, value, icon: Icon, tone }: { label: string; tes
 
 function ActivityRow({ event }: { event: FactoryEvent }) {
   return <div className="flex items-center gap-4 border-b border-border/60 px-6 py-4 last:border-0" data-testid={`row-activity-${event.id}`}><div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary"><CircleDot size={15} /></div><div className="min-w-0 flex-1"><p className="truncate text-sm">{event.message}</p><p className="mt-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{event.type} · {new Date(event.createdAt).toLocaleDateString()}</p></div>{event.projectId && <Link href={`/projects/${event.projectId}`} className="text-muted-foreground hover:text-primary" data-testid={`link-activity-project-${event.id}`}><ChevronRight size={16} /></Link>}</div>;
+}
+
+function GustaftaBridge() {
+  return <Card className="mt-6 overflow-hidden border-primary/20 bg-primary/[.03]" data-testid="card-gustafta-bridge">
+    <CardHeader className="flex-row items-start justify-between gap-4 border-b border-border/70 pb-4">
+      <div>
+        <div className="flex items-center gap-2"><CardTitle className="text-base">Perlu dukungan pekerjaan?</CardTitle><span className="rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[.14em] text-primary">Gustafta</span></div>
+        <CardDescription className="mt-1">Capability pendamping yang relevan untuk dokumen, tender, dan pengetahuan konstruksi.</CardDescription>
+      </div>
+      <ExternalLink className="mt-1 shrink-0 text-primary" size={17} />
+    </CardHeader>
+    <CardContent className="grid gap-3 p-5 sm:grid-cols-2 xl:grid-cols-4">
+      {gustaftaLinks.map(({ href, label, detail, icon: Icon }) => <a href={`${gustaftaBaseUrl}${href}`} key={href} target="_blank" rel="noreferrer" className="focus-ring group rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/50 hover:bg-primary/[.05]" data-testid={`card-link-gustafta-${label.toLowerCase().replaceAll(' ', '-')}`}>
+        <div className="mb-4 flex items-center justify-between"><div className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary"><Icon size={17} /></div><ExternalLink size={14} className="text-muted-foreground transition-colors group-hover:text-primary" /></div>
+        <p className="text-sm font-semibold">{label}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p>
+      </a>)}
+    </CardContent>
+  </Card>;
 }
 
 function Projects() {
