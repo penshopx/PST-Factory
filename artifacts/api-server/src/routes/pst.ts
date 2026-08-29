@@ -90,6 +90,7 @@ import {
   releaseSnapshotHashAlgorithm,
   resolveReleaseDeclarations,
 } from "../lib/services/pst/release-snapshot";
+import { compileExecutableRelease } from "../lib/services/pst/executable-release";
 import { randomUUID } from "node:crypto";
 
 const router: IRouter = Router();
@@ -170,9 +171,154 @@ const publicWorkspaceFixture = {
   projectId: "pst-public-fixture",
   slug: "authenticated-lifecycle-0cd705e8-274d3",
   blueprintId: "blueprint-pst-public-fixture",
-  releaseId: "release-pst-public-fixture-v1-0",
-  version: "v1.0",
+  releaseId: "release-pst-public-fixture-v1-1",
+  version: "v1.1",
 } as const;
+
+function compilerReadyPublicFixtureSnapshot(
+  snapshot: PstReleaseSnapshot,
+): PstReleaseSnapshot {
+  const workflow: WorkflowStep[] = [
+    {
+      id: "context",
+      type: "INPUT",
+      title: "Konteks organisasi",
+      description: "Berikan konteks singkat tentang organisasi yang menjalankan PST ini.",
+      inputs: [],
+      outputs: ["context.organization"],
+      dependencies: [],
+      nextStep: "answers",
+      configuration: {
+        canonical: { next: { type: "step", target: "answers" } },
+        compilerReady: {
+          operation: {
+            type: "collect-context",
+            fields: [{
+              key: "context.organization",
+              label: "Nama organisasi",
+              type: "string",
+              required: true,
+            }],
+            sessionPersistence: "customer_session",
+          },
+        },
+      },
+    },
+    {
+      id: "answers",
+      type: "ANSWER",
+      title: "Situasi utama",
+      description: "Jelaskan situasi utama yang ingin Anda selesaikan.",
+      inputs: ["context.organization"],
+      outputs: ["answers.primary"],
+      dependencies: ["context"],
+      nextStep: "action",
+      configuration: {
+        canonical: { next: { type: "step", target: "action" } },
+        compilerReady: {
+          operation: {
+            type: "collect-answers",
+            schemaRef: "public-questions",
+            answerFields: ["answers.primary"],
+          },
+        },
+      },
+    },
+    {
+      id: "action",
+      type: "ACTION",
+      title: "Rencana tindakan",
+      description: "Susun tindakan berikutnya dari jawaban yang diberikan.",
+      inputs: ["answers.primary"],
+      outputs: ["derived.action"],
+      dependencies: ["answers"],
+      nextStep: "outcome",
+      configuration: {
+        canonical: { next: { type: "step", target: "outcome" } },
+        compilerReady: {
+          operation: {
+            type: "action",
+            actionRef: "public-action",
+            output: "derived.action",
+          },
+        },
+      },
+    },
+    {
+      id: "outcome",
+      type: "OUTCOME",
+      title: "Hasil akhir",
+      description: "Selesaikan journey dengan hasil yang eksplisit.",
+      inputs: ["derived.action"],
+      outputs: [],
+      dependencies: ["action"],
+      nextStep: "",
+      configuration: {
+        canonical: { next: { type: "complete" } },
+        compilerReady: {
+          operation: {
+            type: "outcome",
+            outcomeId: "outcome",
+            outputRefs: ["derived.action"],
+          },
+        },
+      },
+    },
+  ];
+  const { snapshotHash: _snapshotHash, ...base } = snapshot;
+  const payload: Omit<PstReleaseSnapshot, "snapshotHash"> = {
+    ...base,
+    blueprint: { ...base.blueprint, workflow },
+    workflow,
+    components: [{
+      id: "public-questions",
+      assetId: "asset-public-questions",
+      name: "Pertanyaan publik",
+      type: "TOOL",
+      source: "Acceptance fixture",
+      version: "1.0.0",
+      status: "READY",
+      required: true,
+      configuration: {
+        compilerReady: {
+          capability: "question-schema",
+          definition: {
+            questions: [{
+              id: "primary",
+              label: "Situasi utama",
+              type: "string",
+              required: true,
+            }],
+          },
+        },
+      },
+    }, {
+      id: "public-action",
+      assetId: "asset-public-action",
+      name: "Tindakan publik",
+      type: "TOOL",
+      source: "Acceptance fixture",
+      version: "1.0.0",
+      status: "READY",
+      required: true,
+      configuration: {
+        compilerReady: {
+          capability: "action-template",
+          definition: {
+            items: [{
+              id: "clarify-next-step",
+              title: "Tetapkan tindakan berikutnya",
+              description: "Pilih satu tindakan terukur berdasarkan situasi yang telah dijelaskan.",
+            }],
+          },
+        },
+      },
+    }],
+    rules: [],
+    providers: [],
+  };
+  return { ...payload, snapshotHash: releaseSnapshotHash(payload) };
+}
 
 const makeBlueprint = (
   projectId: string,
@@ -361,11 +507,11 @@ async function ensurePublicWorkspaceFixture() {
     throw new Error("Public PST fixture blueprint could not be initialized.");
   }
 
-  const snapshot = await releaseSnapshot(
+  const snapshot = compilerReadyPublicFixtureSnapshot(await releaseSnapshot(
     project,
     blueprint,
     publicWorkspaceFixture.version,
-  );
+  ));
   const [existingRelease] = await db
     .select()
     .from(pstReleasesTable)
@@ -1094,6 +1240,15 @@ async function publicWorkspace(slug: string) {
     );
   }
   const snapshot = release.snapshot;
+  const executable = compileExecutableRelease(release, project.slug, snapshot);
+  if (executable.status === "BLOCKED") {
+    const first = executable.diagnostics[0];
+    throw new PublicWorkspaceConsistencyError(
+      first
+        ? `Published customer workspace cannot be compiled: ${first.code} at ${first.path}.`
+        : "Published customer workspace cannot be compiled.",
+    );
+  }
   const publicWorkflow = publicCustomerWorkspaceSteps(snapshot.workflow);
   return {
     id: project.id,
@@ -1130,6 +1285,7 @@ async function publicWorkspace(slug: string) {
       version: release.version,
       updatedAt: new Date(release.createdAt),
     },
+    definition: executable.definition,
   };
 }
 
@@ -2051,6 +2207,7 @@ router.get("/pst/public/workspaces/:slug", async (req, res): Promise<void> => {
   res.json(GetPublicPstWorkspaceResponse.parse({
     project,
     steps: project.blueprint.workflow,
+    definition: project.definition,
   }));
 });
 

@@ -1,0 +1,129 @@
+Betul. Dengan kondisi terakhir yang Anda laporkan, **arah berikutnya sebaiknya dikunci pada Generic Runtime Proof**.
+
+Namun ada satu disiplin penting: **jangan langsung coding hanya karena runtime adalah langkah berikutnya.** Karena kita sudah memiliki Architecture Review Gate, task runtime harus diperiksa dulu.
+
+### Assignment berikutnya yang saya sarankan
+
+**Task — Prove Generic Runtime untuk Three-PST**
+
+Scope:
+
+```text
+ExecutablePstDefinitionV1
+        ↓
+Generic Runtime
+        ↓
+Customer Journey
+        ↓
+Outcome
+```
+
+Runtime harus:
+
+* menerima `ExecutablePstDefinitionV1`;
+* menjalankan step berdasarkan definition;
+* membaca/menulis state sesuai namespace yang sudah ditentukan;
+* menjalankan transition secara generik;
+* menghasilkan outcome dari definition;
+* tidak mengetahui nama/domain produk;
+* tidak memanggil database/provider secara langsung bila kontraknya memang tidak mengharuskan;
+* tidak memiliki `if Cashflow`, `if Decision`, atau `if Compliance`;
+* mempertahankan isolation antar customer/workspace.
+
+### Acceptance Criteria yang sebaiknya dikunci
+
+**AC1 — Same Runtime**
+
+Tiga executable definition dijalankan oleh **runtime implementation yang sama**.
+
+```text
+Cashflow Definition ─┐
+Decision Definition ─┼→ SAME RUNTIME
+Compliance Definition┘
+```
+
+**AC2 — Different behavior from configuration**
+
+Ketiga journey menghasilkan perilaku dan outcome berbeda **karena definition/configuration**, bukan karena handler produk.
+
+**AC3 — State correctness**
+
+Runtime hanya dapat membaca state yang tersedia dan menulis state sesuai ownership/namespace.
+
+**AC4 — Terminal correctness**
+
+Journey hanya selesai melalui terminal `OUTCOME + complete`.
+
+**AC5 — No product-specific code**
+
+Pemeriksaan source runtime tidak menemukan branch/handler berdasarkan nama produk.
+
+**AC6 — Definition isolation**
+
+Memodifikasi satu executable definition tidak mengubah dua definition lainnya.
+
+**AC7 — Deterministic execution**
+
+Input dan executable definition yang sama menghasilkan execution behavior/outcome yang konsisten.
+
+**AC8 — Failure behavior**
+
+Definition malformed/invalid tidak dieksekusi diam-diam.
+
+### Architecture Review
+
+Sebelum Build, beri task ini status:
+
+**🟢 BUILD** jika:
+
+> Runtime hanya menjadi interpreter terhadap `ExecutablePstDefinitionV1`.
+
+**🟡 REVISE** jika runtime membutuhkan perubahan pada Schema/IR/Compiler untuk bisa bekerja.
+
+**🔴 DEFER** jika implementasinya mulai membuat product-specific runtime.
+
+---
+
+Dan ada satu hal yang menurut saya **sangat penting**: jangan memperluas runtime menjadi platform besar dulu.
+
+Kita **belum** perlu:
+
+* marketplace;
+* plugin system;
+* Gustafta;
+* provider orchestration baru;
+* analytics besar;
+* Factory Learning;
+* UI customer baru yang kompleks.
+
+Target kita jauh lebih sederhana:
+
+```text
+          MANUFACTURING
+               │
+Snapshot → Validate → Compile
+               │
+               ▼
+     Executable PST Definition
+               │
+               ▼
+        ┌──────────────┐
+        │ SAME RUNTIME │
+        └──────────────┘
+          │     │     │
+          ▼     ▼     ▼
+       Cashflow Decision Compliance
+          │     │     │
+          ▼     ▼     ▼
+       Outcome Outcome Outcome
+```
+
+Kalau ini **PASS**, barulah kita bisa mengatakan:
+
+> **PST Factory bukan lagi sekadar factory yang bisa menghasilkan PST; ia sudah memiliki manufacturing-to-execution loop yang generik.**
+
+Setelah itu baru kita uji **backward compatibility**.
+
+Jadi urutan final yang saya rekomendasikan sekarang:
+
+**Three-PST Proof ✅ → Generic Runtime Proof → Backward Compatibility → Publish Guard → Factory Learning → baru pertimbangkan Gustafta.**

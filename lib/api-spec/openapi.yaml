@@ -914,10 +914,15 @@ components:
         steps: { type: array, items: { $ref: "#/components/schemas/WorkflowStep" } }
     PstPublicWorkspace:
       type: object
-      required: [project, steps]
+      required: [project, steps, definition]
       properties:
         project: { $ref: "#/components/schemas/PstPublicProject" }
         steps: { type: array, items: { $ref: "#/components/schemas/PublicWorkflowStep" } }
+        definition: { $ref: "#/components/schemas/ExecutablePstDefinition" }
+    ExecutablePstDefinition:
+      type: object
+      description: Validated, data-only ExecutablePstDefinitionV1 emitted from the immutable release.
+      additionalProperties: true
     PstPublicProject:
       type: object
       required: [id, name, slug, description, status, version, domain, family, series, problemStatement, targetUser, desiredOutcome, productDna, blueprint]

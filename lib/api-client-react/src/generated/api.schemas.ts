@@ -532,9 +532,15 @@ export interface PstPublicProject {
   blueprint: PublicPstBlueprint;
 }
 
+/**
+ * Validated, data-only ExecutablePstDefinitionV1 emitted from the immutable release.
+ */
+export interface ExecutablePstDefinition { [key: string]: unknown }
+
 export interface PstPublicWorkspace {
   project: PstPublicProject;
   steps: PublicWorkflowStep[];
+  definition: ExecutablePstDefinition;
 }
 
 export interface FactoryEvent {

@@ -152,7 +152,7 @@ function resolveBrowserBaseUrl({
 }
 
 const publishedWorkspaceFixtureSlug = "authenticated-lifecycle-0cd705e8-274d3";
-const publishedWorkspaceFixtureVersion = "v1.0";
+const publishedWorkspaceFixtureVersion = "v1.1";
 
 const browserProxyProbes = [
   {
@@ -198,7 +198,7 @@ function publishedWorkspaceProbe(slug, expectedVersion) {
 function assertPublishedPublicWorkspacePayload(body, probeUrl, expectedSlug, expectedVersion) {
   assert.deepEqual(
     Object.keys(body).sort(),
-    ["project", "steps"],
+    ["definition", "project", "steps"],
     `browser API proxy published public PST ${probeUrl}: expected the public workspace envelope`,
   );
   assert.equal(body.project.slug, expectedSlug);
@@ -207,12 +207,14 @@ function assertPublishedPublicWorkspacePayload(body, probeUrl, expectedSlug, exp
     assert.equal(
       body.project.version,
       expectedVersion,
-      "deterministic published PST fixture must resolve its v1.0 release",
+      "deterministic published PST fixture must resolve its active immutable release",
     );
   } else {
     assert.match(body.project.version, /^v\d+\.\d+$/);
   }
   assert.ok(body.steps.length > 0, "published public PST must include customer steps");
+  assert.equal(body.definition.runtimeVersion, "pst-runtime.v1");
+  assert.equal(body.definition.identity.releaseVersion, body.project.version);
   assert.deepEqual(
     body.steps.map((step) => step.title),
     body.project.blueprint.workflow.map((step) => step.title),
@@ -606,8 +608,14 @@ async function runBrowserPublicWorkspaceAcceptance({ slug, expectedProjectName }
     assert.match(body.project.version, /^v\d+\.\d+$/);
     assert.ok(body.steps.length > 0, "published public workspace exposes customer steps");
     await page.getByTestId("link-workspace-brand").waitFor();
-    await page.getByText("ruang kerja terpandu", { exact: true }).waitFor();
     await page.getByText(expectedProjectName, { exact: true }).waitFor();
+    await page.getByTestId("runtime-input").waitFor();
+    await page.getByTestId("input-context.organization").fill("Acceptance Organization");
+    await page.getByTestId("button-submit").click();
+    await page.getByTestId("input-answers.primary").waitFor();
+    await page.getByTestId("input-answers.primary").fill("A measurable customer situation");
+    await page.getByTestId("button-submit").click();
+    await page.getByTestId("runtime-completed").waitFor();
 
     return {
       path: `/workspace/${slug}`,

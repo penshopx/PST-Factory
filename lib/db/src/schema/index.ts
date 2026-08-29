@@ -22,4 +22,5 @@ export * from "./pst-compiler";
 export * from "./pst-compiler-ready";
 export * from "./pst-contract";
 export * from "./pst-executable";
+export * from "./pst-runtime";
 export * from "./pst-validator";

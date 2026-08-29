@@ -16,6 +16,7 @@ export * from './componentSelection';
 export * from './componentSelectionStatus';
 export * from './dashboardSummary';
 export * from './errorResponse';
+export * from './executablePstDefinition';
 export * from './factoryEvent';
 export * from './healthStatus';
 export * from './listPstAssetsParams';

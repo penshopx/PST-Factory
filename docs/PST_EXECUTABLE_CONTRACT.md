@@ -1,8 +1,9 @@
 # Executable PST Definition v1
 
-Status: **Compiler v1 implemented; Runtime not implemented**. This document
-freezes the output language emitted by the pure Compiler. It does not implement
-runtime execution, provider calls, customer persistence, or UI behavior.
+Status: **Compiler v1 and Generic Runtime v1 implemented**. This document
+freezes the output language emitted by the pure Compiler and consumed by the
+deterministic runtime. Provider calls and durable customer persistence remain
+outside the v1 runtime boundary.
 
 The shared TypeScript contract is exported by `@workspace/db/schema` as
 `ExecutablePstDefinitionV1`.
@@ -136,3 +137,22 @@ Source schema, IR, Compiler, and runtime versions are independent. A Compiler
 upgrade may recompile an unchanged release, but must never mutate the stored
 release or silently change its runtime definition in place. Unsupported IR or
 runtime versions produce `UNSUPPORTED_VERSION`.
+
+## 7. Generic Runtime v1
+
+`createPstRuntime` defensively validates an executable definition before a
+customer session starts. `advancePstRuntime` executes only the typed operation,
+state, rule, effect, and transition allowlists described above.
+
+Runtime state is restricted to the `context`, `answers`, and `derived`
+namespaces. Input and answer steps wait for customer data. Persist, rules,
+scoring, analysis, recommendation, action, and outcome steps advance
+deterministically from the immutable definition. Assistive capability
+declarations become deterministic data in v1; the runtime performs no network
+or provider call.
+
+The runtime blocks malformed versions, duplicate or unresolved references,
+undeclared state access, invalid transitions, incomplete outcomes, and
+transition loops with stable diagnostics. The public customer workspace receives
+the compiled definition from the active immutable release and never reads a
+mutable Factory draft.

@@ -1535,7 +1535,8 @@ export const GetPublicPstWorkspaceResponse = zod.object({
   "outputs": zod.array(zod.string()),
   "dependencies": zod.array(zod.string()),
   "nextStep": zod.string()
-}))
+})),
+  "definition": zod.record(zod.string(), zod.unknown()).describe('Validated, data-only ExecutablePstDefinitionV1 emitted from the immutable release.')
 })
 
 

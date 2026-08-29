@@ -29,6 +29,12 @@ import type {
   BuildResult, FactoryEvent, PstAsset, PstBlueprint, PstPattern, PstProject,
   PstProjectMember, PstRecipe, PstRelease, QaRun, SimulationReport, WorkflowStep,
 } from '@workspace/api-client-react';
+import { createPstRuntime, advancePstRuntime } from '@workspace/db/schema/pst-runtime';
+import type {
+  PstExecutableStepV1, PstRuntimeAdvanceResultV1, PstRuntimeDiagnosticV1,
+  PstRuntimeInputV1, PstRuntimeSessionV1, PstRuntimeStartResultV1,
+  PstRuntimeStepViewV1,
+} from '@workspace/db/schema/pst-runtime';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -712,13 +718,388 @@ function RecipeCard({ item }: { item: PstRecipe }) { return <Card className="tra
 
 function CustomerWorkspace() {
   const { slug = '' } = useParams<{ slug: string }>();
-  const workspace = useGetPublicPstWorkspace(slug, { query: { queryKey: getGetPublicPstWorkspaceQueryKey(slug) } });
-  const [active, setActive] = useState(0);
-  if (workspace.isLoading) return <Loading label="Menyiapkan workspace terpandu" />;
-  if (workspace.isError || !workspace.data) return <ErrorState onRetry={() => void workspace.refetch()} label="Workspace customer ini tidak tersedia" />;
-  const { project, steps } = workspace.data;
-  const step = steps?.[active];
-    return <div className="mx-auto min-h-[calc(100dvh-72px)] max-w-5xl py-3 md:py-8"><div className="mb-10 flex items-center justify-between"><Link href="/" className="flex items-center gap-3" data-testid="link-workspace-brand"><div className="grid h-8 w-8 place-items-center rounded-lg bg-accent text-accent-foreground font-mono font-bold">P</div><span className="text-sm font-extrabold">PST Factory</span></Link><span className="font-mono text-[10px] uppercase tracking-[.18em] text-muted-foreground">ruang kerja terpandu</span></div><div className="mb-8 flex items-center gap-2 overflow-x-auto pb-2">{(steps ?? []).map((item, i) => <button onClick={() => setActive(i)} className={cn('flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold', i === active ? 'border-accent bg-accent/10 text-accent' : 'border-border text-muted-foreground')} key={item.id} data-testid={`button-workspace-step-${i}`}><span className="font-mono">{String(i + 1).padStart(2, '0')}</span>{item.title}</button>)}</div><div className="grid gap-8 lg:grid-cols-[1fr_280px]"><div><p className="font-mono text-[10px] uppercase tracking-[.2em] text-accent">Hasil yang ingin dicapai</p><h1 className="mt-3 max-w-2xl text-4xl font-extrabold tracking-[-.06em] md:text-5xl">{project.desiredOutcome}</h1><p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground">{project.description || project.problemStatement}</p>{step ? <Card className="mt-10 border-accent/25 shadow-lg"><CardHeader><div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[.18em] text-accent">Langkah {active + 1} dari {steps.length}</div><CardTitle className="mt-2 text-2xl">{step.title}</CardTitle><CardDescription className="text-sm leading-relaxed">{step.description}</CardDescription></CardHeader><CardContent><div className="rounded-lg border border-dashed border-border bg-muted/30 p-6"><p className="font-mono text-[10px] uppercase tracking-[.16em] text-muted-foreground">Catatan untuk Anda</p><p className="mt-2 text-sm text-muted-foreground">Ikuti panduan di atas untuk menyelesaikan langkah ini. Kemajuan Anda tetap tersimpan di PST ini.</p></div><div className="mt-5 flex justify-between gap-3"><Button variant="outline" onClick={() => setActive(Math.max(0, active - 1))} disabled={active === 0} data-testid="button-workspace-back"><ArrowLeft size={15} /> Kembali</Button><Button onClick={() => setActive(Math.min(steps.length - 1, active + 1))} disabled={active === steps.length - 1} data-testid="button-workspace-next">{active === steps.length - 1 ? 'Selesai' : 'Langkah berikutnya'} <ArrowRight size={15} /></Button></div></CardContent></Card> : <EmptyState title="Belum ada langkah" detail="PST ini masih dalam proses perakitan." />}</div><aside className="space-y-4"><Card><CardHeader><CardTitle className="text-sm">Dibuat untuk</CardTitle></CardHeader><CardContent><p className="text-sm font-semibold">{project.targetUser}</p><div className="mt-4 border-t border-border pt-4"><p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Nama produk</p><p className="mt-1 text-sm">{project.name}</p></div></CardContent></Card><div className="rounded-xl border border-accent/25 bg-accent/5 p-4"><p className="font-mono text-[10px] uppercase tracking-wider text-accent">Kemajuan</p><p className="mt-2 text-2xl font-extrabold">{steps.length ? Math.round(((active + 1) / steps.length) * 100) : 0}%</p><div className="mt-3 h-1.5 rounded-full bg-accent/15"><div className="h-full rounded-full bg-accent" style={{ width: `${steps.length ? ((active + 1) / steps.length) * 100 : 0}%` }} /></div></div></aside></div></div>;
+  const workspaceQuery = useGetPublicPstWorkspace(slug, { query: { queryKey: getGetPublicPstWorkspaceQueryKey(slug) } });
+
+  const [runtimeState, setRuntimeState] = useState<RuntimeUiState | null>(null);
+
+  useEffect(() => {
+    if (workspaceQuery.data?.definition) {
+      const def = workspaceQuery.data.definition;
+      const started = createPstRuntime(def);
+      if (started.status === "READY") {
+        setRuntimeState(advancePstRuntime(started.session));
+      } else {
+        setRuntimeState(started);
+      }
+    }
+  }, [workspaceQuery.data?.definition]);
+
+  if (workspaceQuery.isLoading) return <div className="flex min-h-[100dvh] items-center justify-center bg-[#07111d]"><Loading label="Menyiapkan workspace terpandu" /></div>;
+  if (workspaceQuery.isError || !workspaceQuery.data) return <div className="flex min-h-[100dvh] items-center justify-center bg-[#07111d] p-6"><ErrorState onRetry={() => void workspaceQuery.refetch()} label="Workspace customer ini tidak tersedia" /></div>;
+
+  const { project, definition } = workspaceQuery.data;
+
+  if (!runtimeState) return <div className="flex min-h-[100dvh] items-center justify-center bg-[#07111d]"><Loading label="Memulai Runtime..." /></div>;
+
+  return (
+    <div className="min-h-[100dvh] bg-[#07111d] text-[#edf7ff] font-sans flex flex-col selection:bg-[#16d9f5]/30 selection:text-[#edf7ff]">
+      <header className="flex h-[72px] items-center justify-between border-b border-[#2a4054]/60 px-6 backdrop-blur-xl bg-[#07111d]/90 sticky top-0 z-20">
+        <div className="flex items-center gap-4">
+          <Link href="/" className="flex items-center gap-3 transition-opacity hover:opacity-80" data-testid="link-workspace-brand">
+            <div className="grid h-8 w-8 place-items-center rounded-lg bg-[#16d9f5] text-[#07111d] font-mono font-bold">P</div>
+            <span className="hidden sm:inline-block font-extrabold text-sm tracking-wide">PST Factory</span>
+          </Link>
+          <div className="h-4 w-px bg-[#2a4054]" />
+          <span className="font-mono text-[10px] uppercase tracking-[.2em] text-[#91a9bd]">{project.name}</span>
+        </div>
+        <div className="flex items-center gap-3">
+           <Badge variant="outline" className="font-mono text-[10px] border-[#16d9f5]/30 text-[#16d9f5] bg-[#16d9f5]/10">v{project.version}</Badge>
+        </div>
+      </header>
+
+      <main className="flex-1 w-full max-w-6xl mx-auto p-5 py-8 md:p-10 lg:py-16 grid lg:grid-cols-[1fr_300px] gap-10 lg:gap-16">
+        <div className="flex flex-col min-w-0">
+          <div className="mb-10">
+            <h1 className="text-3xl font-extrabold tracking-[-.04em] md:text-5xl text-[#edf7ff] mb-4">{project.desiredOutcome}</h1>
+            <p className="text-base text-[#a9c1d3] max-w-2xl leading-relaxed">{project.description || project.problemStatement}</p>
+          </div>
+
+          <WorkspaceRuntime
+            activeState={runtimeState}
+            onAdvance={(next) => setRuntimeState(next)}
+            onRestart={() => {
+              if (definition) {
+                const started = createPstRuntime(definition);
+                if (started.status === "READY") {
+                  setRuntimeState(advancePstRuntime(started.session));
+                } else {
+                  setRuntimeState(started);
+                }
+              }
+            }}
+          />
+        </div>
+
+        <aside className="hidden lg:block">
+          <WorkspaceProgress state={runtimeState} />
+        </aside>
+      </main>
+    </div>
+  );
+}
+
+type RuntimeUiState = PstRuntimeAdvanceResultV1
+  | Extract<PstRuntimeStartResultV1, { status: 'BLOCKED' }>;
+
+function WorkspaceRuntime({ activeState, onAdvance, onRestart }: {
+  activeState: RuntimeUiState;
+  onAdvance: (state: PstRuntimeAdvanceResultV1) => void;
+  onRestart: () => void;
+}) {
+  if (activeState.status === "BLOCKED") {
+    return (
+      <div className="animate-rise" data-testid="runtime-blocked">
+        <div className="rounded-2xl border border-[#ff7184]/30 bg-[#ff7184]/10 p-8 shadow-xl">
+          <div className="mx-auto w-12 h-12 bg-[#ff7184]/20 text-[#ff7184] rounded-full flex items-center justify-center mb-5">
+            <TriangleAlert size={24} />
+          </div>
+          <h2 className="text-xl font-bold mb-2 text-center text-[#edf7ff]">Terjadi Kesalahan Runtime</h2>
+          <p className="text-[#a9c1d3] text-sm mb-6 text-center">PST ini tidak dapat dilanjutkan karena ada masalah pada definisinya.</p>
+          <div className="space-y-3 mb-8 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+            {activeState.errors.map((err: PstRuntimeDiagnosticV1, i: number) => (
+              <div key={i} className="bg-[#101a2a] border border-[#ff7184]/20 p-4 rounded-xl font-mono text-xs text-[#ffb4be]">
+                <div className="mb-2 pb-2 border-b border-[#ff7184]/20 flex justify-between items-start gap-4">
+                  <span className="font-bold text-[#ff7184] bg-[#ff7184]/10 px-2 py-0.5 rounded">{err.code}</span>
+                  <span className="opacity-70 break-all text-right">{err.path}</span>
+                </div>
+                <p className="leading-relaxed">{err.message}</p>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-center">
+            <Button onClick={onRestart} className="font-bold bg-[#2a4054] text-[#edf7ff] hover:bg-[#3b556e]" data-testid="button-restart">Mulai Ulang</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (activeState.status === "COMPLETED") {
+    return (
+      <div className="animate-rise" data-testid="runtime-completed">
+        <div className="rounded-2xl border border-emerald-400/30 bg-emerald-400/5 p-8 md:p-12 shadow-2xl relative overflow-hidden">
+          <div className="absolute -inset-24 bg-emerald-400/10 blur-[80px] pointer-events-none" />
+          <div className="relative z-10 text-center">
+            <div className="mx-auto w-20 h-20 bg-emerald-400/20 text-emerald-300 rounded-full flex items-center justify-center mb-6 ring-8 ring-emerald-400/10">
+              <CheckCircle2 size={40} />
+            </div>
+            <h2 className="text-3xl font-extrabold tracking-[-.04em] mb-3 text-[#edf7ff]">Selesai</h2>
+            <p className="text-[#a9c1d3] text-base mb-10 max-w-md mx-auto leading-relaxed">Anda telah menyelesaikan semua langkah. Berikut adalah hasil dari proses ini.</p>
+
+            <div className="bg-[#101a2a] border border-[#2a4054] rounded-xl p-6 text-left mb-10 shadow-inner">
+              <h3 className="font-mono text-[11px] uppercase tracking-widest text-[#6f8ca3] mb-5 flex items-center gap-2">
+                <Database size={14} className="text-emerald-400" />
+                Output Akhir
+              </h3>
+              {Object.keys(activeState.output).length === 0 ? (
+                <p className="text-sm italic text-[#6f8ca3]">Tidak ada output yang dihasilkan.</p>
+              ) : (
+                <div className="space-y-6">
+                  {Object.entries(activeState.output).map(([key, value]) => (
+                    <div key={key}>
+                      <p className="font-semibold text-sm mb-2 text-[#edf7ff]">{key}</p>
+                      <pre className="text-xs p-4 rounded-lg bg-[#07111d] border border-[#2a4054] overflow-auto whitespace-pre-wrap text-[#a9c1d3] leading-relaxed shadow-inner">{JSON.stringify(value, null, 2)}</pre>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <Button onClick={onRestart} size="lg" className="font-bold gap-2 bg-[#16d9f5] text-[#07111d] hover:bg-[#72edff] transition-transform hover:-translate-y-0.5" data-testid="button-restart">
+              <Rocket size={18} />
+              Mulai Ulang Proses
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (activeState.status === "WAITING_INPUT") {
+    return <WorkspaceStep step={activeState.step} session={activeState.session} onAdvance={onAdvance} />;
+  }
+
+  return null;
+}
+
+function WorkspaceStep({ step, session, onAdvance }: {
+  step: PstRuntimeStepViewV1;
+  session: PstRuntimeSessionV1;
+  onAdvance: (state: PstRuntimeAdvanceResultV1) => void;
+}) {
+  const [formData, setFormData] = useState<Record<string, unknown>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  useEffect(() => {
+    setFormData({});
+    setErrors({});
+    setIsTransitioning(false);
+  }, [step.id]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newErrors: Record<string, string> = {};
+    let valid = true;
+
+    const runtimeInput: PstRuntimeInputV1 = {};
+    step.requiredInputs.forEach((input) => {
+      if (input.required && (formData[input.key] === undefined || formData[input.key] === '')) {
+        newErrors[input.key] = "Bidang ini wajib diisi";
+        valid = false;
+      } else if (input.type === 'json' && typeof formData[input.key] === 'string') {
+        try {
+          runtimeInput[input.key] = JSON.parse(formData[input.key] as string) as unknown;
+        } catch {
+          newErrors[input.key] = "Masukkan JSON yang valid";
+          valid = false;
+        }
+      } else if (formData[input.key] !== undefined) {
+        runtimeInput[input.key] = formData[input.key];
+      }
+    });
+
+    setErrors(newErrors);
+    if (!valid) return;
+
+    setIsTransitioning(true);
+    setTimeout(() => {
+      const next = advancePstRuntime(session, runtimeInput);
+      onAdvance(next);
+    }, 250);
+  };
+
+  return (
+    <div className={cn("transition-all duration-300", isTransitioning ? "opacity-0 translate-y-[-15px]" : "opacity-100 translate-y-0")} data-testid="runtime-input">
+      <div className="mb-10">
+        <Badge variant="outline" className="mb-5 text-[#16d9f5] border-[#16d9f5]/30 bg-[#16d9f5]/10 px-3 py-1 font-mono uppercase tracking-widest text-[10px]">Langkah saat ini</Badge>
+        <h2 className="text-3xl font-extrabold tracking-[-.02em] mb-4 text-[#edf7ff]">{step.title}</h2>
+        <p className="text-lg text-[#a9c1d3] leading-relaxed">{step.description}</p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="bg-[#101a2a] border border-[#2a4054] p-6 md:p-10 rounded-2xl shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#16d9f5] via-[#16d9f5]/50 to-transparent" />
+
+        {step.requiredInputs.length === 0 ? (
+          <div className="py-8 text-center">
+            <div className="mx-auto w-12 h-12 bg-[#2a4054]/50 text-[#a9c1d3] rounded-full flex items-center justify-center mb-4">
+              <Check size={20} />
+            </div>
+            <p className="text-[#a9c1d3] mb-2 text-sm font-semibold">Tidak ada input yang diperlukan.</p>
+            <p className="text-[#6f8ca3] text-xs">Silakan lanjutkan ke langkah berikutnya.</p>
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {step.requiredInputs.map((input) => (
+              <div key={input.key} className="space-y-3">
+                <label className="text-sm font-bold text-[#edf7ff] flex items-center gap-2">
+                  {input.label}
+                  {input.required && <span className="text-[#ff7184] text-lg leading-none">*</span>}
+                </label>
+                {input.options ? (
+                  <div className="relative">
+                    <select
+                      value={stringRuntimeField(formData, input.key)}
+                      onChange={(e) => setFormData({ ...formData, [input.key]: e.target.value })}
+                      className="flex h-12 w-full appearance-none rounded-xl border border-[#2a4054] bg-[#0b1421] px-4 py-2 text-sm text-[#edf7ff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#16d9f5]/50 focus-visible:border-[#16d9f5] disabled:cursor-not-allowed disabled:opacity-50 transition-colors shadow-inner"
+                      data-testid={`input-${input.key}`}
+                    >
+                      <option value="" disabled className="text-[#6f8ca3]">Pilih salah satu...</option>
+                      {input.options.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                    <ChevronRight size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#6f8ca3] rotate-90 pointer-events-none" />
+                  </div>
+                ) : input.type === 'number' ? (
+                  <Input
+                    type="number"
+                    value={numberRuntimeField(formData, input.key)}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      [input.key]: e.target.value === '' ? undefined : Number(e.target.value),
+                    })}
+                    className="h-12 rounded-xl border-[#2a4054] bg-[#0b1421] text-[#edf7ff] placeholder:text-[#6f8ca3] focus-visible:ring-[#16d9f5]/50 focus-visible:border-[#16d9f5] shadow-inner text-base"
+                    placeholder="Masukkan angka..."
+                    data-testid={`input-${input.key}`}
+                  />
+                ) : input.type === 'boolean' ? (
+                  <label className="flex items-center gap-4 py-3 px-4 rounded-xl border border-[#2a4054] bg-[#0b1421] cursor-pointer hover:border-[#16d9f5]/50 transition-colors">
+                    <div className="relative flex items-center justify-center">
+                      <input
+                        type="checkbox"
+                        checked={formData[input.key] === true}
+                        onChange={(e) => setFormData({ ...formData, [input.key]: e.target.checked })}
+                        className="peer appearance-none w-6 h-6 rounded-md border-2 border-[#6f8ca3] bg-[#0b1421] checked:bg-[#16d9f5] checked:border-[#16d9f5] transition-colors cursor-pointer"
+                        data-testid={`input-${input.key}`}
+                      />
+                      <Check size={14} strokeWidth={3} className="absolute text-[#07111d] opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" />
+                    </div>
+                    <span className="text-sm text-[#edf7ff] select-none font-medium">Ya, saya setuju</span>
+                  </label>
+                ) : input.type === 'date' ? (
+                  <Input
+                    type="date"
+                    value={stringRuntimeField(formData, input.key)}
+                    onChange={(e) => setFormData({ ...formData, [input.key]: e.target.value })}
+                    className="h-12 rounded-xl border-[#2a4054] bg-[#0b1421] text-[#edf7ff] focus-visible:ring-[#16d9f5]/50 focus-visible:border-[#16d9f5] shadow-inner text-base"
+                    data-testid={`input-${input.key}`}
+                  />
+                ) : (
+                  <Textarea
+                    value={stringRuntimeField(formData, input.key)}
+                    onChange={(e) => setFormData({ ...formData, [input.key]: e.target.value })}
+                    placeholder="Ketik jawaban Anda di sini..."
+                    className="min-h-[140px] resize-y rounded-xl border-[#2a4054] bg-[#0b1421] text-[#edf7ff] placeholder:text-[#6f8ca3] focus-visible:ring-[#16d9f5]/50 focus-visible:border-[#16d9f5] shadow-inner text-base p-4"
+                    data-testid={`input-${input.key}`}
+                  />
+                )}
+                {errors[input.key] && (
+                  <p className="text-xs font-bold text-[#ff7184] animate-rise flex items-center gap-1.5 mt-2">
+                    <TriangleAlert size={12} /> {errors[input.key]}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="pt-8 mt-8 border-t border-[#2a4054] flex justify-end">
+          <Button type="submit" size="lg" className="font-extrabold gap-2 px-8 bg-[#16d9f5] text-[#07111d] hover:bg-[#72edff] transition-transform hover:-translate-y-0.5" disabled={isTransitioning} data-testid="button-submit">
+            {step.requiredInputs.length === 0 ? "Lanjut" : "Kirim & Lanjut"}
+            <ArrowRight size={18} strokeWidth={2.5} />
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function stringRuntimeField(values: Record<string, unknown>, key: string) {
+  const value = values[key];
+  return typeof value === 'string' ? value : '';
+}
+
+function numberRuntimeField(values: Record<string, unknown>, key: string) {
+  const value = values[key];
+  return typeof value === 'number' ? value : '';
+}
+
+function WorkspaceProgress({ state }: { state: RuntimeUiState | null }) {
+  if (!state || state.status === "BLOCKED") return null;
+
+  const session = state.session;
+  if (!session) return null;
+
+  const definition = session.definition;
+  const steps = definition?.steps || [];
+
+  const total = steps.length;
+  const currentIndex = state.status === "COMPLETED"
+    ? total
+    : steps.findIndex((step: PstExecutableStepV1) => step.id === session.currentStepId);
+  const progressPercent = total ? Math.round((Math.max(0, currentIndex) / total) * 100) : 0;
+
+  return (
+    <div className="sticky top-[100px]">
+      <div className="rounded-2xl border border-[#2a4054] bg-[#101a2a] p-6 mb-8 shadow-lg">
+        <p className="font-mono text-[10px] uppercase tracking-widest text-[#16d9f5] mb-2">Kemajuan</p>
+        <div className="flex items-end gap-2 mb-4">
+          <p className="text-3xl font-extrabold text-[#edf7ff] leading-none">{state.status === "COMPLETED" ? 100 : progressPercent}%</p>
+          <p className="text-xs text-[#6f8ca3] font-mono uppercase pb-1">Selesai</p>
+        </div>
+        <div className="h-2 rounded-full bg-[#0b1421] overflow-hidden">
+          <div className="h-full rounded-full bg-gradient-to-r from-[#16d9f5]/50 to-[#16d9f5] transition-all duration-700 ease-out relative" style={{ width: `${state.status === "COMPLETED" ? 100 : progressPercent}%` }}>
+            <div className="absolute top-0 right-0 bottom-0 w-10 bg-gradient-to-r from-transparent to-white/30" />
+          </div>
+        </div>
+      </div>
+
+      <div className="pl-2">
+        <h3 className="font-mono text-[11px] uppercase tracking-[.2em] text-[#6f8ca3] mb-6">Peta Perjalanan</h3>
+        <div className="space-y-1 relative before:absolute before:inset-0 before:ml-[15px] before:h-full before:w-px before:bg-gradient-to-b before:from-[#2a4054] before:via-[#2a4054] before:to-transparent">
+          {steps.map((step: PstExecutableStepV1, idx: number) => {
+            const isVisited = session.visitedStepIds.includes(step.id);
+            const isCurrent = session.currentStepId === step.id && state.status !== "COMPLETED";
+            const isCompleted = state.status === "COMPLETED";
+            const isPast = isVisited && !isCurrent;
+
+            let statusColor = "bg-[#0b1421] text-[#6f8ca3] border-[#2a4054]";
+            let textColor = "text-[#6f8ca3]";
+
+            if (isCurrent) {
+              statusColor = "bg-[#16d9f5] text-[#07111d] border-[#16d9f5] ring-4 ring-[#16d9f5]/20";
+              textColor = "text-[#edf7ff] font-bold";
+            } else if (isPast || isCompleted) {
+              statusColor = "bg-[#101a2a] text-[#16d9f5] border-[#16d9f5]/50";
+              textColor = "text-[#a9c1d3]";
+            }
+
+            return (
+              <div key={step.id} className="relative flex items-start gap-5 z-10 py-3">
+                <div className={cn("w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-500", statusColor)}>
+                  {(isPast || isCompleted) ? <Check size={14} strokeWidth={3} /> : <span className="text-[10px] font-bold font-mono">{idx + 1}</span>}
+                </div>
+                <div className="flex-1 pt-1.5 pb-2">
+                  <p className={cn("text-sm transition-colors", textColor, !isCurrent && !isPast && !isCompleted && "opacity-50")}>{step.title}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function Settings() {
