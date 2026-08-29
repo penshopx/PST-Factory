@@ -4,9 +4,8 @@ PST Factory treats Gustafta as an external engine behind an adapter. The current
 `MockGustaftaEngine` supports persona, knowledge retrieval, and response methods so
 the factory can develop independently.
 
-No production endpoint, credential, or request shape is invented here. When the real
-Gustafta API specification is available, implement the adapter behind the existing
-interface and keep the Factory domain code unchanged.
+No production endpoint, credential, API key, or request shape is required here. The
+current product scope intentionally stops at the public capability bridge.
 
 ## Public capability bridge
 
@@ -22,6 +21,6 @@ These links open `https://gustafta.my.id` in a separate browser tab. They are na
 links, not an authenticated server-to-server API integration. PST Factory does not send
 project, Blueprint, release, ownership, QA, or customer workspace data through them.
 
-The backend `GustaftaEngine` remains provider-neutral and mocked until Gustafta supplies
-an official API contract and an approved authentication method. Public frontend bundle
+The backend `GustaftaEngine` remains provider-neutral and mocked. A direct API adapter is
+optional future work, not a prerequisite for using PST Factory. Public frontend bundle
 routes or undocumented internal endpoints must not be treated as a stable API contract.
