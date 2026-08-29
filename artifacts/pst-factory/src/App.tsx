@@ -136,7 +136,10 @@ const gustaftaBaseUrl = 'https://gustafta.my.id';
 const gustaftaLinks = [
   { href: '/chat/8193', label: 'Panduan Gustafta', detail: 'Cari fitur dan alur yang tepat', icon: MessageCircle },
   { href: '/chat/1', label: 'Help Desk Pekerjaan', detail: 'Tanya jalur SBU, SKK, tender, proyek', icon: Bot },
+  { href: '/cek-kesiapan-sbu', label: 'Cek kesiapan SBU', detail: 'Diagnosis awal kesiapan badan usaha', icon: ShieldCheck },
+  { href: '/klinik-konsultasi', label: 'Klinik konstruksi', detail: 'Konsultasi SBU, SKK, PKB, dan PUB', icon: MessageCircle },
   { href: '/bedah-dokumen', label: 'Bedah dokumen', detail: 'Baca konteks dan celah dokumen', icon: FileSearch },
+  { href: '/brain-project', label: 'Brain Project', detail: 'Bangun fondasi pengetahuan proyek', icon: Database },
   { href: '/tender', label: 'Peluang tender', detail: 'Buka ruang kerja tender Gustafta', icon: BriefcaseBusiness },
 ];
 
@@ -336,7 +339,7 @@ function GustaftaBridge() {
       </div>
       <ExternalLink className="mt-1 shrink-0 text-primary" size={17} />
     </CardHeader>
-    <CardContent className="grid gap-3 p-5 sm:grid-cols-2 xl:grid-cols-4">
+    <CardContent className="grid gap-3 p-5 sm:grid-cols-2 xl:grid-cols-3">
       {gustaftaLinks.map(({ href, label, detail, icon: Icon }) => <a href={`${gustaftaBaseUrl}${href}`} key={href} target="_blank" rel="noreferrer" className="focus-ring group rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/50 hover:bg-primary/[.05]" data-testid={`card-link-gustafta-${label.toLowerCase().replaceAll(' ', '-')}`}>
         <div className="mb-4 flex items-center justify-between"><div className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary"><Icon size={17} /></div><ExternalLink size={14} className="text-muted-foreground transition-colors group-hover:text-primary" /></div>
         <p className="text-sm font-semibold">{label}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p>

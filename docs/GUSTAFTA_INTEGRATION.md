@@ -14,7 +14,10 @@ changing the Factory domain or passing customer data between systems:
 
 - Gustafta Platform Guide (`/chat/8193`)
 - Gustafta Work Help Desk (`/chat/1`)
+- SBU Readiness Check (`/cek-kesiapan-sbu`)
+- Construction Clinic (`/klinik-konsultasi`)
 - Document Review (`/bedah-dokumen`)
+- Brain Project (`/brain-project`)
 - Tender Workspace (`/tender`)
 
 These links open `https://gustafta.my.id` in a separate browser tab. They are navigation
