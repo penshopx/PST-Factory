@@ -94,34 +94,177 @@ export function workflowFromStructure(
   source: Pick<ManufacturingReference, "type" | "id" | "name">,
 ): ManufacturingWorkflowStep[] {
   const steps = labels.length ? labels : ["Start", "Work", "Result"];
-  return steps.map((label, index) => {
+  const authored = steps.map((label, index) => {
     const normalized = label.toLowerCase();
     const type = index === 0
       ? "INPUT"
       : index === steps.length - 1
-        ? "OUTPUT"
-        : /assess|question|criteria|score|option/i.test(normalized)
-          ? "ASSESSMENT"
+        ? "OUTCOME"
+        : /scor/i.test(normalized)
+          ? "SCORING"
+          : /assess|question|criteria|option/i.test(normalized)
+            ? "ANSWER"
           : /analy|extract|gap|current/i.test(normalized)
             ? "ANALYSIS"
-            : /recommend|plan|action/i.test(normalized)
+            : /recommend/i.test(normalized)
+              ? "RECOMMENDATION"
+              : /plan|action/i.test(normalized)
               ? "ACTION"
-              : "STEP";
-    const previousId = index > 0 ? `${slugify(steps[index - 1])}-${index - 1}` : undefined;
+              : /result|report/i.test(normalized)
+                ? "ANALYSIS"
+                : "UNRESOLVED";
+    const namespace = type === "INPUT"
+      ? "context"
+      : type === "ANSWER"
+        ? "answers"
+        : "derived";
     return {
       id: `${slugify(label)}-${index}`,
       type,
       title: label,
       description: `${label} step from the ${source.type} "${source.name}".`,
-      inputs: previousId ? [`${slugify(steps[index - 1])}_result`] : ["user_context"],
-      outputs: [`${slugify(label)}_result`],
-      dependencies: previousId ? [previousId] : [],
-      nextStep: index < steps.length - 1 ? `${slugify(steps[index + 1])}-${index + 1}` : "",
+      output: type === "OUTCOME" ? undefined : `${namespace}.${slugify(label)}_result`,
+    };
+  });
+  return authored.map((step, index) => {
+    const previous = authored[index - 1];
+    const next = authored[index + 1];
+    const inputs = previous?.output ? [previous.output] : [];
+    const outputs = step.output ? [step.output] : [];
+    const componentId = `authored-${step.id}`;
+    const componentIdentity = {
+      id: componentId,
+      assetId: `${source.type}-${source.id}-${step.id}`,
+      name: step.title,
+      version: "1.0.0",
+      status: "READY",
+      required: true,
+      source: `${source.type}: ${source.name}`,
+    };
+    const component = step.type === "ANSWER"
+      ? {
+          ...componentIdentity,
+          type: "QUESTION_SCHEMA",
+          configuration: {
+            compilerReady: {
+              capability: "question-schema",
+              definition: {
+                questions: outputs.map((output) => ({
+                  id: output.split(".").at(-1) ?? output,
+                  label: step.title,
+                  type: "string",
+                  required: true,
+                })),
+              },
+            },
+          },
+        }
+      : step.type === "SCORING"
+        ? {
+            ...componentIdentity,
+            type: "SCORING_SCALE",
+            configuration: {
+              compilerReady: {
+                capability: "scoring-scale",
+                definition: {
+                  minimum: 0,
+                  maximum: 100,
+                  bands: [
+                    { minimum: 0, label: "Starting" },
+                    { minimum: 50, label: "Progressing" },
+                    { minimum: 80, label: "Strong" },
+                  ],
+                },
+              },
+            },
+          }
+        : step.type === "ANALYSIS"
+          ? {
+              ...componentIdentity,
+              type: "ANALYSIS_TEMPLATE",
+              configuration: {
+                compilerReady: {
+                  capability: "analysis-template",
+                  definition: { template: step.description, outputFields: outputs },
+                },
+              },
+            }
+          : step.type === "RECOMMENDATION"
+            ? {
+                ...componentIdentity,
+                type: "RECOMMENDATION_STRATEGY",
+                configuration: {
+                  compilerReady: {
+                    capability: "recommendation-strategy",
+                    definition: { template: step.description, outputFields: outputs },
+                  },
+                },
+              }
+            : step.type === "ACTION"
+              ? {
+                  ...componentIdentity,
+                  type: "ACTION_TEMPLATE",
+                  configuration: {
+                    compilerReady: {
+                      capability: "action-template",
+                      definition: {
+                        items: [{
+                          id: `${slugify(step.title)}-next-action`,
+                          title: step.title,
+                          description: step.description,
+                        }],
+                      },
+                    },
+                  },
+                }
+              : undefined;
+    const operation = step.type === "INPUT"
+      ? {
+          type: "collect-context",
+          fields: outputs.map((key) => ({
+            key,
+            label: step.title,
+            type: "string",
+            required: true,
+          })),
+          sessionPersistence: "customer_session",
+        }
+      : step.type === "ANSWER"
+        ? { type: "collect-answers", schemaRef: componentId, answerFields: outputs }
+        : step.type === "SCORING"
+          ? { type: "score", scaleRef: componentId, output: outputs[0] }
+          : step.type === "ANALYSIS"
+            ? { type: "analyze", templateRef: componentId, output: outputs[0] }
+            : step.type === "RECOMMENDATION"
+              ? { type: "recommend", strategyRef: componentId, output: outputs[0] }
+              : step.type === "ACTION"
+                ? { type: "action", actionRef: componentId, output: outputs[0] }
+                : step.type === "OUTCOME"
+                  ? { type: "outcome", outcomeId: step.id, outputRefs: inputs }
+                  : undefined;
+    return {
+      id: step.id,
+      type: step.type,
+      title: step.title,
+      description: step.description,
+      inputs,
+      outputs,
+      dependencies: previous ? [previous.id] : [],
+      nextStep: next?.id ?? "",
       configuration: {
         sourceType: source.type,
         sourceId: source.id,
         sourceName: source.name,
         sourceIndex: index,
+        ...(operation ? {
+          canonical: {
+            next: next
+              ? { type: "step", target: next.id }
+              : { type: "complete" },
+          },
+          compilerReady: { operation },
+        } : {}),
+        ...(component ? { authoredComponents: [component] } : {}),
       },
     };
   });

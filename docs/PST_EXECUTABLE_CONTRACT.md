@@ -169,3 +169,10 @@ undeclared state access, invalid transitions, incomplete outcomes, and
 transition loops with stable diagnostics. The public customer workspace receives
 the compiled definition from the active immutable release and never reads a
 mutable Factory draft.
+
+Modern publication is fail-closed: Builder-authored declarations are
+materialized into a hash-addressed snapshot, compiled inside the publication
+transaction, and persisted only when compilation succeeds. Snapshot
+`components` are executable declarations; restorable Factory component
+references are retained separately and are never consumed by Compiler or
+Runtime.

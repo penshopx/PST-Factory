@@ -264,6 +264,7 @@ export type PstReleaseSnapshot = {
   pattern?: PstReleasePatternSnapshot;
   recipe?: PstReleaseRecipeSnapshot;
   components: PstReleaseComponentSnapshot[];
+  factoryComponents?: PstReleaseComponentSnapshot[];
   rules: PstReleaseRuleSnapshot[];
   providers: PstReleaseProviderSnapshot[];
 };

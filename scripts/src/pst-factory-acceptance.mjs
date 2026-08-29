@@ -609,12 +609,39 @@ async function runBrowserPublicWorkspaceAcceptance({ slug, expectedProjectName }
     assert.ok(body.steps.length > 0, "published public workspace exposes customer steps");
     await page.getByTestId("link-workspace-brand").waitFor();
     await page.getByText(expectedProjectName, { exact: true }).waitFor();
-    await page.getByTestId("runtime-input").waitFor();
-    await page.getByTestId("input-context.organization").fill("Acceptance Organization");
-    await page.getByTestId("button-submit").click();
-    await page.getByTestId("input-answers.primary").waitFor();
-    await page.getByTestId("input-answers.primary").fill("A measurable customer situation");
-    await page.getByTestId("button-submit").click();
+    for (let stepIndex = 0; stepIndex < body.definition.steps.length; stepIndex += 1) {
+      const completed = await page.getByTestId("runtime-completed").isVisible().catch(() => false);
+      if (completed) break;
+      await page.getByTestId("runtime-input").waitFor();
+      const inputs = page.locator('[data-testid^="input-"]');
+      const inputCount = await inputs.count();
+      assert.ok(inputCount > 0, "runtime input step exposes at least one declared input");
+      for (let inputIndex = 0; inputIndex < inputCount; inputIndex += 1) {
+        const input = inputs.nth(inputIndex);
+        const inputType = await input.getAttribute("type");
+        const tagName = await input.evaluate((element) => element.tagName.toLowerCase());
+        if (inputType === "checkbox") {
+          await input.check();
+        } else if (tagName === "select") {
+          const options = await input.locator("option").evaluateAll((elements) =>
+            elements.map((element) => element.value).filter(Boolean));
+          assert.ok(options.length > 0, "choice input exposes a selectable option");
+          await input.selectOption(options[0]);
+        } else {
+          await input.fill(`Acceptance value ${stepIndex + 1}.${inputIndex + 1}`);
+        }
+      }
+      await page.waitForFunction(() => {
+        const button = document.querySelector('[data-testid="button-submit"]');
+        return button instanceof HTMLButtonElement && !button.disabled;
+      });
+      const currentInput = inputs.first();
+      await page.getByTestId("button-submit").click();
+      await Promise.race([
+        currentInput.waitFor({ state: "detached", timeout: 20_000 }),
+        page.getByTestId("runtime-completed").waitFor({ state: "visible", timeout: 20_000 }),
+      ]);
+    }
     await page.getByTestId("runtime-completed").waitFor();
 
     return {
@@ -1062,19 +1089,28 @@ async function runAuthenticatedRouteAcceptance() {
     assert.equal(releaseSnapshot.project.publicationStatus, "PUBLISHED");
     assert.equal(releaseSnapshot.blueprint.projectId, projectId);
     assert.equal(releaseSnapshot.workflow[0].title, afterPublish.body.steps[0].title);
-    assert.equal(releaseSnapshot.workflow[0].configuration.sourceId, "pattern-assessment");
+    assert.deepEqual(
+      Object.keys(releaseSnapshot.workflow[0].configuration).sort(),
+      ["canonical", "compilerReady"],
+    );
     assert.equal(releaseSnapshot.pattern.id, "pattern-assessment");
     assert.equal(releaseSnapshot.pattern.version, "v1.0");
     assert.deepEqual(releaseSnapshot.pattern.steps, ["Questions", "Scoring", "Analysis", "Recommendation"]);
     assert.equal(releaseSnapshot.recipe.id, "recipe-assessment");
     assert.equal(releaseSnapshot.recipe.version, "v1.0");
     assert.deepEqual(releaseSnapshot.recipe.components, ["Questions", "Scoring", "Analysis", "Recommendation"]);
-    assert.equal(releaseSnapshot.components.length, published.body.components.length);
+    assert.ok(releaseSnapshot.components.length > 0);
+    assert.ok(releaseSnapshot.components.every((component) =>
+      component.configuration
+      && Object.keys(component.configuration).length === 1
+      && component.configuration.compilerReady));
     assert.equal(releaseSnapshot.components.every((component) =>
       component.id
+      && component.assetId
+      && component.name
       && component.version
-      && component.configuration
-      && Array.isArray(component.configuration.compatibility)), true);
+      && component.status === "READY"), true);
+    assert.equal(releaseSnapshot.factoryComponents.length, published.body.components.length);
     assert.deepEqual(releaseSnapshot.rules, []);
     assert.deepEqual(releaseSnapshot.providers, []);
 

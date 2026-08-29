@@ -619,6 +619,9 @@ components:
         components:
           type: array
           items: { $ref: "#/components/schemas/PstReleaseComponent" }
+        factoryComponents:
+          type: array
+          items: { $ref: "#/components/schemas/PstReleaseComponent" }
         rules:
           type: array
           items: { $ref: "#/components/schemas/PstReleaseRule" }

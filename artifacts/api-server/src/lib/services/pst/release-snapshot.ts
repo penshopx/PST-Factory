@@ -3,6 +3,7 @@ import {
   pstCredentialConfigurationPaths,
 } from "@workspace/db/schema";
 import type {
+  PstReleaseComponentSnapshot,
   PstReleaseProviderSnapshot,
   PstReleaseRuleSnapshot,
   PstReleaseSnapshot,
@@ -10,6 +11,10 @@ import type {
 } from "@workspace/db";
 
 export const releaseSnapshotHashAlgorithm = "sha256-canonical-json.v1" as const;
+
+export type CompilerReadySnapshotResult =
+  | { status: "READY"; snapshot: PstReleaseSnapshot }
+  | { status: "BLOCKED"; errors: string[] };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -124,5 +129,75 @@ export function resolveReleaseDeclarations(workflow: WorkflowStep[]) {
     rules: rules.values,
     providers: providers.values,
     errors: [...rules.errors, ...providers.errors, ...credentialErrors],
+  };
+}
+
+function releaseComponent(value: unknown): value is PstReleaseComponentSnapshot {
+  if (!isRecord(value)) return false;
+  return typeof value.id === "string"
+    && typeof value.assetId === "string"
+    && typeof value.name === "string"
+    && typeof value.type === "string"
+    && typeof value.source === "string"
+    && typeof value.version === "string"
+    && value.status === "READY"
+    && typeof value.required === "boolean"
+    && isRecord(value.configuration)
+    && Object.keys(value.configuration).length === 1
+    && isRecord(value.configuration.compilerReady);
+}
+
+export function materializeCompilerReadySnapshot(
+  snapshot: PstReleaseSnapshot,
+): CompilerReadySnapshotResult {
+  const errors: string[] = [];
+  const components = new Map<string, PstReleaseComponentSnapshot>();
+  const workflow = snapshot.workflow.map((step, index): WorkflowStep => {
+    const path = `workflow[${index}].configuration`;
+    if (!isRecord(step.configuration)
+      || !isRecord(step.configuration.canonical)
+      || !isRecord(step.configuration.compilerReady)) {
+      errors.push(`${path} must contain canonical and compilerReady declarations.`);
+      return step;
+    }
+    const authoredComponents = step.configuration.authoredComponents;
+    if (authoredComponents !== undefined) {
+      if (!Array.isArray(authoredComponents)) {
+        errors.push(`${path}.authoredComponents must be an array.`);
+      } else {
+        authoredComponents.forEach((component, componentIndex) => {
+          if (!releaseComponent(component)) {
+            errors.push(`${path}.authoredComponents[${componentIndex}] is not a complete typed component.`);
+            return;
+          }
+          const existing = components.get(component.id);
+          if (existing && pstCanonicalJsonHash(existing) !== pstCanonicalJsonHash(component)) {
+            errors.push(`${path}.authoredComponents[${componentIndex}] conflicts with component ${component.id}.`);
+            return;
+          }
+          components.set(component.id, component);
+        });
+      }
+    }
+    return {
+      ...step,
+      configuration: {
+        canonical: step.configuration.canonical,
+        compilerReady: step.configuration.compilerReady,
+      },
+    };
+  });
+  if (errors.length) return { status: "BLOCKED", errors };
+  const { snapshotHash: _snapshotHash, ...base } = snapshot;
+  const payload: Omit<PstReleaseSnapshot, "snapshotHash"> = {
+    ...base,
+    blueprint: { ...base.blueprint, workflow },
+    workflow,
+    factoryComponents: base.components,
+    components: [...components.values()].sort((left, right) => left.id.localeCompare(right.id)),
+  };
+  return {
+    status: "READY",
+    snapshot: { ...payload, snapshotHash: releaseSnapshotHash(payload) },
   };
 }

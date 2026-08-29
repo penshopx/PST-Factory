@@ -1303,6 +1303,17 @@ export const GetPstReleasesResponseItem = zod.object({
   "required": zod.boolean(),
   "configuration": zod.record(zod.string(), zod.unknown()).optional()
 })),
+  "factoryComponents": zod.array(zod.object({
+  "id": zod.string().optional(),
+  "assetId": zod.string(),
+  "name": zod.string(),
+  "type": zod.string(),
+  "source": zod.string(),
+  "version": zod.string().optional(),
+  "status": zod.string(),
+  "required": zod.boolean(),
+  "configuration": zod.record(zod.string(), zod.unknown()).optional()
+})).optional(),
   "rules": zod.array(zod.object({
   "id": zod.string(),
   "version": zod.string(),

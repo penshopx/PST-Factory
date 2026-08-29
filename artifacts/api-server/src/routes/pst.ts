@@ -88,6 +88,7 @@ import {
 import {
   releaseSnapshotHash,
   releaseSnapshotHashAlgorithm,
+  materializeCompilerReadySnapshot,
   resolveReleaseDeclarations,
 } from "../lib/services/pst/release-snapshot";
 import { compileExecutableRelease } from "../lib/services/pst/executable-release";
@@ -175,151 +176,6 @@ const publicWorkspaceFixture = {
   version: "v1.1",
 } as const;
 
-function compilerReadyPublicFixtureSnapshot(
-  snapshot: PstReleaseSnapshot,
-): PstReleaseSnapshot {
-  const workflow: WorkflowStep[] = [
-    {
-      id: "context",
-      type: "INPUT",
-      title: "Konteks organisasi",
-      description: "Berikan konteks singkat tentang organisasi yang menjalankan PST ini.",
-      inputs: [],
-      outputs: ["context.organization"],
-      dependencies: [],
-      nextStep: "answers",
-      configuration: {
-        canonical: { next: { type: "step", target: "answers" } },
-        compilerReady: {
-          operation: {
-            type: "collect-context",
-            fields: [{
-              key: "context.organization",
-              label: "Nama organisasi",
-              type: "string",
-              required: true,
-            }],
-            sessionPersistence: "customer_session",
-          },
-        },
-      },
-    },
-    {
-      id: "answers",
-      type: "ANSWER",
-      title: "Situasi utama",
-      description: "Jelaskan situasi utama yang ingin Anda selesaikan.",
-      inputs: ["context.organization"],
-      outputs: ["answers.primary"],
-      dependencies: ["context"],
-      nextStep: "action",
-      configuration: {
-        canonical: { next: { type: "step", target: "action" } },
-        compilerReady: {
-          operation: {
-            type: "collect-answers",
-            schemaRef: "public-questions",
-            answerFields: ["answers.primary"],
-          },
-        },
-      },
-    },
-    {
-      id: "action",
-      type: "ACTION",
-      title: "Rencana tindakan",
-      description: "Susun tindakan berikutnya dari jawaban yang diberikan.",
-      inputs: ["answers.primary"],
-      outputs: ["derived.action"],
-      dependencies: ["answers"],
-      nextStep: "outcome",
-      configuration: {
-        canonical: { next: { type: "step", target: "outcome" } },
-        compilerReady: {
-          operation: {
-            type: "action",
-            actionRef: "public-action",
-            output: "derived.action",
-          },
-        },
-      },
-    },
-    {
-      id: "outcome",
-      type: "OUTCOME",
-      title: "Hasil akhir",
-      description: "Selesaikan journey dengan hasil yang eksplisit.",
-      inputs: ["derived.action"],
-      outputs: [],
-      dependencies: ["action"],
-      nextStep: "",
-      configuration: {
-        canonical: { next: { type: "complete" } },
-        compilerReady: {
-          operation: {
-            type: "outcome",
-            outcomeId: "outcome",
-            outputRefs: ["derived.action"],
-          },
-        },
-      },
-    },
-  ];
-  const { snapshotHash: _snapshotHash, ...base } = snapshot;
-  const payload: Omit<PstReleaseSnapshot, "snapshotHash"> = {
-    ...base,
-    blueprint: { ...base.blueprint, workflow },
-    workflow,
-    components: [{
-      id: "public-questions",
-      assetId: "asset-public-questions",
-      name: "Pertanyaan publik",
-      type: "TOOL",
-      source: "Acceptance fixture",
-      version: "1.0.0",
-      status: "READY",
-      required: true,
-      configuration: {
-        compilerReady: {
-          capability: "question-schema",
-          definition: {
-            questions: [{
-              id: "primary",
-              label: "Situasi utama",
-              type: "string",
-              required: true,
-            }],
-          },
-        },
-      },
-    }, {
-      id: "public-action",
-      assetId: "asset-public-action",
-      name: "Tindakan publik",
-      type: "TOOL",
-      source: "Acceptance fixture",
-      version: "1.0.0",
-      status: "READY",
-      required: true,
-      configuration: {
-        compilerReady: {
-          capability: "action-template",
-          definition: {
-            items: [{
-              id: "clarify-next-step",
-              title: "Tetapkan tindakan berikutnya",
-              description: "Pilih satu tindakan terukur berdasarkan situasi yang telah dijelaskan.",
-            }],
-          },
-        },
-      },
-    }],
-    rules: [],
-    providers: [],
-  };
-  return { ...payload, snapshotHash: releaseSnapshotHash(payload) };
-}
-
 const makeBlueprint = (
   projectId: string,
   problem: string,
@@ -343,6 +199,26 @@ const makeBlueprint = (
   nextStep: "Review and approve the proposed blueprint",
   version: "v0.1",
 });
+
+function makePublicWorkspaceFixtureBlueprint() {
+  const labels = ["Questions", "Criteria", "Action", "Outcome"];
+  const blueprint = makeBlueprint(
+    publicWorkspaceFixture.projectId,
+    "Teams need a reliable way to assess operational choices.",
+    "Operations lead",
+    "Choose one justified next action.",
+    publicWorkspaceFixture.blueprintId,
+  );
+  return {
+    ...blueprint,
+    journey: labels,
+    workflow: workflowFromStructure(labels, {
+      type: "pattern",
+      id: "pattern-assessment",
+      name: "Assessment pattern",
+    }),
+  };
+}
 
 let seedPromise: Promise<void> | undefined;
 
@@ -419,13 +295,7 @@ async function ensurePublicWorkspaceFixture() {
     .where(eq(pstProjectsTable.slug, publicWorkspaceFixture.slug));
 
   if (!project) {
-    const fixtureBlueprint = makeBlueprint(
-      publicWorkspaceFixture.projectId,
-      "Teams need a reliable way to assess operational choices.",
-      "Operations lead",
-      "Choose one justified next action.",
-      publicWorkspaceFixture.blueprintId,
-    );
+    const fixtureBlueprint = makePublicWorkspaceFixtureBlueprint();
     await db.insert(pstProjectsTable).values({
       id: publicWorkspaceFixture.projectId,
       ownerId: "system",
@@ -462,15 +332,10 @@ async function ensurePublicWorkspaceFixture() {
       .from(pstBlueprintsTable)
       .where(eq(pstBlueprintsTable.projectId, project.id));
     if (!existingBlueprint) {
-      const fixtureBlueprint = makeBlueprint(
-        project.id,
-        project.problemStatement,
-        project.targetUser,
-        project.desiredOutcome,
-        publicWorkspaceFixture.blueprintId,
-      );
+      const fixtureBlueprint = makePublicWorkspaceFixtureBlueprint();
       await db.insert(pstBlueprintsTable).values({
         ...fixtureBlueprint,
+        projectId: project.id,
         version: publicWorkspaceFixture.version,
       });
     }
@@ -507,11 +372,6 @@ async function ensurePublicWorkspaceFixture() {
     throw new Error("Public PST fixture blueprint could not be initialized.");
   }
 
-  const snapshot = compilerReadyPublicFixtureSnapshot(await releaseSnapshot(
-    project,
-    blueprint,
-    publicWorkspaceFixture.version,
-  ));
   const [existingRelease] = await db
     .select()
     .from(pstReleasesTable)
@@ -523,13 +383,43 @@ async function ensurePublicWorkspaceFixture() {
     );
 
   if (!existingRelease) {
+    const authoredBlueprint = {
+      ...blueprint,
+      ...makePublicWorkspaceFixtureBlueprint(),
+      projectId: project.id,
+      version: publicWorkspaceFixture.version,
+      updatedAt: blueprint.updatedAt,
+    };
+    const candidate = materializeCompilerReadySnapshot(await releaseSnapshot(
+      project,
+      authoredBlueprint,
+      publicWorkspaceFixture.version,
+    ));
+    if (candidate.status === "BLOCKED") {
+      throw new Error(`Public PST fixture is not Compiler-ready: ${candidate.errors.join(" ")}`);
+    }
+    const createdAt = new Date();
+    const executable = compileExecutableRelease({
+      id: publicWorkspaceFixture.releaseId,
+      projectId: project.id,
+      version: publicWorkspaceFixture.version,
+      createdAt,
+    }, project.slug, candidate.snapshot);
+    if (executable.status === "BLOCKED") {
+      throw new Error(
+        `Public PST fixture is not executable: ${executable.diagnostics
+          .map(({ code, path }) => `${code} at ${path}`)
+          .join("; ")}`,
+      );
+    }
     await db
       .insert(pstReleasesTable)
       .values({
         id: publicWorkspaceFixture.releaseId,
         projectId: project.id,
         version: publicWorkspaceFixture.version,
-        snapshot,
+        snapshot: candidate.snapshot,
+        createdAt,
       })
       .onConflictDoNothing();
   }
@@ -1888,12 +1778,35 @@ router.post("/pst/projects/:projectId/publish", async (req, res): Promise<void> 
       }
 
       const version = await nextReleaseVersion(lockedProject.id, tx);
-      const snapshot = await releaseSnapshot(lockedProject, lockedBlueprint, version, tx);
-      await tx.insert(pstReleasesTable).values({
-        id: randomUUID(),
+      const releaseId = randomUUID();
+      const createdAt = new Date();
+      const candidate = materializeCompilerReadySnapshot(
+        await releaseSnapshot(lockedProject, lockedBlueprint, version, tx),
+      );
+      if (candidate.status === "BLOCKED") {
+        throw new PublishRequirementError(
+          `Release is not Compiler-ready: ${candidate.errors.join(" ")}`,
+        );
+      }
+      const executable = compileExecutableRelease({
+        id: releaseId,
         projectId: lockedProject.id,
         version,
-        snapshot,
+        createdAt,
+      }, lockedProject.slug, candidate.snapshot);
+      if (executable.status === "BLOCKED") {
+        throw new PublishRequirementError(
+          `Release is not executable: ${executable.diagnostics
+            .map(({ code, path }) => `${code} at ${path}`)
+            .join("; ")}`,
+        );
+      }
+      await tx.insert(pstReleasesTable).values({
+        id: releaseId,
+        projectId: lockedProject.id,
+        version,
+        snapshot: candidate.snapshot,
+        createdAt,
       });
       await tx.update(pstBlueprintsTable)
         .set({ version, updatedAt: new Date() })
@@ -1962,6 +1875,16 @@ router.post("/pst/projects/:projectId/releases/:releaseId/restore", async (req, 
     return;
   }
   const snapshot = release.snapshot;
+  const restoredWorkflow = snapshot.workflow.map((step, index) => ({
+    ...step,
+    configuration: {
+      ...(step.configuration ?? {}),
+      ...(index === 0 && snapshot.components.length
+        ? { authoredComponents: snapshot.components }
+        : {}),
+    },
+  }));
+  const factoryComponents = snapshot.factoryComponents ?? snapshot.components;
   await db.transaction(async (tx) => {
     await tx.update(pstProjectsTable).set({
       name: snapshot.project.name,
@@ -1987,7 +1910,7 @@ router.post("/pst/projects/:projectId/releases/:releaseId/restore", async (req, 
       knowledgeRequirements: snapshot.blueprint.knowledgeRequirements,
       componentRequirements: snapshot.blueprint.componentRequirements,
       aiRequirements: snapshot.blueprint.aiRequirements,
-      workflow: snapshot.workflow,
+      workflow: restoredWorkflow,
       expectedOutput: snapshot.blueprint.expectedOutput,
       actionPlan: snapshot.blueprint.actionPlan,
       nextStep: snapshot.blueprint.nextStep,
@@ -1995,8 +1918,17 @@ router.post("/pst/projects/:projectId/releases/:releaseId/restore", async (req, 
       updatedAt: new Date(),
     }).where(eq(pstBlueprintsTable.projectId, access.project.id));
     await tx.delete(pstProjectComponentsTable).where(eq(pstProjectComponentsTable.projectId, access.project.id));
-    if (snapshot.components.length) {
-        await tx.insert(pstProjectComponentsTable).values(snapshot.components.map((component) => ({
+    if (factoryComponents.length) {
+      const assetIds = factoryComponents.map(({ assetId }) => assetId);
+      const existingAssets = await tx
+        .select({ id: pstAssetsTable.id })
+        .from(pstAssetsTable)
+        .where(inArray(pstAssetsTable.id, assetIds));
+      const existingAssetIds = new Set(existingAssets.map(({ id }) => id));
+      const restorableComponents = factoryComponents.filter(({ assetId }) =>
+        existingAssetIds.has(assetId));
+      if (restorableComponents.length) {
+        await tx.insert(pstProjectComponentsTable).values(restorableComponents.map((component) => ({
           assetId: component.assetId,
           name: component.name,
           type: component.type,
@@ -2006,6 +1938,7 @@ router.post("/pst/projects/:projectId/releases/:releaseId/restore", async (req, 
           id: randomUUID(),
           projectId: access.project.id,
         })));
+      }
     }
   });
   await addEvent("PST_RELEASE_RESTORED", `${access.project.name} release ${release.version} was restored to the draft.`, access.project.id);

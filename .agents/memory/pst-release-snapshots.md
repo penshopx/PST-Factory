@@ -44,3 +44,16 @@ Release configuration must reject credential-like data and malformed rule/provid
 **Why:** Silent omission makes compilation depend on live defaults, while retained credentials would leak secrets into release history.
 
 **How to apply:** Recursively inspect declarative configuration, block credential-bearing keys, and fail publication when a configured rule or provider is incomplete.
+
+Modern publication must compile the exact candidate snapshot before inserting
+the release or marking the project published. Keep executable component
+declarations separate from restorable Factory component references.
+
+**Why:** Discovering an incomplete modern snapshot only when the public route is
+opened creates a published-but-unusable release. Executable component identities
+also are not Asset Library foreign keys and cannot safely restore draft rows.
+
+**How to apply:** Materialize draft authoring metadata into strict canonical and
+Compiler-Ready data, run the complete Compiler pipeline in the publication
+transaction, and restore Factory rows only from their separately snapshotted
+library references.

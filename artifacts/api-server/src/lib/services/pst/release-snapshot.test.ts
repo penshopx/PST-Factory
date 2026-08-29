@@ -1,12 +1,83 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { PstReleaseSnapshot, WorkflowStep } from "@workspace/db";
+import { workflowFromStructure } from "./manufacturing";
+import { compileExecutableRelease } from "./executable-release";
 import {
+  materializeCompilerReadySnapshot,
   releaseSnapshotHash,
   releaseSnapshotHashAlgorithm,
   releaseSnapshotHashMatches,
   resolveReleaseDeclarations,
 } from "./release-snapshot";
+
+function modernSnapshot(workflow: WorkflowStep[]): PstReleaseSnapshot {
+  const payload: Omit<PstReleaseSnapshot, "snapshotHash"> = {
+    sourceSchemaVersion: "pst-release-snapshot.v1",
+    snapshotHashAlgorithm: releaseSnapshotHashAlgorithm,
+    project: {
+      name: "Modern PST",
+      description: "Compiler-ready release proof.",
+      status: "PUBLISHED",
+      version: "v1.0",
+      domain: "General",
+      family: "Assessment",
+      series: "Core",
+      problemStatement: "A measurable problem",
+      targetUser: "Operator",
+      desiredOutcome: "A practical action",
+      productDna: {
+        problem: "A measurable problem",
+        user: "Operator",
+        journey: ["Question", "Assess", "Act"],
+        components: [],
+        intelligence: "Declarative",
+        outcome: "A practical action",
+      },
+      qaStatus: "PASS",
+      publicationStatus: "PUBLISHED",
+    },
+    blueprint: {
+      id: "blueprint-modern",
+      projectId: "project-modern",
+      problem: "A measurable problem",
+      targetUser: "Operator",
+      desiredOutcome: "A practical action",
+      problemType: "Assessment",
+      journey: ["Question", "Assess", "Act"],
+      knowledgeRequirements: [],
+      componentRequirements: [],
+      aiRequirements: [],
+      workflow,
+      expectedOutput: ["A practical action"],
+      actionPlan: ["Complete the journey"],
+      nextStep: "Publish",
+      version: "v1.0",
+      updatedAt: "2026-08-29T00:00:00.000Z",
+    },
+    workflow,
+    pattern: {
+      id: "pattern-assessment",
+      name: "Assessment pattern",
+      version: "v1.0",
+      steps: workflow.map(({ title }) => title),
+    },
+    components: [{
+      id: "factory-component",
+      assetId: "asset-factory-component",
+      name: "Factory component",
+      type: "TOOL",
+      source: "Asset Library",
+      version: "v1.0",
+      status: "READY",
+      required: true,
+      configuration: { description: "Authoring-only metadata" },
+    }],
+    rules: [],
+    providers: [],
+  };
+  return { ...payload, snapshotHash: releaseSnapshotHash(payload) };
+}
 
 test("release snapshot hash is stable across object key ordering", () => {
   const left = {
@@ -108,4 +179,55 @@ test("release snapshot rejects incomplete declarations and credential-like confi
   assert.equal(declarations.errors.some((error) => error.includes("not a complete release rule")), true);
   assert.equal(declarations.errors.filter((error) => error.includes("credential-like data")).length, 3);
   assert.equal(declarations.errors.some((error) => error.includes("tokenLimit")), false);
+});
+
+test("modern release materialization is deterministic and compiler-complete", () => {
+  const workflow = workflowFromStructure(
+    ["Questions", "Scoring", "Analysis", "Recommendation"],
+    { type: "pattern", id: "pattern-assessment", name: "Assessment pattern" },
+  );
+  const source = modernSnapshot(workflow);
+  const first = materializeCompilerReadySnapshot(source);
+  const second = materializeCompilerReadySnapshot(source);
+  assert.deepEqual(first, second);
+  assert.equal(first.status, "READY");
+  if (first.status !== "READY") return;
+
+  assert.equal(first.snapshot.factoryComponents?.[0]?.id, "factory-component");
+  assert.ok(first.snapshot.components.length > 0);
+  assert.deepEqual(
+    Object.keys(first.snapshot.workflow[0]!.configuration!).sort(),
+    ["canonical", "compilerReady"],
+  );
+  assert.equal(
+    first.snapshot.components.every((component) =>
+      Object.keys(component.configuration ?? {}).join(",") === "compilerReady"),
+    true,
+  );
+  const compiled = compileExecutableRelease({
+    id: "release-modern",
+    projectId: "project-modern",
+    version: "v1.0",
+    createdAt: new Date("2026-08-29T00:00:00.000Z"),
+  }, "modern-pst", first.snapshot);
+  assert.equal(compiled.status, "COMPILED");
+});
+
+test("modern release materialization rejects incomplete authoring configuration", () => {
+  const source = modernSnapshot([{
+    id: "ambiguous",
+    type: "UNRESOLVED",
+    title: "Ambiguous",
+    description: "No executable declaration.",
+    inputs: [],
+    outputs: [],
+    dependencies: [],
+    nextStep: "",
+    configuration: { sourceId: "pattern-ambiguous" },
+  }]);
+  const result = materializeCompilerReadySnapshot(source);
+  assert.equal(result.status, "BLOCKED");
+  if (result.status === "BLOCKED") {
+    assert.match(result.errors[0]!, /canonical and compilerReady/);
+  }
 });

@@ -309,6 +309,7 @@ export interface PstReleaseSnapshot {
   pattern?: PstReleasePattern;
   recipe?: PstReleaseRecipe;
   components: PstReleaseComponent[];
+  factoryComponents?: PstReleaseComponent[];
   rules?: PstReleaseRule[];
   providers?: PstReleaseProvider[];
 }

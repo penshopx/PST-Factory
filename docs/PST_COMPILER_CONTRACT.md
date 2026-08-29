@@ -44,6 +44,20 @@ requirement, or the full component configuration, the release assembler must
 version and embed that resolved data before compilation. The Compiler MUST NOT
 fill that gap by querying mutable Factory tables at runtime.
 
+Builder authoring may retain source-selection metadata while a draft is being
+reviewed, but publication materializes workflow configuration to the strict
+`canonical` and `compilerReady` declarations only. Executable component
+declarations and restorable Factory component references are stored separately
+inside the immutable snapshot so Compiler input does not depend on Asset Library
+rows and draft restore does not treat executable identities as database foreign
+keys.
+
+Before a release row is inserted or the project is marked published, the
+candidate snapshot MUST pass the same Canonical Source → Validator →
+Manufacturing IR → Compiler-Ready IR → Compiler pipeline used by public
+delivery. A blocked candidate is a publish requirement failure, not a public
+workspace `503` discovered after publication.
+
 The public customer response is an allowlisted projection of the executable
 contract. It MUST NOT expose factory ownership, membership, QA internals,
 library usage, source identifiers that are not needed by the runtime, provider
@@ -480,6 +494,7 @@ type PstCompileResult =
 
 At minimum, validation MUST cover:
 
+- the candidate snapshot compiles successfully before publication commits;
 - release is approved/published and project and publication statuses are both
   `PUBLISHED`;
 - release snapshot is present, internally consistent, and matches its
