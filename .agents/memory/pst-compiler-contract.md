@@ -86,3 +86,26 @@ change.
 task jumps directly from snapshots to a large Compiler without defining the
 canonical schema and IR, revise the scope or defer it rather than building
 product-specific shortcuts.
+
+Compiler v1 must not start until the IR-to-runtime operation contract is
+explicit: opaque node configuration, raw conditional predicates, undeclared
+references, and completion without an outcome identity are blockers.
+
+**Why:** A generic compiler can only emit safe executable definitions when every
+operation, transition, persistence target, rule reference, and output mapping
+has typed declarative semantics.
+
+**How to apply:** Freeze an allowlisted `ExecutablePstDefinitionV1`, require
+validated IR as the only input, map branches to rule IDs and step IDs, and
+reject opaque or unbound configuration before emission.
+
+Compiler architecture review must distinguish representability proof from
+execution proof. Three fixtures passing the same schema/IR pipeline does not
+yet prove three executable customer journeys.
+
+**Why:** A one-node outcome fixture can hide missing input, scoring, rule,
+action, and persistence semantics while appearing product-neutral.
+
+**How to apply:** Require full Cashflow, Decision, and Compliance graph fixtures,
+deterministic golden outputs, zero product branches, and zero DB/network/provider
+calls before declaring Compiler v1 ready.
