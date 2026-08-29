@@ -71,3 +71,18 @@ without linear technical debt or one-off product migrations.
 engine. New schema versions may add normalizers, but the Compiler and Runtime
 should consume the canonical representation rather than branching on product
 or historical input shape.
+
+The preferred milestone order is Canonical PST Schema → Manufacturing IR →
+Validator → Compiler v1 → Executable PST Definition → Generic Runtime →
+Three-PST Proof → Versioned Normalizer → Factory Learning. The canonical schema
+and IR must be stable enough to serve as the shared language before normalizer
+work is expanded.
+
+**Why:** Normalizing multiple historical inputs before the canonical contract is
+settled would encode assumptions too early and make compatibility work harder to
+change.
+
+**How to apply:** Review Compiler-related assignments for this sequence. If a
+task jumps directly from snapshots to a large Compiler without defining the
+canonical schema and IR, revise the scope or defer it rather than building
+product-specific shortcuts.
