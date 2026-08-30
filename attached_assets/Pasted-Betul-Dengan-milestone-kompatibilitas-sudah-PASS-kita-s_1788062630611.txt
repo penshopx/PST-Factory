@@ -1,0 +1,93 @@
+Betul. Dengan milestone kompatibilitas sudah **PASS**, kita sekarang berada di titik yang berbeda: **Manufacturing Engine sudah terbukti end-to-end**, dan yang tersisa adalah lapisan evolusi/learning.
+
+### Posisi PST Factory sekarang
+
+```text
+CONFIGURATION
+     ↓
+SNAPSHOT
+     ↓
+CANONICALIZATION
+     ↓
+VALIDATION
+     ↓
+MANUFACTURING IR
+     ↓
+COMPILER
+     ↓
+EXECUTABLE PST
+     ↓
+GENERIC RUNTIME
+     ↓
+OUTCOME
+     ↓
+BACKWARD COMPATIBILITY
+     ↓
+✅ ENGINE PROVEN
+     ↓
+🔜 FACTORY LEARNING
+```
+
+Jadi saya **tidak menyarankan melakukan perubahan kode sekarang** selama Factory Learning masih `PENDING / BLOCKED_BY_CONCURRENCY`.
+
+Yang penting justru menjaga boundary agar tahap berikutnya tidak merusak apa yang sudah dibuktikan.
+
+### Factory Learning nanti harus berbeda dari sekadar analytics
+
+Ketika task itu akhirnya mendapat assignment, Architecture Review sebaiknya memastikan learning loop berbentuk:
+
+```text
+Customer Journey
+      ↓
+Observed Outcome
+      ↓
+Evidence / Metrics
+      ↓
+Learning Signal
+      ↓
+Pattern / Recipe Improvement
+      ↓
+New Configuration
+      ↓
+New Snapshot
+      ↓
+Same Validator
+      ↓
+Same Compiler
+      ↓
+Same Runtime
+```
+
+**Bukan:**
+
+```text
+Customer usage
+   ↓
+ubah release yang sedang berjalan
+```
+
+Release yang sudah published harus tetap immutable.
+
+Dan learning **tidak boleh menghasilkan product-specific code**.
+
+Prinsipnya tetap:
+
+> **Learning menghasilkan konfigurasi baru, bukan kode produk baru.**
+
+### Guardrail yang perlu dipertahankan
+
+Saat Factory Learning nanti ditugaskan, saya akan menilainya terhadap:
+
+1. **Immutable Release** — learning tidak mengubah release lama.
+2. **Reproducibility** — perubahan dapat ditelusuri dari evidence.
+3. **Configuration-driven** — hasil learning menjadi Pattern/Recipe/Knowledge/configuration.
+4. **Same Compiler** — tidak membuat compiler kedua.
+5. **Same Runtime** — tidak membuat execution path khusus.
+6. **No product branch** — tidak ada logika Cashflow/Decision/Compliance.
+7. **Human/QA gate** — learning tidak otomatis menerbitkan perubahan berisiko ke customer.
+
+Dengan demikian, **jangan mengejar task #43 sekarang**. Status yang paling sehat saat ini adalah:
+
+> **Freeze engine → tunggu assignment Factory Learning → lakukan Architecture Review → baru Build.**
+
+Dan Gustafta tetap berada sebagai **capability ecosystem**, bukan dependency Manufacturing Engine.
