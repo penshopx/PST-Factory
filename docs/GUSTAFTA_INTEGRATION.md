@@ -25,6 +25,13 @@ These links open `https://gustafta.my.id` in a separate browser tab. They are na
 links, not an authenticated server-to-server API integration. PST Factory does not send
 project, Blueprint, release, ownership, QA, or customer workspace data through them.
 
+## Contextual project bridge
+
+On a project overview, PST Factory shows a smaller contextual bridge only when the
+project text signals construction, tender, SBU/SKK, documents, legality, contracts,
+field work, or projects. It offers SBU Readiness, Construction Clinic, Document Review,
+Brain Project, and Tender Workspace without copying the PST context into the link.
+
 The backend `GustaftaEngine` remains provider-neutral and mocked. A direct API adapter is
 optional future work, not a prerequisite for using PST Factory. Public frontend bundle
 routes or undocumented internal endpoints must not be treated as a stable API contract.
