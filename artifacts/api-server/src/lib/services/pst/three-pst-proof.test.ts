@@ -7,6 +7,7 @@ import {
   prepareCompilerReadyIr,
   pstCanonicalJsonHash,
   pstCompilerVersion,
+  runPstRuntime,
   validateCanonicalSource,
   type PstReleaseSnapshot,
   type PstReleaseRuleSnapshot,
@@ -312,9 +313,23 @@ function fixtureFor(key: ThreePstFixture["key"]): ThreePstFixture {
             output: "derived.analysis",
             providerId: providers[0]!.id,
           },
+          next: { type: "step", target: "persist-analysis" },
+        }),
+        step({
+          id: "persist-analysis",
+          type: "PERSIST",
+          title: "Persist analysis",
+          description: "Retain the configured analysis in the customer session.",
+          inputs: ["derived.analysis"],
+          dependencies: ["analysis"],
+          operation: {
+            type: "persist",
+            target: "derived.analysis",
+            retention: "customer_session",
+          },
           next: { type: "step", target: "action" },
         }),
-      ]),
+      ], { input: "derived.analysis", dependencies: ["persist-analysis"] }),
     };
   }
 
@@ -604,6 +619,125 @@ test("one shared pipeline and Compiler produce three distinct executable PSTs", 
       `Compiler must not contain a ${productName} product branch`,
     );
   }
+});
+
+test("one generic Runtime executes the three compiled PST definitions", () => {
+  const cases = [
+    {
+      key: "cashflow",
+      answer: "cashflow evidence",
+      visited: ["context", "answers", "scoring", "analysis", "persist-analysis", "action", "outcome"],
+    },
+    {
+      key: "decision",
+      answer: "vendor evidence",
+      visited: ["context", "answers", "scoring", "recommendation", "action", "outcome"],
+    },
+    {
+      key: "compliance",
+      answer: "complete",
+      visited: ["context", "answers", "rules", "action", "outcome"],
+    },
+  ] as const;
+
+  const completed = cases.map(({ key, answer, visited }) => {
+    const definition = compileFixture(fixtureFor(key)).definition;
+    const inputs = [
+      { "context.organization": "Acme" },
+      { "answers.primary": answer },
+    ];
+    const first = runPstRuntime(definition, inputs);
+    const replay = runPstRuntime(definition, inputs);
+
+    assert.equal(first.status, "COMPLETED", `${key} compiled journey must complete`);
+    assert.deepEqual(replay, first, `${key} runtime replay must be deterministic`);
+    if (first.status !== "COMPLETED") return first;
+
+    assert.equal(first.outcomeId, "outcome");
+    assert.deepEqual(first.session.visitedStepIds, visited);
+    assert.deepEqual(first.session.events, ["outcome:outcome"]);
+    assert.deepEqual(first.output, {
+      "derived.action": first.session.state.derived.action,
+    });
+    return first;
+  });
+
+  const [cashflow, decision, compliance] = completed;
+  assert.equal(cashflow.status, "COMPLETED");
+  assert.equal(decision.status, "COMPLETED");
+  assert.equal(compliance.status, "COMPLETED");
+  if (cashflow.status !== "COMPLETED"
+    || decision.status !== "COMPLETED"
+    || compliance.status !== "COMPLETED") return;
+
+  assert.equal(cashflow.session.scores["cashflow-scoring"], "cashflow evidence".length);
+  assert.deepEqual(cashflow.session.state.derived.analysis, {
+    template: "Interpret cashflow signals.",
+    inputs: ["cashflow evidence".length],
+  });
+  assert.deepEqual(cashflow.session.state.derived.action, {
+    items: [{
+      id: "next-action",
+      title: "Next action",
+      description: "Cashflow Health Check action plan",
+    }],
+    basedOn: [cashflow.session.state.derived.analysis],
+  });
+
+  assert.equal(decision.session.scores["decision-scoring"], "vendor evidence".length);
+  assert.deepEqual(decision.session.state.derived.recommendation, {
+    template: "Recommend a decision next step.",
+    inputs: ["vendor evidence".length],
+  });
+  assert.deepEqual(decision.session.state.derived.action, {
+    items: [{
+      id: "next-action",
+      title: "Next action",
+      description: "Decision Readiness action plan",
+    }],
+    basedOn: [decision.session.state.derived.recommendation],
+  });
+
+  assert.equal(compliance.session.evaluatedRules["compliance-document-complete"], true);
+  assert.equal(compliance.session.state.derived.complianceFlag, true);
+  assert.equal(compliance.session.state.derived.analysis, undefined);
+  assert.deepEqual(compliance.session.state.derived.action, {
+    items: [{
+      id: "next-action",
+      title: "Next action",
+      description: "Document Compliance action plan",
+    }],
+    basedOn: [true],
+  });
+
+  assert.equal(new Set(completed.map((result) =>
+    result.status === "COMPLETED" ? JSON.stringify(result.output) : result.status)).size, 3);
+});
+
+test("compiled Document Compliance takes the default Runtime branch when its rule does not match", () => {
+  const definition = compileFixture(fixtureFor("compliance")).definition;
+  const inputs = [
+    { "context.organization": "Acme" },
+    { "answers.primary": "incomplete" },
+  ];
+  const result = runPstRuntime(definition, inputs);
+  const replay = runPstRuntime(definition, inputs);
+
+  assert.deepEqual(replay, result, "default compliance branch must replay deterministically");
+  assert.equal(result.status, "COMPLETED");
+  if (result.status !== "COMPLETED") return;
+
+  assert.deepEqual(
+    result.session.visitedStepIds,
+    ["context", "answers", "rules", "analysis", "action", "outcome"],
+  );
+  assert.equal(result.session.evaluatedRules["compliance-document-complete"], false);
+  assert.equal(result.session.state.derived.complianceFlag, undefined);
+  assert.deepEqual(result.session.state.derived.analysis, {
+    template: "Interpret compliance signals.",
+    inputs: [null],
+  });
+  assert.deepEqual(result.session.events, ["outcome:outcome"]);
 });
 
 test("three-PST executable outputs are deterministic golden projections", () => {

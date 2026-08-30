@@ -1,0 +1,112 @@
+Ya. Dari rangkaian perkembangan terakhir, saya sarankan **berhenti dulu menambah sinergi Gustafta** dan kembali ke jalur pembuktian inti PST Factory.
+
+Posisi kita sekarang:
+
+```text
+Schema
+ ↓
+Normalizer
+ ↓
+Canonical Schema
+ ↓
+Pattern / Recipe / Knowledge
+ ↓
+Blueprint
+ ↓
+Immutable Snapshot
+ ↓
+Canonical Source
+ ↓
+Manufacturing IR
+ ↓
+Validator
+ ↓
+Compiler-Ready IR
+ ↓
+Compiler v1
+ ↓
+Executable PST Definition
+ ↓
+✅ Three-PST Manufacturing Proof
+ ↓
+🔜 Generic Runtime Proof
+ ↓
+🔜 Backward Compatibility
+ ↓
+🔜 Factory Learning
+```
+
+### Langkah berikutnya: Generic Runtime Proof
+
+Targetnya bukan membuat runtime baru khusus tiga produk. Justru kita harus membuktikan bahwa **runtime yang sama** dapat menerima tiga `ExecutablePstDefinitionV1`.
+
+Acceptance idealnya:
+
+| Proof      | Input            | Engine                | Expected           |
+| ---------- | ---------------- | --------------------- | ------------------ |
+| Cashflow   | Executable PST A | **Runtime yang sama** | Cashflow outcome   |
+| Decision   | Executable PST B | **Runtime yang sama** | Decision outcome   |
+| Compliance | Executable PST C | **Runtime yang sama** | Compliance outcome |
+
+Dan Architecture Review harus secara eksplisit mencari:
+
+```text
+❌ if product === "cashflow"
+❌ if product === "decision"
+❌ if product === "compliance"
+❌ handler khusus produk
+❌ schema runtime khusus produk
+```
+
+Yang boleh berbeda hanyalah **configuration/executable definition**.
+
+### Setelah itu: Compatibility Proof
+
+Baru kita buktikan:
+
+```text
+Legacy PST
+    ↓
+Versioned Normalizer
+    ↓
+Canonical Schema
+    ↓
+Validator
+    ↓
+Compiler
+    ↓
+Executable PST
+    ↓
+Same Generic Runtime
+```
+
+Acceptance minimum:
+
+**PST lama → Load → Validate → Run → Publish**
+
+tanpa rewrite manual.
+
+### Gustafta
+
+Integrasi yang baru saja ditambahkan sudah cukup untuk saat ini. Bridge seperti **Bedah Dokumen**, **KontrakClaw**, dan **KonstraClaw/BrainClaw** sebaiknya dianggap sebagai **contextual capability layer**, bukan bagian dari manufacturing engine.
+
+Dengan kata lain:
+
+> **Gustafta boleh menjadi ecosystem capability, tetapi tidak boleh menjadi dependency Compiler atau Runtime.**
+
+Itu justru menjaga prinsip arsitektur kita.
+
+### Jadi prioritas sekarang
+
+```text
+1. 🔒 Freeze Three-PST Proof
+2. ▶️ Generic Runtime Proof
+3. ▶️ Three-PST Runtime Acceptance
+4. 🔒 Freeze Runtime
+5. ▶️ Backward Compatibility Proof
+6. ▶️ Publish/Release Compatibility
+7. ▶️ Factory Learning
+8. 🔗 Baru evaluasi integrasi eksternal lanjutan
+```
+
+**Jangan membuat task baru secara otomatis.** Jika sudah ada task yang mencakup Generic Runtime Proof, gunakan task tersebut. Kalau assignment berikutnya menyentuh **Runtime, Schema, Pattern, Recipe, Blueprint, Snapshot, atau Compiler**, lakukan **Architecture Review Gate terlebih dahulu** seperti guardrail yang sudah kita sepakati.
