@@ -1305,6 +1305,44 @@ function PublicHome() {
             </div>
           </section>
 
+          {/* Workflow explanation */}
+          <section id="alur-kerja" className="mt-32 sm:mt-48 lg:mt-56" data-testid="section-workflow-explanation">
+            <div className="mx-auto max-w-3xl text-center">
+              <p className="font-mono text-[10px] uppercase tracking-[.22em] text-[#16d9f5]">Alur dari ide ke penggunaan</p>
+              <h2 className="mt-4 text-3xl font-bold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
+                Setiap langkah punya arah yang jelas.
+              </h2>
+              <p className="mt-6 text-lg leading-relaxed text-[#91a9bd]">
+                PST Factory menjaga proses tetap utuh: mulai dari memahami masalah, merancang pendekatan, hingga membuka ruang kerja yang siap dipakai.
+              </p>
+            </div>
+            <div className="mx-auto mt-12 grid max-w-5xl gap-4 md:grid-cols-2">
+              {[
+                { title: 'Tentukan arah', detail: 'Rumuskan masalah, pengguna, dan hasil yang ingin dicapai.', icon: Target },
+                { title: 'Susun rancangan', detail: 'Hubungkan pola kerja, pengetahuan, dan komponen menjadi satu alur.', icon: FileCode2 },
+                { title: 'Rakit pengalaman', detail: 'Ubah rancangan menjadi ruang kerja yang memandu tindakan pengguna.', icon: LayoutDashboard },
+                { title: 'Uji lalu terbitkan', detail: 'Periksa setiap bagian sebelum membuka solusi untuk tim Anda.', icon: Rocket },
+              ].map(({ title, detail, icon: Icon }, index) => (
+                <div
+                  key={title}
+                  className="group relative overflow-hidden rounded-2xl border border-[#2a4054] bg-[#0d1522] p-6 transition-colors hover:border-[#16d9f5]/60"
+                  data-testid={`card-workflow-${index}`}
+                >
+                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#16d9f5]/50 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#16d9f5]/10 text-[#16d9f5]">
+                      <Icon size={21} />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-[#edf7ff]">{title}</h3>
+                      <p className="mt-2 text-sm leading-6 text-[#91a9bd]">{detail}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
           {/* Desire */}
           <section className="mt-32 sm:mt-48 lg:mt-56">
             <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-24">
