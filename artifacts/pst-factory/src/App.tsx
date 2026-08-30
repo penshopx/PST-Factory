@@ -1183,14 +1183,14 @@ function PublicHome() {
       </div>
 
       <div className="relative z-10 mx-auto flex min-h-[100dvh] max-w-7xl flex-col px-6 sm:px-10 lg:px-12">
-        <header className="flex h-24 items-center justify-between gap-4 py-4">
-          <Link href="/" className="focus-ring block shrink-0 rounded-xl" data-testid="link-public-logo">
-            <img src={`${basePath}/logo.svg`} alt="PST Factory" className="h-9 w-auto" />
+        <header className="flex flex-col items-stretch gap-4 py-6 sm:flex-row sm:items-center sm:justify-between">
+          <Link href="/" className="focus-ring block w-full max-w-[420px] shrink-0 rounded-xl sm:w-auto sm:max-w-none" data-testid="link-public-logo">
+            <img src={`${basePath}/logo.svg`} alt="PST Factory" className="h-auto w-full sm:h-28 sm:w-auto" />
           </Link>
-          <nav className="flex items-center gap-3">
-            <Link href="/video" className="focus-ring hidden rounded-lg px-4 py-2 text-sm font-semibold text-[#a9c1d3] transition-colors hover:text-[#edf7ff] md:inline-flex" data-testid="link-process-film">Film proses</Link>
-            <Link href="/sign-in" className="focus-ring rounded-lg px-4 py-2 text-sm font-semibold text-[#a9c1d3] transition-colors hover:text-[#edf7ff]" data-testid="link-sign-in">Masuk</Link>
-            <Link href="/sign-up" className="focus-ring rounded-lg bg-[#16d9f5] px-4 py-2 text-sm font-bold text-[#030910] transition-colors hover:bg-[#72edff]" data-testid="link-sign-up">Buat akun</Link>
+          <nav className="flex items-center justify-end gap-2">
+            <Link href="/video" className="focus-ring hidden rounded-lg px-4 py-2.5 text-sm font-semibold text-[#a9c1d3] transition-colors hover:text-[#edf7ff] sm:inline-flex" data-testid="link-process-film">Film proses</Link>
+            <Link href="/sign-in" className="focus-ring rounded-lg px-4 py-2.5 text-sm font-semibold text-[#a9c1d3] transition-colors hover:text-[#edf7ff]" data-testid="link-sign-in">Masuk</Link>
+            <Link href="/sign-up" className="focus-ring rounded-lg border border-[#16d9f5]/50 bg-[#16d9f5] px-4 py-2.5 text-sm font-bold text-[#030910] transition-colors hover:bg-[#72edff]" data-testid="link-sign-up">Buat akun</Link>
           </nav>
         </header>
 
@@ -1215,6 +1215,12 @@ function PublicHome() {
               <Link href="/video" className="focus-ring group flex h-14 w-full items-center justify-center gap-2 rounded-xl border border-[#2a4054] bg-[#101a2a] px-8 text-base font-bold text-[#edf7ff] transition-colors hover:border-[#16d9f5]/50 hover:bg-[#16273a] sm:w-auto" data-testid="button-hero-video">
                 <Rocket size={18} className="text-[#16d9f5]" /> Lihat cara kerjanya
               </Link>
+            </div>
+            <div className="mt-14 flex flex-wrap justify-center gap-x-8 gap-y-3 font-mono text-[10px] uppercase tracking-[.16em] text-[#6f8ca3] animate-rise-3">
+              <span>Masalah → Rancangan</span>
+              <span>Rancangan → Perakitan</span>
+              <span>Perakitan → Periksa</span>
+              <span>Periksa → Terbitkan</span>
             </div>
           </section>
 
