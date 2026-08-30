@@ -1175,42 +1175,241 @@ function HomeRoute() {
 }
 
 function PublicHome() {
-  return <main className="min-h-[100dvh] overflow-hidden bg-[#07111d] text-[#edf7ff]">
-    <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_20%,rgba(22,217,245,.16),transparent_32%),linear-gradient(rgba(255,255,255,.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.035)_1px,transparent_1px)] bg-[size:auto,56px_56px,56px_56px]" />
-    <div className="relative mx-auto flex min-h-[100dvh] max-w-6xl flex-col px-6 py-6 sm:px-10">
-      <header className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <Link href="/" className="focus-ring block w-full max-w-[420px] shrink-0 rounded-xl sm:w-auto sm:max-w-none" data-testid="link-public-logo">
-         <img src={`${basePath}/logo.svg`} alt="PST Factory" className="h-auto w-full sm:h-28 sm:w-auto" />
-        </Link>
-        <nav className="flex items-center justify-end gap-2">
-           <Link href="/video" className="hidden rounded-lg px-4 py-2.5 text-sm font-semibold text-[#a9c1d3] transition-colors hover:text-[#edf7ff] sm:inline-flex" data-testid="link-process-film">Film proses</Link>
-          <Link href="/sign-in" className="rounded-lg px-4 py-2.5 text-sm font-semibold text-[#a9c1d3] transition-colors hover:text-[#edf7ff]" data-testid="link-sign-in">Masuk</Link>
-          <Link href="/sign-up" className="rounded-lg border border-[#16d9f5]/50 bg-[#16d9f5] px-4 py-2.5 text-sm font-bold text-[#07111d] transition-colors hover:bg-[#72edff]" data-testid="link-sign-up">Buat akun</Link>
-        </nav>
-      </header>
-      <section className="grid flex-1 items-center gap-12 py-20 lg:grid-cols-[1.05fr_.95fr]">
-        <div>
-           <p className="mb-6 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[.22em] text-[#16d9f5]"><span className="h-1.5 w-1.5 rounded-full bg-[#16d9f5] shadow-[0_0_16px_#16d9f5]" /> Studio produk untuk membuat solusi yang jelas</p>
-           <h1 className="max-w-3xl text-5xl font-extrabold leading-[1.04] tracking-[-.045em] sm:text-7xl">Ubah masalah menjadi <span className="text-[#16d9f5]">solusi siap pakai.</span></h1>
-           <p className="mt-7 max-w-xl text-lg leading-8 text-[#a9c1d3]">PST Factory membantu mengubah masalah yang rumit menjadi alat bantu penyelesaian masalah yang terstruktur dan bisa dipakai lagi — dari penjelasan awal hingga ruang kerja pengguna yang siap digunakan.</p>
-          <div className="mt-9 flex flex-wrap items-center gap-3">
-             <Link href="/sign-up" className="inline-flex items-center gap-2 rounded-lg bg-[#16d9f5] px-5 py-3.5 text-sm font-extrabold text-[#07111d] transition-transform hover:-translate-y-0.5 hover:bg-[#72edff]" data-testid="button-hero-sign-up">Mulai membuat solusi <ArrowRight size={16} /></Link>
-             <Link href="/sign-in" className="rounded-lg border border-[#2a4054] px-5 py-3.5 text-sm font-bold text-[#edf7ff] transition-colors hover:border-[#16d9f5]/60 hover:bg-[#102336]" data-testid="button-hero-sign-in">Masuk ke pabrik</Link>
-          </div>
-           <div className="mt-14 flex flex-wrap gap-x-8 gap-y-3 font-mono text-[10px] uppercase tracking-[.16em] text-[#6f8ca3]"><span>Masalah → Rancangan</span><span>Rancangan → Perakitan</span><span>Periksa → Terbitkan</span></div>
+  return (
+    <main className="min-h-[100dvh] overflow-x-hidden bg-[#030910] text-[#edf7ff] font-sans selection:bg-[#16d9f5]/30 selection:text-white">
+      <div className="absolute inset-0 z-0 opacity-40">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(22,217,245,.1),transparent_50%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.02)_1px,transparent_1px)] bg-[size:auto,48px_48px,48px_48px]" />
+      </div>
+
+      <div className="relative z-10 mx-auto flex min-h-[100dvh] max-w-7xl flex-col px-6 sm:px-10 lg:px-12">
+        <header className="flex h-24 items-center justify-between gap-4 py-4">
+          <Link href="/" className="focus-ring block shrink-0 rounded-xl" data-testid="link-public-logo">
+            <img src={`${basePath}/logo.svg`} alt="PST Factory" className="h-9 w-auto" />
+          </Link>
+          <nav className="flex items-center gap-3">
+            <Link href="/video" className="focus-ring hidden rounded-lg px-4 py-2 text-sm font-semibold text-[#a9c1d3] transition-colors hover:text-[#edf7ff] md:inline-flex" data-testid="link-process-film">Film proses</Link>
+            <Link href="/sign-in" className="focus-ring rounded-lg px-4 py-2 text-sm font-semibold text-[#a9c1d3] transition-colors hover:text-[#edf7ff]" data-testid="link-sign-in">Masuk</Link>
+            <Link href="/sign-up" className="focus-ring rounded-lg bg-[#16d9f5] px-4 py-2 text-sm font-bold text-[#030910] transition-colors hover:bg-[#72edff]" data-testid="link-sign-up">Buat akun</Link>
+          </nav>
+        </header>
+
+        <div className="flex-1 pb-24 pt-16 sm:pt-24 lg:pt-32">
+          {/* Attention */}
+          <section className="mx-auto max-w-4xl text-center">
+            <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-[#16d9f5]/20 bg-[#16d9f5]/5 px-4 py-1.5 font-mono text-xs font-medium text-[#16d9f5] animate-rise">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#16d9f5] shadow-[0_0_12px_#16d9f5]" />
+              Studio produk untuk membuat solusi nyata
+            </div>
+            <h1 className="text-balance text-5xl font-extrabold leading-[1.05] tracking-tight sm:text-7xl lg:text-8xl animate-rise-2">
+              Ubah masalah menjadi <span className="text-[#16d9f5]">solusi siap pakai.</span>
+            </h1>
+            <p className="mx-auto mt-8 max-w-2xl text-balance text-lg leading-relaxed text-[#91a9bd] animate-rise-3">
+              Ide yang berserakan tidak menghasilkan kemajuan. PST Factory menyatukan kebingungan menjadi arah yang jelas — dari penjelasan awal hingga ruang kerja yang terstruktur dan siap digunakan.
+            </p>
+            <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row animate-rise-3" style={{ animationDelay: '0.24s' }}>
+              <Link href="/sign-up" className="focus-ring group flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#16d9f5] px-8 text-base font-bold text-[#030910] transition-all hover:bg-[#72edff] hover:shadow-[0_0_32px_rgba(22,217,245,0.4)] sm:w-auto" data-testid="button-hero-sign-up">
+                Mulai membuat solusi
+                <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
+              </Link>
+              <Link href="/video" className="focus-ring group flex h-14 w-full items-center justify-center gap-2 rounded-xl border border-[#2a4054] bg-[#101a2a] px-8 text-base font-bold text-[#edf7ff] transition-colors hover:border-[#16d9f5]/50 hover:bg-[#16273a] sm:w-auto" data-testid="button-hero-video">
+                <Rocket size={18} className="text-[#16d9f5]" /> Lihat cara kerjanya
+              </Link>
+            </div>
+          </section>
+
+          {/* Interest */}
+          <section className="mt-32 sm:mt-48 lg:mt-56">
+            <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-24">
+              <div className="relative order-2 lg:order-1">
+                <div className="absolute -inset-10 rounded-full bg-[#16d9f5]/5 blur-3xl" />
+                <div className="relative rounded-2xl border border-[#2a4054] bg-[#0d1522] p-6 shadow-2xl sm:p-8">
+                  <div className="mb-6 flex items-center justify-between border-b border-[#1f3143] pb-4">
+                    <div>
+                      <p className="font-mono text-[10px] uppercase tracking-widest text-[#91a9bd]">Tahap Awal</p>
+                      <p className="mt-1 text-base font-bold text-[#edf7ff]">Rancangan Solusi</p>
+                    </div>
+                    <FileCode2 className="text-[#16d9f5]" size={24} />
+                  </div>
+                  <div className="space-y-4">
+                    <div className="rounded-xl border border-[#1f3143] bg-[#142031] p-4 transition-colors hover:border-[#16d9f5]/40">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#16d9f5]/10 text-[#16d9f5]">
+                          <Check size={16} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-[#edf7ff]">Pernyataan masalah</p>
+                          <p className="text-sm text-[#91a9bd]">Tajam dan dapat diamati.</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-[#1f3143] bg-[#142031] p-4 transition-colors hover:border-[#16d9f5]/40">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#16d9f5]/10 text-[#16d9f5]">
+                          <Check size={16} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-[#edf7ff]">Pola kerja</p>
+                          <p className="text-sm text-[#91a9bd]">Pilihan terpandu yang aman.</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-[#1f3143] bg-[#142031] p-4 transition-colors hover:border-[#16d9f5]/40">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#16d9f5]/10 text-[#16d9f5]">
+                          <Check size={16} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-[#edf7ff]">Pengguna</p>
+                          <p className="text-sm text-[#91a9bd]">Peran yang akan menggunakan alat.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="order-1 lg:order-2">
+                <h2 className="text-3xl font-bold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
+                  Dari kekacauan menuju kejelasan.
+                </h2>
+                <p className="mt-6 text-lg leading-relaxed text-[#91a9bd]">
+                  Setiap masalah yang rumit dipecah menjadi komponen dasar yang bisa dikelola. PST Factory memaksa Anda untuk memikirkan ulang keluhan sebagai pola yang dapat diamati dan ditindaklanjuti, menciptakan fondasi kuat sebelum pembuatan alat dimulai.
+                </p>
+                <ul className="mt-8 space-y-4">
+                  <li className="flex gap-4">
+                    <div className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#16d9f5]/20 text-[#16d9f5]">
+                      <ArrowRight size={14} />
+                    </div>
+                    <div>
+                      <strong className="block text-[#edf7ff]">Amati sinyal</strong>
+                      <span className="text-[#91a9bd]">Kumpulkan bukti yang tersebar di lapangan.</span>
+                    </div>
+                  </li>
+                  <li className="flex gap-4">
+                    <div className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#16d9f5]/20 text-[#16d9f5]">
+                      <ArrowRight size={14} />
+                    </div>
+                    <div>
+                      <strong className="block text-[#edf7ff]">Beri bentuk pada masalah</strong>
+                      <span className="text-[#91a9bd]">Tentukan target dan arah perbaikan yang terukur.</span>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          {/* Desire */}
+          <section className="mt-32 sm:mt-48 lg:mt-56">
+            <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-24">
+              <div>
+                <h2 className="text-3xl font-bold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
+                  Bukan sekadar dokumen. <span className="text-[#16d9f5]">Sebuah ruang kerja.</span>
+                </h2>
+                <p className="mt-6 text-lg leading-relaxed text-[#91a9bd]">
+                  Setiap masalah yang selesai dirancang akan dirakit menjadi ruang kerja interaktif. Dengan menggunakan komponen siap pakai dan pola pengalaman yang konsisten, pengguna akhir Anda akan dipandu langkah demi langkah menuju hasil yang dapat dipertanggungjawabkan.
+                </p>
+                <div className="mt-8 flex flex-col gap-4">
+                  <div className="flex items-start gap-4 rounded-xl border border-[#2a4054] bg-[#0d1522] p-5 transition-colors hover:border-[#16d9f5]/50">
+                    <div className="rounded-lg bg-[#16d9f5]/10 p-2 text-[#16d9f5]">
+                      <LayoutDashboard size={20} />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-[#edf7ff]">Antarmuka interaktif</h4>
+                      <p className="mt-1 text-sm text-[#91a9bd]">Ruang kerja yang memandu dan merespons pilihan pengguna.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-4 rounded-xl border border-[#2a4054] bg-[#0d1522] p-5 transition-colors hover:border-[#16d9f5]/50">
+                    <div className="rounded-lg bg-[#16d9f5]/10 p-2 text-[#16d9f5]">
+                      <Workflow size={20} />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-[#edf7ff]">Bahan yang bisa dipakai lagi</h4>
+                      <p className="mt-1 text-sm text-[#91a9bd]">Pola dan komponen yang mempercepat perakitan PST berikutnya.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="relative">
+                <div className="absolute -inset-10 rounded-full bg-[#16d9f5]/5 blur-3xl" />
+                <div className="relative overflow-hidden rounded-2xl border border-[#2a4054] bg-[#0d1522] shadow-2xl">
+                  <div className="flex items-center gap-2 border-b border-[#1f3143] bg-[#0a101a] px-4 py-3">
+                    <div className="flex gap-1.5">
+                      <span className="h-3 w-3 rounded-full bg-[#2a4054]" />
+                      <span className="h-3 w-3 rounded-full bg-[#2a4054]" />
+                      <span className="h-3 w-3 rounded-full bg-[#2a4054]" />
+                    </div>
+                    <div className="mx-auto flex h-6 w-1/2 items-center justify-center rounded bg-[#142031] font-mono text-[10px] text-[#91a9bd]">
+                      ruang-kerja / kejernihan-arus-kas
+                    </div>
+                  </div>
+                  <div className="flex h-[320px]">
+                    <div className="flex w-16 flex-col items-center gap-4 border-r border-[#1f3143] bg-[#0a101a] py-4">
+                      <div className="flex h-8 w-8 items-center justify-center rounded bg-[#16d9f5]/20 font-bold text-[#16d9f5]">P</div>
+                      <span className="h-8 w-8 rounded border border-[#2a4054]" />
+                      <span className="h-8 w-8 rounded border border-[#2a4054]" />
+                    </div>
+                    <div className="flex-1 p-6">
+                      <div className="mb-6 flex gap-2">
+                        <span className="h-1.5 flex-1 rounded-full bg-[#16d9f5]" />
+                        <span className="h-1.5 flex-1 rounded-full bg-[#2a4054]" />
+                        <span className="h-1.5 flex-1 rounded-full bg-[#2a4054]" />
+                      </div>
+                      <p className="font-mono text-[10px] uppercase tracking-widest text-[#16d9f5]">Tahap Utama</p>
+                      <h3 className="mt-2 text-2xl font-bold">Apa yang berubah hari ini?</h3>
+                      <p className="mt-2 text-sm text-[#91a9bd]">Pilih sinyal pengamatan sebelum memberikan tindakan.</p>
+                      <div className="mt-6 space-y-3">
+                        <div className="flex h-12 items-center justify-between rounded-lg border border-[#16d9f5] bg-[#16d9f5]/10 px-4">
+                          <span className="font-semibold text-[#edf7ff]">Pendapatan bertambah</span>
+                          <CheckCircle2 className="text-[#16d9f5]" size={18} />
+                        </div>
+                        <div className="flex h-12 items-center rounded-lg border border-[#2a4054] bg-[#142031] px-4 opacity-50">
+                          <span className="font-semibold text-[#edf7ff]">Biaya berkurang</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Action */}
+          <section className="mt-32 sm:mt-48 lg:mt-56 text-center">
+            <div className="relative mx-auto max-w-3xl overflow-hidden rounded-3xl border border-[#2a4054] bg-[#0d1522] p-8 shadow-2xl sm:p-16">
+              <div className="absolute -inset-24 opacity-20">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_100%,rgba(22,217,245,1),transparent_70%)]" />
+              </div>
+              <div className="relative z-10">
+                <h2 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-5xl">
+                  Siap membangun alat bantu pertama Anda?
+                </h2>
+                <p className="mx-auto mt-6 max-w-xl text-lg text-[#91a9bd]">
+                  PST Factory adalah tempat Anda mulai memetakan, merakit, dan menerbitkan solusi yang benar-benar bisa digunakan oleh tim Anda.
+                </p>
+                <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+                  <Link href="/sign-up" className="focus-ring group flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#16d9f5] px-8 text-base font-bold text-[#030910] transition-all hover:bg-[#72edff] hover:shadow-[0_0_32px_rgba(22,217,245,0.4)] sm:w-auto" data-testid="link-cta-sign-up">
+                    Buat akun pabrik
+                    <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </section>
         </div>
-        <div className="relative">
-          <div className="absolute -inset-8 rounded-full bg-[#16d9f5]/10 blur-3xl" />
-          <div className="relative rounded-2xl border border-[#2a4054] bg-[#0d1b2b]/90 p-4 shadow-2xl shadow-[#02070c]/60 backdrop-blur">
-            <div className="flex items-center justify-between border-b border-[#2a4054] px-2 pb-4"><div><p className="font-mono text-[10px] uppercase tracking-[.18em] text-[#6f8ca3]">Alur pembuatan</p><p className="mt-1 text-sm font-bold">Alat bantu kejernihan arus kas</p></div><span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-1 font-mono text-[9px] uppercase tracking-wider text-emerald-300">Disetujui</span></div>
-             <div className="space-y-3 p-2 pt-5">{['Jelaskan masalah', 'Buat rancangan', 'Rakit komponen', 'Periksa dan setujui'].map((step, index) => <div key={step} className="flex items-center gap-3 rounded-lg border border-[#20364a] bg-[#102336] p-3"><div className={`grid h-7 w-7 place-items-center rounded-full font-mono text-xs ${index < 3 ? 'bg-[#16d9f5] text-[#07111d]' : 'border border-emerald-400/50 text-emerald-300'}`}>{index < 3 ? '✓' : '→'}</div><span className="text-sm font-semibold text-[#d8e8f2]">{step}</span><span className="ml-auto font-mono text-[9px] uppercase tracking-wider text-[#6f8ca3]">{index < 3 ? 'selesai' : 'siap'}</span></div>)}</div>
-             <div className="mt-3 rounded-lg border border-[#16d9f5]/20 bg-[#16d9f5]/5 p-4"><p className="font-mono text-[10px] uppercase tracking-wider text-[#16d9f5]">Bahan yang bisa dipakai lagi</p><p className="mt-2 text-sm leading-6 text-[#a9c1d3]">Komponen, pola, dan panduan akan membantu setiap PST baru dibuat lebih cepat.</p></div>
+
+        <footer className="flex flex-col items-center justify-between gap-6 border-t border-[#1f3143] py-8 sm:flex-row">
+          <div className="flex items-center gap-2">
+            <img src={`${basePath}/logo.svg`} alt="PST Factory" className="h-6 w-auto opacity-50 grayscale" />
+            <span className="font-mono text-xs text-[#5c778c]">© PST Factory Studio</span>
           </div>
-        </div>
-      </section>
-      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-[#1b3042] py-5 font-mono text-[10px] uppercase tracking-[.16em] text-[#6f8ca3]"><span>PST Factory · studio produk</span><span>Dibuat untuk kemajuan yang terukur</span></footer>
-    </div>
-  </main>;
+          <div className="flex font-mono text-xs uppercase tracking-widest text-[#5c778c]">
+            Dibuat untuk kemajuan
+          </div>
+        </footer>
+      </div>
+    </main>
+  );
 }
 
 function ProtectedApp() {

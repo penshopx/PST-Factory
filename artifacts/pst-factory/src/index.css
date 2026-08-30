@@ -350,6 +350,16 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise,
+  .animate-rise-2,
+  .animate-rise-3 {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
 body { min-width: 320px; }
 button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
 ::selection { background: hsl(var(--accent) / .28); color: hsl(var(--foreground)); }
