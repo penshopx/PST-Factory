@@ -20,6 +20,8 @@ changing the Factory domain or passing customer data between systems:
 - Brain Project (`/brain-project`)
 - Ruang Simpan (`/ruang-simpan`)
 - Tender Workspace (`/tender`)
+- Contract Consultant (`/konsultan-kontrak`)
+- Project Documentation Consultant (`/konsultan-dokumen-proyek`)
 
 These links open `https://gustafta.my.id` in a separate browser tab. They are navigation
 links, not an authenticated server-to-server API integration. PST Factory does not send
@@ -30,7 +32,8 @@ project, Blueprint, release, ownership, QA, or customer workspace data through t
 On a project overview, PST Factory shows a smaller contextual bridge only when the
 project text signals construction, tender, SBU/SKK, documents, legality, contracts,
 field work, or projects. It offers SBU Readiness, Construction Clinic, Document Review,
-Brain Project, and Tender Workspace without copying the PST context into the link.
+Brain Project, Tender Workspace, Contract Consultant, and Project Documentation
+Consultant without copying the PST context into the link.
 
 The backend `GustaftaEngine` remains provider-neutral and mocked. A direct API adapter is
 optional future work, not a prerequisite for using PST Factory. Public frontend bundle

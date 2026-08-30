@@ -492,13 +492,17 @@ function OverviewTab({ project, blueprint, onArchitect, onBuild }: { project: Ps
 function GustaftaProjectBridge({ project }: { project: PstProject }) {
   const context = [project.name, project.domain, project.family, project.problemStatement, project.targetUser, project.desiredOutcome].join(' ');
   if (!/(konstruksi|tender|sbu|skk|dokumen|legalitas|kontrak|lapangan|proyek)/i.test(context)) return null;
-  const links = gustaftaLinks.filter(({ href }) => ['/cek-kesiapan-sbu', '/klinik-konsultasi', '/bedah-dokumen', '/brain-project', '/tender'].includes(href));
+  const links = [
+    ...gustaftaLinks.filter(({ href }) => ['/cek-kesiapan-sbu', '/klinik-konsultasi', '/bedah-dokumen', '/brain-project', '/tender'].includes(href)),
+    { href: '/konsultan-kontrak', label: 'Konsultan kontrak', detail: 'Review kontrak, klaim, dan sengketa', icon: ShieldCheck },
+    { href: '/konsultan-dokumen-proyek', label: 'Dokumen proyek', detail: 'Rapikan laporan dan dokumentasi proyek', icon: FileCode2 },
+  ];
   return <Card className="mt-6 border-primary/20 bg-primary/[.03]" data-testid="card-gustafta-project-bridge">
     <CardHeader className="border-b border-border/70 pb-4">
       <CardTitle className="text-base">Capability Gustafta untuk konteks ini</CardTitle>
       <CardDescription className="mt-1">Pintu masuk opsional untuk pemeriksaan SBU, dokumen, knowledge, dan tender. Data PST tidak dikirim otomatis.</CardDescription>
     </CardHeader>
-    <CardContent className="grid gap-3 p-5 sm:grid-cols-2 xl:grid-cols-5">
+    <CardContent className="grid gap-3 p-5 sm:grid-cols-2 xl:grid-cols-4">
       {links.map(({ href, label, detail, icon: Icon }) => <a href={`${gustaftaBaseUrl}${href}`} key={href} target="_blank" rel="noreferrer" className="focus-ring group rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/50 hover:bg-primary/[.05]" data-testid={`project-link-gustafta-${label.toLowerCase().replaceAll(' ', '-')}`}>
         <div className="mb-4 flex items-center justify-between"><div className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary"><Icon size={17} /></div><ExternalLink size={14} className="text-muted-foreground transition-colors group-hover:text-primary" /></div>
         <p className="text-sm font-semibold">{label}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p>
