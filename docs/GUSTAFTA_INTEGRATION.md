@@ -16,7 +16,7 @@ changing the Factory domain or passing customer data between systems:
 - Gustafta Work Help Desk (`/chat/1`)
 - SBU Readiness Check (`/cek-kesiapan-sbu`)
 - Construction Clinic (`/klinik-konsultasi`)
-- Document Review (`/bedah-dokumen`)
+- Document Review app (`/bedah-dokumen/app`; landing page: `/bedah-dokumen`)
 - Brain Project (`/brain-project`)
 - Ruang Simpan (`/ruang-simpan`)
 - Tender Workspace (`/tender`)

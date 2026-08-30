@@ -138,7 +138,7 @@ const gustaftaLinks = [
   { href: '/chat/1', label: 'Help Desk Pekerjaan', detail: 'Tanya jalur SBU, SKK, tender, proyek', icon: Bot },
   { href: '/cek-kesiapan-sbu', label: 'Cek kesiapan SBU', detail: 'Diagnosis awal kesiapan badan usaha', icon: ShieldCheck },
   { href: '/klinik-konsultasi', label: 'Klinik konstruksi', detail: 'Konsultasi SBU, SKK, PKB, dan PUB', icon: MessageCircle },
-  { href: '/bedah-dokumen', label: 'Bedah dokumen', detail: 'Baca konteks dan celah dokumen', icon: FileSearch },
+  { href: '/bedah-dokumen/app', label: 'Bedah dokumen', detail: 'Upload dan pahami dokumen konstruksi', icon: FileSearch },
   { href: '/brain-project', label: 'Brain Project', detail: 'Bangun fondasi pengetahuan proyek', icon: Database },
   { href: '/ruang-simpan', label: 'Ruang Simpan', detail: 'Aktifkan konteks dokumen untuk AI', icon: Library },
   { href: '/tender', label: 'Peluang tender', detail: 'Buka ruang kerja tender Gustafta', icon: BriefcaseBusiness },
@@ -493,7 +493,7 @@ function GustaftaProjectBridge({ project }: { project: PstProject }) {
   const context = [project.name, project.domain, project.family, project.problemStatement, project.targetUser, project.desiredOutcome].join(' ');
   if (!/(konstruksi|tender|sbu|skk|dokumen|legalitas|kontrak|lapangan|proyek)/i.test(context)) return null;
   const links = [
-    ...gustaftaLinks.filter(({ href }) => ['/cek-kesiapan-sbu', '/klinik-konsultasi', '/bedah-dokumen', '/brain-project', '/tender'].includes(href)),
+    ...gustaftaLinks.filter(({ href }) => ['/cek-kesiapan-sbu', '/klinik-konsultasi', '/bedah-dokumen/app', '/brain-project', '/tender'].includes(href)),
     { href: '/konsultan-kontrak', label: 'Konsultan kontrak', detail: 'Review kontrak, klaim, dan sengketa', icon: ShieldCheck },
     { href: '/konsultan-dokumen-proyek', label: 'Dokumen proyek', detail: 'Rapikan laporan dan dokumentasi proyek', icon: FileCode2 },
   ];
