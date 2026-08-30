@@ -151,6 +151,14 @@ fallback. Legacy definitions identify their source as
 `pst-release-snapshot.legacy-v0`; this derived identity must not be represented
 as a historical v1 integrity proof.
 
+Compatibility acceptance persists a marker-free historical snapshot as an
+active release, loads it through the unauthenticated public workspace endpoint,
+and executes the exact returned definition with Generic Runtime v1. The stored
+JSONB snapshot must remain unchanged before and after public load and execution.
+A malformed persisted snapshot carrying any modern provenance marker must fail
+closed at the same endpoint and must never be reinterpreted by the legacy
+adapter.
+
 ## 7. Generic Runtime v1
 
 `createPstRuntime` defensively validates an executable definition before a

@@ -6,6 +6,10 @@ import { fileURLToPath } from "node:url";
 import { clerk, clerkSetup } from "@clerk/testing/playwright";
 import { chromium } from "playwright";
 import {
+  pool,
+  runPstRuntime,
+} from "../../lib/db/src/index.ts";
+import {
   buildFromConfiguration,
   canApprove,
   canPublish,
@@ -692,6 +696,244 @@ function assertStatus(result, expected, label) {
   assert.equal(result.response.status, expected, `${label}: expected ${expected}, got ${result.response.status}`);
 }
 
+function legacyCompatibilitySnapshot(projectId, projectName) {
+  const workflow = [
+    {
+      id: "profile",
+      type: "INPUT",
+      title: "User profile",
+      description: "Capture customer context.",
+      inputs: ["profile"],
+      outputs: ["user_context"],
+      dependencies: [],
+      nextStep: "assessment",
+    },
+    {
+      id: "assessment",
+      type: "ASSESSMENT",
+      title: "Assessment",
+      description: "Collect structured answers.",
+      inputs: ["user_context"],
+      outputs: ["assessment_score", "assessment_answers"],
+      dependencies: ["profile"],
+      nextStep: "analysis",
+    },
+    {
+      id: "analysis",
+      type: "ANALYSIS",
+      title: "Analysis",
+      description: "Summarize the situation.",
+      inputs: ["assessment_score", "assessment_answers"],
+      outputs: ["analysis"],
+      dependencies: ["assessment"],
+      nextStep: "recommendation",
+    },
+    {
+      id: "recommendation",
+      type: "RECOMMENDATION",
+      title: "Recommendation",
+      description: "Recommend the next move.",
+      inputs: ["analysis"],
+      outputs: ["recommendation"],
+      dependencies: ["analysis"],
+      nextStep: "action",
+    },
+    {
+      id: "action",
+      type: "ACTION",
+      title: "Action",
+      description: "Create a practical action.",
+      inputs: ["recommendation"],
+      outputs: ["action_plan"],
+      dependencies: ["recommendation"],
+      nextStep: "completion",
+    },
+    {
+      id: "completion",
+      type: "OUTPUT",
+      title: "Completion",
+      description: "Return the outcome.",
+      inputs: ["action_plan"],
+      outputs: ["outcome"],
+      dependencies: ["action"],
+      nextStep: "",
+    },
+  ];
+  const productDna = {
+    problem: "A historical customer problem",
+    user: "Customer",
+    journey: ["Profile", "Assess", "Analyze", "Act"],
+    components: [],
+    intelligence: "Human-approved assistance",
+    outcome: "A practical next step",
+  };
+  return {
+    project: {
+      name: projectName,
+      description: "Published before Compiler v1.",
+      status: "PUBLISHED",
+      version: "v1.0",
+      domain: "General",
+      family: "Problem Solving",
+      series: "Legacy",
+      problemStatement: productDna.problem,
+      targetUser: productDna.user,
+      desiredOutcome: productDna.outcome,
+      productDna,
+      qaStatus: "PASS",
+      publicationStatus: "PUBLISHED",
+    },
+    blueprint: {
+      id: `blueprint-${projectId}`,
+      projectId,
+      problem: productDna.problem,
+      targetUser: productDna.user,
+      desiredOutcome: productDna.outcome,
+      problemType: "Assessment and action planning",
+      journey: productDna.journey,
+      knowledgeRequirements: [],
+      componentRequirements: [],
+      aiRequirements: [],
+      workflow,
+      expectedOutput: [productDna.outcome],
+      actionPlan: ["Complete the assessment"],
+      nextStep: "Run",
+      version: "v1.0",
+      updatedAt: "2026-08-29T00:00:00.000Z",
+    },
+    workflow,
+    components: [],
+    rules: [],
+    providers: [],
+  };
+}
+
+async function insertPublishedCompatibilityFixture({
+  projectId,
+  releaseId,
+  slug,
+  projectName,
+  snapshot,
+}) {
+  await pool.query(
+    `INSERT INTO pst_projects (
+      id, owner_id, name, slug, description, status, version, domain, family, series,
+      problem_statement, target_user, desired_outcome, product_dna, qa_status, publication_status
+    ) VALUES (
+      $1, 'system', $2, $3, $4, 'PUBLISHED', 'v1.0', 'General', 'Problem Solving', 'Compatibility',
+      $5, $6, $7, $8::jsonb, 'PASS', 'PUBLISHED'
+    )`,
+    [
+      projectId,
+      projectName,
+      slug,
+      snapshot.project.description,
+      snapshot.project.problemStatement,
+      snapshot.project.targetUser,
+      snapshot.project.desiredOutcome,
+      JSON.stringify(snapshot.project.productDna),
+    ],
+  );
+  await pool.query(
+    `INSERT INTO pst_releases (id, project_id, version, snapshot, created_at)
+     VALUES ($1, $2, 'v1.0', $3::jsonb, $4::timestamptz)`,
+    [releaseId, projectId, JSON.stringify(snapshot), "2026-08-29T00:00:00.000Z"],
+  );
+}
+
+async function persistedSnapshotText(releaseId) {
+  const result = await pool.query(
+    "SELECT snapshot::text AS snapshot_text FROM pst_releases WHERE id = $1",
+    [releaseId],
+  );
+  assert.equal(result.rowCount, 1, "compatibility fixture release must exist");
+  return result.rows[0].snapshot_text;
+}
+
+async function runLegacyPublicCompatibilityAcceptance() {
+  const suffix = randomUUID().slice(0, 8);
+  const legacyProjectId = `legacy-public-${suffix}`;
+  const legacyReleaseId = `legacy-release-${suffix}`;
+  const legacySlug = `legacy-public-${suffix}`;
+  const modernProjectId = `modern-invalid-${suffix}`;
+  const modernReleaseId = `modern-invalid-release-${suffix}`;
+  const modernSlug = `modern-invalid-${suffix}`;
+  const projectIds = [legacyProjectId, modernProjectId];
+
+  try {
+    const legacySnapshot = legacyCompatibilitySnapshot(
+      legacyProjectId,
+      `Legacy public compatibility ${suffix}`,
+    );
+    await insertPublishedCompatibilityFixture({
+      projectId: legacyProjectId,
+      releaseId: legacyReleaseId,
+      slug: legacySlug,
+      projectName: legacySnapshot.project.name,
+      snapshot: legacySnapshot,
+    });
+    const legacyBefore = await persistedSnapshotText(legacyReleaseId);
+    const legacyPublic = await apiRequest(undefined, `/pst/public/workspaces/${legacySlug}`);
+    assertStatus(legacyPublic, 200, "legacy public workspace");
+    assert.equal(legacyPublic.body.definition.compiler.name, "pst-legacy-compat");
+    assert.equal(legacyPublic.body.definition.compiler.version, "pst-legacy-compat.v1");
+    assert.equal(
+      legacyPublic.body.definition.identity.sourceSchemaVersion,
+      "pst-release-snapshot.legacy-v0",
+    );
+    const runtime = runPstRuntime(legacyPublic.body.definition, [
+      { "context.user_context": "Established business" },
+      {
+        "answers.assessment_score": "70",
+        "answers.assessment_answers": "Needs a clear priority",
+      },
+    ]);
+    assert.equal(runtime.status, "COMPLETED", "legacy public definition must run to completion");
+    if (runtime.status === "COMPLETED") {
+      assert.ok(runtime.output["derived.action_plan"]);
+    }
+    assert.equal(
+      await persistedSnapshotText(legacyReleaseId),
+      legacyBefore,
+      "legacy public load and run must not rewrite its persisted snapshot",
+    );
+
+    const malformedModernSnapshot = {
+      ...legacyCompatibilitySnapshot(
+        modernProjectId,
+        `Malformed modern compatibility ${suffix}`,
+      ),
+      sourceSchemaVersion: "pst-release-snapshot.v1",
+    };
+    await insertPublishedCompatibilityFixture({
+      projectId: modernProjectId,
+      releaseId: modernReleaseId,
+      slug: modernSlug,
+      projectName: malformedModernSnapshot.project.name,
+      snapshot: malformedModernSnapshot,
+    });
+    const modernBefore = await persistedSnapshotText(modernReleaseId);
+    const modernPublic = await apiRequest(undefined, `/pst/public/workspaces/${modernSlug}`);
+    assertStatus(modernPublic, 503, "malformed modern public workspace");
+    assert.match(modernPublic.body.error, /cannot be compiled/i);
+    assert.doesNotMatch(modernPublic.body.error, /legacy compatibility/i);
+    assert.equal(
+      await persistedSnapshotText(modernReleaseId),
+      modernBefore,
+      "failed modern public load must not rewrite its persisted snapshot",
+    );
+
+    return {
+      legacyCompiler: legacyPublic.body.definition.compiler.version,
+      legacyRuntimeStatus: runtime.status,
+      modernMalformedStatus: modernPublic.response.status,
+      snapshotsUnchanged: true,
+    };
+  } finally {
+    await pool.query("DELETE FROM pst_projects WHERE id = ANY($1::text[])", [projectIds]);
+  }
+}
+
 async function assertPrivateRouteAuthentication() {
   const projectId = "private-route-auth-check";
   const releaseId = "private-release-auth-check";
@@ -1164,13 +1406,21 @@ async function runAuthenticatedRouteAcceptance() {
   }
 }
 
-const authenticatedRouteResult = await runAuthenticatedRouteAcceptance();
+let authenticatedRouteResult;
+let legacyCompatibilityResult;
+try {
+  authenticatedRouteResult = await runAuthenticatedRouteAcceptance();
+  legacyCompatibilityResult = await runLegacyPublicCompatibilityAcceptance();
+} finally {
+  await pool.end();
+}
 
 console.log("PST Factory v1.1 acceptance: PASS");
 console.log(JSON.stringify({
   blueprints: 2,
   assessmentSteps: assessment.workflow.map((step) => step.title),
   decisionSteps: decision.workflow.map((step) => step.title),
-  checks: ["configuration-driven build", "different customer journeys/outcomes", "QA failure", "missing dependency", "duplicate isolation", "publish gate", "customer access boundary", "public metadata allowlist", "private route authentication sweep", "router isolation outside /api", "cross-owner route isolation", "cross-owner access boundary", "scoped library usage", "authenticated create-to-publish route lifecycle", "safe project membership revocation", "concurrent publish version guard", "published public workspace through browser proxy"],
+  checks: ["configuration-driven build", "different customer journeys/outcomes", "QA failure", "missing dependency", "duplicate isolation", "publish gate", "customer access boundary", "public metadata allowlist", "private route authentication sweep", "router isolation outside /api", "cross-owner route isolation", "cross-owner access boundary", "scoped library usage", "authenticated create-to-publish route lifecycle", "safe project membership revocation", "concurrent publish version guard", "published public workspace through browser proxy", "persisted legacy public compatibility", "malformed modern release fail-closed"],
   authenticatedRoute: authenticatedRouteResult,
+  legacyCompatibility: legacyCompatibilityResult,
 }, null, 2));
