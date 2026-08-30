@@ -140,6 +140,7 @@ const gustaftaLinks = [
   { href: '/klinik-konsultasi', label: 'Klinik konstruksi', detail: 'Konsultasi SBU, SKK, PKB, dan PUB', icon: MessageCircle },
   { href: '/bedah-dokumen', label: 'Bedah dokumen', detail: 'Baca konteks dan celah dokumen', icon: FileSearch },
   { href: '/brain-project', label: 'Brain Project', detail: 'Bangun fondasi pengetahuan proyek', icon: Database },
+  { href: '/ruang-simpan', label: 'Ruang Simpan', detail: 'Aktifkan konteks dokumen untuk AI', icon: Library },
   { href: '/tender', label: 'Peluang tender', detail: 'Buka ruang kerja tender Gustafta', icon: BriefcaseBusiness },
 ];
 

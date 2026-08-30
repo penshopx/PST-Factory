@@ -18,6 +18,7 @@ changing the Factory domain or passing customer data between systems:
 - Construction Clinic (`/klinik-konsultasi`)
 - Document Review (`/bedah-dokumen`)
 - Brain Project (`/brain-project`)
+- Ruang Simpan (`/ruang-simpan`)
 - Tender Workspace (`/tender`)
 
 These links open `https://gustafta.my.id` in a separate browser tab. They are navigation
