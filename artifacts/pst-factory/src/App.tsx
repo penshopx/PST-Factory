@@ -1343,6 +1343,39 @@ function PublicHome() {
             </div>
           </section>
 
+          {/* Audience value */}
+          <section id="untuk-siapa" className="mt-32 sm:mt-48 lg:mt-56" data-testid="section-audience-value">
+            <div className="mx-auto max-w-3xl text-center">
+              <p className="font-mono text-[10px] uppercase tracking-[.22em] text-[#16d9f5]">Untuk setiap peran</p>
+              <h2 className="mt-4 text-3xl font-bold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
+                Satu alur yang membuat semua orang lebih jelas.
+              </h2>
+              <p className="mt-6 text-lg leading-relaxed text-[#91a9bd]">
+                Dari orang yang membawa masalah hingga pengguna yang menjalankan solusinya, setiap peran mendapat konteks yang sama dan langkah yang mudah diikuti.
+              </p>
+            </div>
+            <div className="mx-auto mt-12 grid max-w-5xl gap-4 md:grid-cols-3">
+              {[
+                { id: 'problem-owner', role: 'Pemilik masalah', title: 'Melihat arah', detail: 'Mengubah keluhan yang kabur menjadi masalah yang bisa dipahami bersama.', icon: BriefcaseBusiness },
+                { id: 'solution-builder', role: 'Perakit solusi', title: 'Menyusun dengan tenang', detail: 'Membawa pola, pengetahuan, dan komponen ke dalam rancangan yang utuh.', icon: Workflow },
+                { id: 'end-user', role: 'Pengguna akhir', title: 'Mengikuti jalur yang jelas', detail: 'Mendapat ruang kerja yang memandu tindakan tanpa membebani mereka.', icon: Users },
+              ].map(({ id, role, title, detail, icon: Icon }) => (
+                <div
+                  key={id}
+                  className="rounded-2xl border border-[#2a4054] bg-[#0d1522] p-6 transition-colors hover:border-[#16d9f5]/60"
+                  data-testid={`card-audience-${id}`}
+                >
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#16d9f5]/10 text-[#16d9f5]">
+                    <Icon size={21} />
+                  </div>
+                  <p className="mt-8 font-mono text-[10px] uppercase tracking-[.18em] text-[#6f8ca3]">{role}</p>
+                  <h3 className="mt-2 text-lg font-bold text-[#edf7ff]">{title}</h3>
+                  <p className="mt-3 text-sm leading-6 text-[#91a9bd]">{detail}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
           {/* Desire */}
           <section className="mt-32 sm:mt-48 lg:mt-56">
             <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-24">
