@@ -32,6 +32,9 @@ const apiProxyTarget = `http://127.0.0.1:${apiProxyPort}`;
 
 export default defineConfig({
   base: basePath,
+  define: process.env.NODE_ENV !== 'production'
+    ? { 'import.meta.env.VITE_CLERK_PROXY_URL': '""' }
+    : undefined,
   plugins: [
     react(),
     tailwindcss(),

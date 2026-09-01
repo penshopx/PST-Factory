@@ -20,3 +20,9 @@ Browser acceptance must use the Replit development domain rather than the raw Vi
 **Why:** Direct requests to the Vite port return the frontend fallback for `/api`, and password sign-in from fresh Playwright contexts triggers Clerk Device Trust email verification.
 
 **How to apply:** Set `PST_BROWSER_URL=https://$REPLIT_DEV_DOMAIN`, call `clerkSetup()` once, and use `clerk.signIn({ page, emailAddress })` for each isolated browser context.
+
+Managed secrets may expose `VITE_CLERK_PROXY_URL` to the development Vite process even though Clerk's development instance must load directly rather than through `/api/__clerk`.
+
+**Why:** Passing that production proxy path in preview made Clerk JS fail first with `401`, then `404`; enabling the production proxy in development also failed upstream.
+
+**How to apply:** Keep the canonical production proxy middleware unchanged, exempt `/api/__clerk/*` from global API auth, and override only the Vite development replacement of `import.meta.env.VITE_CLERK_PROXY_URL` to an empty string.
