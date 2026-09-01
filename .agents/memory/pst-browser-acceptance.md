@@ -15,6 +15,12 @@ The browser proxy preflight should call a private API route without credentials 
 
 **How to apply:** Run the preflight before creating Clerk test users, and keep the expected unauthenticated response tied to a stable private route.
 
+A transient `502` can occur while the managed API artifact is restarting; rerun the routing check after confirming `/api/healthz` is back to `200` before treating it as a code regression.
+
+**Why:** The same proxy and API returned the expected four-route pass immediately after the API finished becoming reachable, without any source change.
+
+**How to apply:** Check workflow readiness and rerun once after a restart; preserve the fail-fast assertion when the proxy remains unavailable.
+
 Browser assertions for localized release content should target the exact visible label or a stable test id rather than a broad regex that also matches the surrounding card heading.
 
 **Why:** A broad fallback regex matched both the release-history heading and its localized live-release label, triggering Playwright strict-mode failure after routing was corrected.
