@@ -1451,6 +1451,42 @@ function PublicHome() {
             </div>
           </section>
 
+          {/* Product value */}
+          <section className="mt-32 sm:mt-48 lg:mt-56" data-testid="section-product-value">
+            <div className="rounded-3xl border border-[#2a4054] bg-[#0d1522] p-8 shadow-2xl sm:p-12 lg:p-16">
+              <div className="grid gap-12 lg:grid-cols-[.8fr_1.2fr] lg:items-center lg:gap-20">
+                <div>
+                  <p className="font-mono text-[10px] uppercase tracking-[.22em] text-[#16d9f5]">Yang tetap terbawa</p>
+                  <h2 className="mt-4 text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
+                    Hasilnya bukan hanya selesai. Hasilnya bisa dipakai lagi.
+                  </h2>
+                  <p className="mt-6 text-lg leading-relaxed text-[#91a9bd]">
+                    Setiap keputusan penting tetap terlihat, setiap komponen punya konteks, dan setiap ruang kerja bisa menjadi dasar untuk perbaikan berikutnya.
+                  </p>
+                  <Link href="/video" className="focus-ring mt-8 inline-flex items-center gap-2 rounded-lg border border-[#2a4054] px-4 py-2.5 text-sm font-bold text-[#edf7ff] transition-colors hover:border-[#16d9f5]/60 hover:bg-[#16273a]" data-testid="link-product-value-video">
+                    Lihat prosesnya
+                    <ArrowRight size={16} className="text-[#16d9f5]" />
+                  </Link>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {[
+                    { title: 'Jejak yang jelas', detail: 'Rancangan tetap mudah dibaca dan ditinjau.', icon: FileSearch },
+                    { title: 'Bahan yang siap', detail: 'Komponen dan pola dapat dipakai kembali.', icon: Package },
+                    { title: 'Ruang yang hidup', detail: 'Pengguna mendapat arahan yang bisa dijalankan.', icon: LayoutDashboard },
+                  ].map(({ title, detail, icon: Icon }) => (
+                    <div key={title} className="rounded-2xl border border-[#2a4054] bg-[#101a2a] p-5" data-testid={`card-product-value-${title.toLowerCase().replaceAll(' ', '-')}`}>
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#16d9f5]/10 text-[#16d9f5]">
+                        <Icon size={19} />
+                      </div>
+                      <h3 className="mt-6 text-sm font-bold text-[#edf7ff]">{title}</h3>
+                      <p className="mt-2 text-sm leading-6 text-[#91a9bd]">{detail}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+
           {/* Action */}
           <section className="mt-32 sm:mt-48 lg:mt-56 text-center">
             <div className="relative mx-auto max-w-3xl overflow-hidden rounded-3xl border border-[#2a4054] bg-[#0d1522] p-8 shadow-2xl sm:p-16">
