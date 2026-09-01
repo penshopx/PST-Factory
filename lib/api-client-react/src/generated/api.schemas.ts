@@ -369,6 +369,182 @@ export interface ArchitectInput {
   recipeId?: string | null;
 }
 
+export interface FrameworkAnalysisInput {
+  /**
+     * @minLength 10
+     * @maxLength 4000
+     */
+  problemStatement: string;
+  /** @maxLength 500 */
+  targetUser?: string;
+  /** @maxLength 3000 */
+  additionalContext?: string;
+}
+
+export type SelectedFrameworkName = typeof SelectedFrameworkName[keyof typeof SelectedFrameworkName];
+
+
+export const SelectedFrameworkName = {
+  '5_Whys': '5 Whys',
+  Fishbone: 'Fishbone',
+  ICE_Scoring: 'ICE Scoring',
+  SWOT: 'SWOT',
+} as const;
+
+export interface SelectedFramework {
+  name: SelectedFrameworkName;
+  /**
+     * @minLength 20
+     * @maxLength 1000
+     */
+  reason: string;
+}
+
+export interface FrameworkBreakdownItem {
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  id: string;
+  /**
+     * @minLength 3
+     * @maxLength 160
+     */
+  label: string;
+  /**
+     * @minLength 10
+     * @maxLength 500
+     */
+  question: string;
+  /**
+     * @minLength 5
+     * @maxLength 500
+     */
+  focus: string;
+  /**
+     * @minItems 1
+     * @maxItems 5
+     * @items.minLength 2
+     * @items.maxLength 300
+     */
+  children: string[];
+}
+
+export type RecommendedSolutionEffort = typeof RecommendedSolutionEffort[keyof typeof RecommendedSolutionEffort];
+
+
+export const RecommendedSolutionEffort = {
+  Low: 'Low',
+  Med: 'Med',
+  High: 'High',
+} as const;
+
+export interface RecommendedSolution {
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  id: string;
+  /**
+     * @minLength 5
+     * @maxLength 180
+     */
+  title: string;
+  /**
+     * @minLength 20
+     * @maxLength 1200
+     */
+  description: string;
+  /**
+     * @minLength 10
+     * @maxLength 700
+     */
+  expectedImpact: string;
+  effort: RecommendedSolutionEffort;
+}
+
+export interface FrameworkAnalysis {
+  problem_statement: string;
+  selected_framework: SelectedFramework;
+  /**
+     * @minItems 3
+     * @maxItems 5
+     */
+  framework_breakdown: FrameworkBreakdownItem[];
+  /**
+     * @minItems 3
+     * @maxItems 5
+     */
+  recommended_solutions: RecommendedSolution[];
+}
+
+export type ActionPlanSolutionEffort = typeof ActionPlanSolutionEffort[keyof typeof ActionPlanSolutionEffort];
+
+
+export const ActionPlanSolutionEffort = {
+  Low: 'Low',
+  Med: 'Med',
+  High: 'High',
+} as const;
+
+export interface ActionPlanSolution {
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  id: string;
+  /**
+     * @minLength 5
+     * @maxLength 180
+     */
+  title: string;
+  /**
+     * @minLength 20
+     * @maxLength 1200
+     */
+  description: string;
+  /**
+     * @minLength 10
+     * @maxLength 700
+     */
+  expectedImpact: string;
+  effort: ActionPlanSolutionEffort;
+}
+
+export interface ActionPlanInput {
+  frameworkName?: string;
+  /**
+     * @minItems 1
+     * @maxItems 5
+     */
+  solutions: ActionPlanSolution[];
+}
+
+export type ActionPlanItemPriority = typeof ActionPlanItemPriority[keyof typeof ActionPlanItemPriority];
+
+
+export const ActionPlanItemPriority = {
+  High: 'High',
+  Med: 'Med',
+  Low: 'Low',
+} as const;
+
+export interface ActionPlanItem {
+  task_title: string;
+  description: string;
+  priority: ActionPlanItemPriority;
+  suggested_timeline: string;
+  success_metric: string;
+}
+
+export interface ActionPlanOutput {
+  /**
+     * @minItems 1
+     * @maxItems 5
+     */
+  action_plan: ActionPlanItem[];
+}
+
 export type AssetType = typeof AssetType[keyof typeof AssetType];
 
 

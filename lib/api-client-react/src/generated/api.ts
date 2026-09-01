@@ -20,6 +20,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ActionPlanInput,
+  ActionPlanOutput,
   ArchitectInput,
   BlueprintUpdate,
   BuildInput,
@@ -27,6 +29,8 @@ import type {
   DashboardSummary,
   ErrorResponse,
   FactoryEvent,
+  FrameworkAnalysis,
+  FrameworkAnalysisInput,
   HealthStatus,
   ListPstAssetsParams,
   ListPstProjectsParams,
@@ -823,6 +827,148 @@ export const useRunPstArchitect = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getRunPstArchitectMutationOptions(options));
+    }
+
+export const getAnalyzePstFrameworkUrl = () => {
+
+
+
+
+  return `/api/pst/framework-analyzer`
+}
+
+/**
+ * @summary Analyze a raw problem and select a framework
+ */
+export const analyzePstFramework = async (frameworkAnalysisInput: FrameworkAnalysisInput, options?: Parameters<typeof customFetch>[1]): Promise<FrameworkAnalysis> => {
+
+  return customFetch<FrameworkAnalysis>(getAnalyzePstFrameworkUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(frameworkAnalysisInput)
+  }
+);}
+
+
+
+
+
+export const getAnalyzePstFrameworkMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyzePstFramework>>, TError,{data: BodyType<FrameworkAnalysisInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof analyzePstFramework>>, TError,{data: BodyType<FrameworkAnalysisInput>}, TContext> => {
+
+const mutationKey = ['analyzePstFramework'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof analyzePstFramework>>, {data: BodyType<FrameworkAnalysisInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  analyzePstFramework(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AnalyzePstFrameworkMutationResult = NonNullable<Awaited<ReturnType<typeof analyzePstFramework>>>
+    export type AnalyzePstFrameworkMutationBody = BodyType<FrameworkAnalysisInput>
+    export type AnalyzePstFrameworkMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Analyze a raw problem and select a framework
+ */
+export const useAnalyzePstFramework = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyzePstFramework>>, TError,{data: BodyType<FrameworkAnalysisInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof analyzePstFramework>>,
+        TError,
+        {data: BodyType<FrameworkAnalysisInput>},
+        TContext
+      > => {
+      return useMutation(getAnalyzePstFrameworkMutationOptions(options));
+    }
+
+export const getConvertPstActionPlanUrl = () => {
+
+
+
+
+  return `/api/pst/action-plan`
+}
+
+/**
+ * @summary Convert selected solutions into an action plan
+ */
+export const convertPstActionPlan = async (actionPlanInput: ActionPlanInput, options?: Parameters<typeof customFetch>[1]): Promise<ActionPlanOutput> => {
+
+  return customFetch<ActionPlanOutput>(getConvertPstActionPlanUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(actionPlanInput)
+  }
+);}
+
+
+
+
+
+export const getConvertPstActionPlanMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof convertPstActionPlan>>, TError,{data: BodyType<ActionPlanInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof convertPstActionPlan>>, TError,{data: BodyType<ActionPlanInput>}, TContext> => {
+
+const mutationKey = ['convertPstActionPlan'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof convertPstActionPlan>>, {data: BodyType<ActionPlanInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  convertPstActionPlan(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConvertPstActionPlanMutationResult = NonNullable<Awaited<ReturnType<typeof convertPstActionPlan>>>
+    export type ConvertPstActionPlanMutationBody = BodyType<ActionPlanInput>
+    export type ConvertPstActionPlanMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Convert selected solutions into an action plan
+ */
+export const useConvertPstActionPlan = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof convertPstActionPlan>>, TError,{data: BodyType<ActionPlanInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof convertPstActionPlan>>,
+        TError,
+        {data: BodyType<ActionPlanInput>},
+        TContext
+      > => {
+      return useMutation(getConvertPstActionPlanMutationOptions(options));
     }
 
 export const getGetPstBlueprintUrl = (projectId: string,) => {

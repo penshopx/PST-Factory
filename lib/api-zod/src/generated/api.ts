@@ -692,6 +692,129 @@ export const RunPstArchitectResponse = zod.object({
 
 
 /**
+ * @summary Analyze a raw problem and select a framework
+ */
+export const analyzePstFrameworkBodyProblemStatementMin = 10;
+export const analyzePstFrameworkBodyProblemStatementMax = 4000;
+
+export const analyzePstFrameworkBodyTargetUserMax = 500;
+
+export const analyzePstFrameworkBodyAdditionalContextMax = 3000;
+
+
+
+export const AnalyzePstFrameworkBody = zod.object({
+  "problemStatement": zod.string().min(analyzePstFrameworkBodyProblemStatementMin).max(analyzePstFrameworkBodyProblemStatementMax),
+  "targetUser": zod.string().max(analyzePstFrameworkBodyTargetUserMax).optional(),
+  "additionalContext": zod.string().max(analyzePstFrameworkBodyAdditionalContextMax).optional()
+})
+
+export const analyzePstFrameworkResponseSelectedFrameworkReasonMin = 20;
+export const analyzePstFrameworkResponseSelectedFrameworkReasonMax = 1000;
+
+export const analyzePstFrameworkResponseFrameworkBreakdownItemIdMax = 80;
+
+export const analyzePstFrameworkResponseFrameworkBreakdownItemLabelMin = 3;
+export const analyzePstFrameworkResponseFrameworkBreakdownItemLabelMax = 160;
+
+export const analyzePstFrameworkResponseFrameworkBreakdownItemQuestionMin = 10;
+export const analyzePstFrameworkResponseFrameworkBreakdownItemQuestionMax = 500;
+
+export const analyzePstFrameworkResponseFrameworkBreakdownItemFocusMin = 5;
+export const analyzePstFrameworkResponseFrameworkBreakdownItemFocusMax = 500;
+
+export const analyzePstFrameworkResponseFrameworkBreakdownItemChildrenItemMin = 2;
+export const analyzePstFrameworkResponseFrameworkBreakdownItemChildrenItemMax = 300;
+
+export const analyzePstFrameworkResponseFrameworkBreakdownItemChildrenMax = 5;
+
+export const analyzePstFrameworkResponseFrameworkBreakdownMin = 3;
+export const analyzePstFrameworkResponseFrameworkBreakdownMax = 5;
+
+export const analyzePstFrameworkResponseRecommendedSolutionsItemIdMax = 80;
+
+export const analyzePstFrameworkResponseRecommendedSolutionsItemTitleMin = 5;
+export const analyzePstFrameworkResponseRecommendedSolutionsItemTitleMax = 180;
+
+export const analyzePstFrameworkResponseRecommendedSolutionsItemDescriptionMin = 20;
+export const analyzePstFrameworkResponseRecommendedSolutionsItemDescriptionMax = 1200;
+
+export const analyzePstFrameworkResponseRecommendedSolutionsItemExpectedImpactMin = 10;
+export const analyzePstFrameworkResponseRecommendedSolutionsItemExpectedImpactMax = 700;
+
+export const analyzePstFrameworkResponseRecommendedSolutionsMin = 3;
+export const analyzePstFrameworkResponseRecommendedSolutionsMax = 5;
+
+
+
+export const AnalyzePstFrameworkResponse = zod.object({
+  "problem_statement": zod.string(),
+  "selected_framework": zod.object({
+  "name": zod.enum(['5 Whys', 'Fishbone', 'ICE Scoring', 'SWOT']),
+  "reason": zod.string().min(analyzePstFrameworkResponseSelectedFrameworkReasonMin).max(analyzePstFrameworkResponseSelectedFrameworkReasonMax)
+}),
+  "framework_breakdown": zod.array(zod.object({
+  "id": zod.string().min(1).max(analyzePstFrameworkResponseFrameworkBreakdownItemIdMax),
+  "label": zod.string().min(analyzePstFrameworkResponseFrameworkBreakdownItemLabelMin).max(analyzePstFrameworkResponseFrameworkBreakdownItemLabelMax),
+  "question": zod.string().min(analyzePstFrameworkResponseFrameworkBreakdownItemQuestionMin).max(analyzePstFrameworkResponseFrameworkBreakdownItemQuestionMax),
+  "focus": zod.string().min(analyzePstFrameworkResponseFrameworkBreakdownItemFocusMin).max(analyzePstFrameworkResponseFrameworkBreakdownItemFocusMax),
+  "children": zod.array(zod.string().min(analyzePstFrameworkResponseFrameworkBreakdownItemChildrenItemMin).max(analyzePstFrameworkResponseFrameworkBreakdownItemChildrenItemMax)).min(1).max(analyzePstFrameworkResponseFrameworkBreakdownItemChildrenMax)
+})).min(analyzePstFrameworkResponseFrameworkBreakdownMin).max(analyzePstFrameworkResponseFrameworkBreakdownMax),
+  "recommended_solutions": zod.array(zod.object({
+  "id": zod.string().min(1).max(analyzePstFrameworkResponseRecommendedSolutionsItemIdMax),
+  "title": zod.string().min(analyzePstFrameworkResponseRecommendedSolutionsItemTitleMin).max(analyzePstFrameworkResponseRecommendedSolutionsItemTitleMax),
+  "description": zod.string().min(analyzePstFrameworkResponseRecommendedSolutionsItemDescriptionMin).max(analyzePstFrameworkResponseRecommendedSolutionsItemDescriptionMax),
+  "expectedImpact": zod.string().min(analyzePstFrameworkResponseRecommendedSolutionsItemExpectedImpactMin).max(analyzePstFrameworkResponseRecommendedSolutionsItemExpectedImpactMax),
+  "effort": zod.enum(['Low', 'Med', 'High'])
+})).min(analyzePstFrameworkResponseRecommendedSolutionsMin).max(analyzePstFrameworkResponseRecommendedSolutionsMax)
+})
+
+
+/**
+ * @summary Convert selected solutions into an action plan
+ */
+export const convertPstActionPlanBodySolutionsItemIdMax = 80;
+
+export const convertPstActionPlanBodySolutionsItemTitleMin = 5;
+export const convertPstActionPlanBodySolutionsItemTitleMax = 180;
+
+export const convertPstActionPlanBodySolutionsItemDescriptionMin = 20;
+export const convertPstActionPlanBodySolutionsItemDescriptionMax = 1200;
+
+export const convertPstActionPlanBodySolutionsItemExpectedImpactMin = 10;
+export const convertPstActionPlanBodySolutionsItemExpectedImpactMax = 700;
+
+export const convertPstActionPlanBodySolutionsMax = 5;
+
+
+
+export const ConvertPstActionPlanBody = zod.object({
+  "frameworkName": zod.string().optional(),
+  "solutions": zod.array(zod.object({
+  "id": zod.string().min(1).max(convertPstActionPlanBodySolutionsItemIdMax),
+  "title": zod.string().min(convertPstActionPlanBodySolutionsItemTitleMin).max(convertPstActionPlanBodySolutionsItemTitleMax),
+  "description": zod.string().min(convertPstActionPlanBodySolutionsItemDescriptionMin).max(convertPstActionPlanBodySolutionsItemDescriptionMax),
+  "expectedImpact": zod.string().min(convertPstActionPlanBodySolutionsItemExpectedImpactMin).max(convertPstActionPlanBodySolutionsItemExpectedImpactMax),
+  "effort": zod.enum(['Low', 'Med', 'High'])
+})).min(1).max(convertPstActionPlanBodySolutionsMax)
+})
+
+export const convertPstActionPlanResponseActionPlanMax = 5;
+
+
+
+export const ConvertPstActionPlanResponse = zod.object({
+  "action_plan": zod.array(zod.object({
+  "task_title": zod.string(),
+  "description": zod.string(),
+  "priority": zod.enum(['High', 'Med', 'Low']),
+  "suggested_timeline": zod.string(),
+  "success_metric": zod.string()
+})).min(1).max(convertPstActionPlanResponseActionPlanMax)
+})
+
+
+/**
  * @summary Get the current PST blueprint
  */
 export const GetPstBlueprintParams = zod.object({

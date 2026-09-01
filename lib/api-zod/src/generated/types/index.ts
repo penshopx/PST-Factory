@@ -6,6 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './actionPlanInput';
+export * from './actionPlanItem';
+export * from './actionPlanItemPriority';
+export * from './actionPlanOutput';
+export * from './actionPlanSolution';
+export * from './actionPlanSolutionEffort';
 export * from './architectInput';
 export * from './assetType';
 export * from './blueprintUpdate';
@@ -18,6 +24,9 @@ export * from './dashboardSummary';
 export * from './errorResponse';
 export * from './executablePstDefinition';
 export * from './factoryEvent';
+export * from './frameworkAnalysis';
+export * from './frameworkAnalysisInput';
+export * from './frameworkBreakdownItem';
 export * from './healthStatus';
 export * from './listPstAssetsParams';
 export * from './listPstProjectsParams';
@@ -63,7 +72,11 @@ export * from './qaResult';
 export * from './qaResultStatus';
 export * from './qaRun';
 export * from './qaStatus';
+export * from './recommendedSolution';
+export * from './recommendedSolutionEffort';
 export * from './referenceProject';
+export * from './selectedFramework';
+export * from './selectedFrameworkName';
 export * from './simulationInput';
 export * from './simulationInputMode';
 export * from './simulationReport';

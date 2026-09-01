@@ -180,6 +180,54 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PstBlueprint"
+  /pst/framework-analyzer:
+    post:
+      operationId: analyzePstFramework
+      tags: [manufacturing]
+      summary: Analyze a raw problem and select a framework
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FrameworkAnalysisInput"
+      responses:
+        "200":
+          description: Structured framework analysis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FrameworkAnalysis"
+        "502":
+          description: LLM analysis unavailable or invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Analysis rate limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /pst/action-plan:
+    post:
+      operationId: convertPstActionPlan
+      tags: [manufacturing]
+      summary: Convert selected solutions into an action plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActionPlanInput"
+      responses:
+        "200":
+          description: Structured action plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionPlanOutput"
   /pst/projects/{projectId}/blueprint:
     get:
       operationId: getPstBlueprint
@@ -788,6 +836,94 @@ components:
         additionalContext: { type: string }
         patternId: { type: string, nullable: true }
         recipeId: { type: string, nullable: true }
+    FrameworkAnalysisInput:
+      type: object
+      required: [problemStatement]
+      properties:
+        problemStatement: { type: string, minLength: 10, maxLength: 4000 }
+        targetUser: { type: string, maxLength: 500 }
+        additionalContext: { type: string, maxLength: 3000 }
+    SelectedFramework:
+      type: object
+      required: [name, reason]
+      properties:
+        name: { type: string, enum: [5 Whys, Fishbone, ICE Scoring, SWOT] }
+        reason: { type: string, minLength: 20, maxLength: 1000 }
+    FrameworkBreakdownItem:
+      type: object
+      required: [id, label, question, focus, children]
+      properties:
+        id: { type: string, minLength: 1, maxLength: 80 }
+        label: { type: string, minLength: 3, maxLength: 160 }
+        question: { type: string, minLength: 10, maxLength: 500 }
+        focus: { type: string, minLength: 5, maxLength: 500 }
+        children:
+          type: array
+          minItems: 1
+          maxItems: 5
+          items: { type: string, minLength: 2, maxLength: 300 }
+    RecommendedSolution:
+      type: object
+      required: [id, title, description, expectedImpact, effort]
+      properties:
+        id: { type: string, minLength: 1, maxLength: 80 }
+        title: { type: string, minLength: 5, maxLength: 180 }
+        description: { type: string, minLength: 20, maxLength: 1200 }
+        expectedImpact: { type: string, minLength: 10, maxLength: 700 }
+        effort: { type: string, enum: [Low, Med, High] }
+    FrameworkAnalysis:
+      type: object
+      required: [problem_statement, selected_framework, framework_breakdown, recommended_solutions]
+      properties:
+        problem_statement: { type: string }
+        selected_framework: { $ref: "#/components/schemas/SelectedFramework" }
+        framework_breakdown:
+          type: array
+          minItems: 3
+          maxItems: 5
+          items: { $ref: "#/components/schemas/FrameworkBreakdownItem" }
+        recommended_solutions:
+          type: array
+          minItems: 3
+          maxItems: 5
+          items: { $ref: "#/components/schemas/RecommendedSolution" }
+    ActionPlanSolution:
+      type: object
+      required: [id, title, description, expectedImpact, effort]
+      properties:
+        id: { type: string, minLength: 1, maxLength: 80 }
+        title: { type: string, minLength: 5, maxLength: 180 }
+        description: { type: string, minLength: 20, maxLength: 1200 }
+        expectedImpact: { type: string, minLength: 10, maxLength: 700 }
+        effort: { type: string, enum: [Low, Med, High] }
+    ActionPlanInput:
+      type: object
+      required: [solutions]
+      properties:
+        frameworkName: { type: string }
+        solutions:
+          type: array
+          minItems: 1
+          maxItems: 5
+          items: { $ref: "#/components/schemas/ActionPlanSolution" }
+    ActionPlanItem:
+      type: object
+      required: [task_title, description, priority, suggested_timeline, success_metric]
+      properties:
+        task_title: { type: string }
+        description: { type: string }
+        priority: { type: string, enum: [High, Med, Low] }
+        suggested_timeline: { type: string }
+        success_metric: { type: string }
+    ActionPlanOutput:
+      type: object
+      required: [action_plan]
+      properties:
+        action_plan:
+          type: array
+          minItems: 1
+          maxItems: 5
+          items: { $ref: "#/components/schemas/ActionPlanItem" }
     WorkflowStep:
       type: object
       required: [id, type, title, description, inputs, outputs, dependencies, nextStep]
