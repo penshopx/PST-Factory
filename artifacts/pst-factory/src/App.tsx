@@ -14,11 +14,12 @@ import {
 import {
   getGetDashboardActivityQueryKey, getGetDashboardSummaryQueryKey,
   getGetPstBlueprintQueryKey, getGetPstProjectQueryKey, getGetPublicPstWorkspaceQueryKey,
+  getPstProjectDocumentOpenUrl,
   getGetPstReleasesQueryKey,
   getListPstProjectMembersQueryKey,
   getListPstAssetsQueryKey, getListPstPatternsQueryKey, getListPstProjectsQueryKey,
   getListPstRecipesQueryKey, useApprovePstProject, useArchivePstProject,
-  useBuildPstProject, useCreatePstProject, useCreatePstProjectComponent, useCreatePstProjectDocument, useDuplicatePstProject,
+  useBuildPstProject, useCreatePstProject, useCreatePstProjectComponent, useCreatePstProjectDocument, useDeletePstProjectDocument, useDuplicatePstProject,
   useGetDashboardActivity, useGetDashboardSummary, useGetPstBlueprint,
   useGetPstProject, useGetPstReleases, useGetPublicPstWorkspace, useListPstAssets, useListPstPatterns,
   useListPstProjectMembers, useListPstProjects, useListPstRecipes, usePublishPstProject, useRemovePstProjectMember, useRunPstArchitect,
@@ -26,7 +27,7 @@ import {
   useRestorePstRelease, useRunPstQa, useSimulatePstProject, useUpdatePstBlueprint, useUpdatePstProject,
 } from '@workspace/api-client-react';
 import type {
-  BuildResult, FactoryEvent, PstAsset, PstBlueprint, PstPattern, PstProject,
+  BuildResult, FactoryEvent, PstAsset, PstBlueprint, PstDocument, PstPattern, PstProject,
   PstProjectMember, PstRecipe, PstRelease, QaRun, SimulationReport, WorkflowStep,
 } from '@workspace/api-client-react';
 import { createPstRuntime, advancePstRuntime } from '@workspace/db/schema/pst-runtime';
@@ -554,6 +555,9 @@ function ProjectAssetsEditor({ project }: { project: PstProject }) {
   });
   const [notice, setNotice] = useState('');
   const [assetError, setAssetError] = useState('');
+  const [openingDocumentId, setOpeningDocumentId] = useState('');
+  const [documentToDelete, setDocumentToDelete] = useState<PstDocument | null>(null);
+  const deleteDocument = useDeletePstProjectDocument();
   const refresh = () => qc.invalidateQueries({ queryKey: getGetPstProjectQueryKey(project.id) });
   const componentValid = componentForm.name.trim().length >= 2 && componentForm.description.trim().length >= 5;
   const uploadPending = requestUpload.isPending || createDocument.isPending;
@@ -624,6 +628,41 @@ function ProjectAssetsEditor({ project }: { project: PstProject }) {
     }
   };
 
+  const openDocument = async (document: PstDocument) => {
+    setAssetError('');
+    setNotice('');
+    setOpeningDocumentId(document.id);
+    const popup = window.open('about:blank', '_blank');
+    if (popup) popup.opener = null;
+    try {
+      const target = await getPstProjectDocumentOpenUrl(project.id, document.id);
+      if (popup) popup.location.href = target.url;
+      else window.location.assign(target.url);
+    } catch {
+      popup?.close();
+      setAssetError('Dokumen belum dapat dibuka. Silakan coba lagi.');
+    } finally {
+      setOpeningDocumentId('');
+    }
+  };
+
+  const confirmDeleteDocument = () => {
+    if (!documentToDelete) return;
+    setAssetError('');
+    setNotice('');
+    deleteDocument.mutate({
+      projectId: project.id,
+      documentId: documentToDelete.id,
+    }, {
+      onSuccess: () => {
+        setNotice('Dokumen berhasil dihapus dari proyek.');
+        setDocumentToDelete(null);
+        void refresh();
+      },
+      onError: () => setAssetError('Dokumen belum dapat dihapus. Silakan coba lagi.'),
+    });
+  };
+
   return <div className="space-y-6">
     <div className="grid gap-6 xl:grid-cols-2">
       <Card>
@@ -650,8 +689,14 @@ function ProjectAssetsEditor({ project }: { project: PstProject }) {
     <ProjectAssets project={project} />
     <Card>
       <CardHeader><CardTitle className="text-base">Dokumen proyek</CardTitle><CardDescription>Dokumen sumber yang sudah tersimpan dan terhubung ke proyek.</CardDescription></CardHeader>
-      <CardContent>{project.documents?.length ? <div className="grid gap-2 md:grid-cols-2">{project.documents.map((document) => <div className="flex items-center gap-3 rounded-lg border border-border p-3" key={document.id}><div className="rounded-md bg-accent/10 p-2 text-accent"><FileText size={16} /></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold" title={document.name}>{document.name}</p><p className="font-mono text-[10px] uppercase text-muted-foreground">{(document.size / 1024).toFixed(0)} KB · tersimpan</p></div><StatusBadge value={document.status} /></div>)}</div> : <EmptyState icon={FileText} title="Belum ada dokumen" detail="Upload dokumen sumber melalui area di atas." />}</CardContent>
+      <CardContent>{project.documents?.length ? <div className="grid gap-2 md:grid-cols-2">{project.documents.map((document) => <div className="flex items-center gap-3 rounded-lg border border-border p-3" key={document.id}><div className="rounded-md bg-accent/10 p-2 text-accent"><FileText size={16} /></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold" title={document.name}>{document.name}</p><p className="font-mono text-[10px] uppercase text-muted-foreground">{(document.size / 1024).toFixed(0)} KB · tersimpan</p></div><div className="flex items-center gap-1"><Button type="button" size="sm" variant="outline" disabled={openingDocumentId === document.id} onClick={() => void openDocument(document)} data-testid={`button-open-document-${document.id}`}><ExternalLink size={14} /> {openingDocumentId === document.id ? 'Membuka...' : 'Buka'}</Button><Button type="button" size="icon" variant="ghost" className="text-muted-foreground hover:text-destructive" onClick={() => setDocumentToDelete(document)} aria-label={`Hapus ${document.name}`} data-testid={`button-delete-document-${document.id}`}><Trash2 size={15} /></Button></div></div>)}</div> : <EmptyState icon={FileText} title="Belum ada dokumen" detail="Upload dokumen sumber melalui area di atas." />}</CardContent>
     </Card>
+    <AlertDialog open={Boolean(documentToDelete)} onOpenChange={(open) => { if (!open && !deleteDocument.isPending) setDocumentToDelete(null); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader><AlertDialogTitle>Hapus dokumen proyek?</AlertDialogTitle><AlertDialogDescription>Dokumen <span className="font-semibold text-foreground">{documentToDelete?.name}</span> akan dihapus permanen dari proyek dan penyimpanan privat.</AlertDialogDescription></AlertDialogHeader>
+        <AlertDialogFooter><AlertDialogCancel disabled={deleteDocument.isPending}>Batalkan</AlertDialogCancel><AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={confirmDeleteDocument} disabled={deleteDocument.isPending} data-testid="button-confirm-delete-document">{deleteDocument.isPending ? 'Menghapus...' : 'Hapus permanen'}</AlertDialogAction></AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </div>;
 }
 function WorkflowTab({ workflow }: { workflow: WorkflowStep[] }) { return <Card><CardHeader><CardTitle className="text-base">Langkah kerja</CardTitle><CardDescription>Setiap langkah menjelaskan masukan, hasil, dan tindakan berikutnya.</CardDescription></CardHeader><CardContent>{workflow.length ? <div className="space-y-3">{workflow.map((step, i) => <div className="flex gap-4 rounded-xl border border-border p-4" key={step.id}><div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/10 font-mono text-xs text-primary">{String(i + 1).padStart(2, '0')}</div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="font-semibold">{step.title}</p><Badge variant="outline" className="font-mono text-[9px]">{step.type}</Badge></div><p className="mt-1 text-sm text-muted-foreground">{step.description}</p><div className="mt-3 flex flex-wrap gap-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground"><span>masukan: {step.inputs?.join(', ') || 'tidak ada'}</span><span>hasil: {step.outputs?.join(', ') || 'tidak ada'}</span></div></div><ChevronRight size={16} className="mt-1 text-muted-foreground" /></div>)}</div> : <EmptyState icon={Workflow} title="Langkah kerja belum ada" detail="Buat rancangan untuk menyusun langkah-langkah kerja." />}</CardContent></Card>; }

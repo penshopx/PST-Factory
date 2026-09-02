@@ -640,6 +640,11 @@ export interface UploadTarget {
   objectPath: string;
 }
 
+export interface DocumentAccessTarget {
+  /** @pattern ^https://.+ */
+  url: string;
+}
+
 export type PstAssetStatus = typeof PstAssetStatus[keyof typeof PstAssetStatus];
 
 

@@ -21,6 +21,7 @@ export * from './buildResultStatus';
 export * from './componentSelection';
 export * from './componentSelectionStatus';
 export * from './dashboardSummary';
+export * from './documentAccessTarget';
 export * from './errorResponse';
 export * from './executablePstDefinition';
 export * from './factoryEvent';

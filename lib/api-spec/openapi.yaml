@@ -173,6 +173,38 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PstDocument"
+  /pst/projects/{projectId}/documents/{documentId}/open-url:
+    get:
+      operationId: getPstProjectDocumentOpenUrl
+      tags: [projects]
+      summary: Get a short-lived private URL for a project document
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - name: documentId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Private document URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentAccessTarget"
+  /pst/projects/{projectId}/documents/{documentId}:
+    delete:
+      operationId: deletePstProjectDocument
+      tags: [projects]
+      summary: Delete a project document and its private object
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - name: documentId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: Document deleted
   /storage/uploads/request-url:
     post:
       operationId: requestUploadUrl
@@ -1046,6 +1078,11 @@ components:
       properties:
         uploadURL: { type: string, pattern: "^https://.+" }
         objectPath: { type: string }
+    DocumentAccessTarget:
+      type: object
+      required: [url]
+      properties:
+        url: { type: string, pattern: "^https://.+" }
     PstAsset:
       type: object
       required: [id, name, type, description, version, status, tags, domain, compatibility, createdAt, updatedAt]

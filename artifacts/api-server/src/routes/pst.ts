@@ -38,6 +38,9 @@ import {
   CreatePstProjectDocumentBody,
   CreatePstProjectDocumentParams,
   CreatePstProjectDocumentResponse,
+  DeletePstProjectDocumentParams,
+  GetPstProjectDocumentOpenUrlParams,
+  GetPstProjectDocumentOpenUrlResponse,
   DuplicatePstProjectParams,
   DuplicatePstProjectResponse,
   GetDashboardActivityResponse,
@@ -100,6 +103,7 @@ import {
 } from "../lib/services/pst/release-snapshot";
 import { compileExecutableRelease } from "../lib/services/pst/executable-release";
 import { randomUUID } from "node:crypto";
+import { deleteObject, signObjectUrl } from "./storage";
 
 const router: IRouter = Router();
 
@@ -1607,6 +1611,80 @@ router.post("/pst/projects/:projectId/documents", async (req, res): Promise<void
   }).returning();
   await addEvent("DOCUMENT_UPLOADED", `${body.data.name} was attached to the project.`, access.project.id);
   res.status(201).json(CreatePstProjectDocumentResponse.parse(document));
+});
+
+router.get("/pst/projects/:projectId/documents/:documentId/open-url", async (req, res): Promise<void> => {
+  const params = GetPstProjectDocumentOpenUrlParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const access = await authorizeProject(req, res, params.data.projectId);
+  if (!access) {
+    return;
+  }
+  const [document] = await db
+    .select()
+    .from(pstProjectDocumentsTable)
+    .where(and(
+      eq(pstProjectDocumentsTable.id, params.data.documentId),
+      eq(pstProjectDocumentsTable.projectId, access.project.id),
+    ));
+  if (!document) {
+    res.status(404).json({ error: "Project document not found" });
+    return;
+  }
+  const privateObjectDir = process.env.PRIVATE_OBJECT_DIR;
+  if (!privateObjectDir) {
+    res.status(503).json({ error: "Document storage is not configured" });
+    return;
+  }
+  try {
+    const storagePath = document.objectPath.replace(/^\/objects/, "");
+    const url = await signObjectUrl(`${privateObjectDir}${storagePath}`, "GET");
+    res.json(GetPstProjectDocumentOpenUrlResponse.parse({ url }));
+  } catch (error) {
+    req.log.error({ err: error, documentId: document.id }, "Failed to create document read URL");
+    res.status(500).json({ error: "Failed to open project document" });
+  }
+});
+
+router.delete("/pst/projects/:projectId/documents/:documentId", async (req, res): Promise<void> => {
+  const params = DeletePstProjectDocumentParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const access = await authorizeProject(req, res, params.data.projectId, editorRoles);
+  if (!access) {
+    return;
+  }
+  const [document] = await db
+    .select()
+    .from(pstProjectDocumentsTable)
+    .where(and(
+      eq(pstProjectDocumentsTable.id, params.data.documentId),
+      eq(pstProjectDocumentsTable.projectId, access.project.id),
+    ));
+  if (!document) {
+    res.status(404).json({ error: "Project document not found" });
+    return;
+  }
+  const privateObjectDir = process.env.PRIVATE_OBJECT_DIR;
+  if (!privateObjectDir) {
+    res.status(503).json({ error: "Document storage is not configured" });
+    return;
+  }
+  try {
+    const storagePath = document.objectPath.replace(/^\/objects/, "");
+    await deleteObject(`${privateObjectDir}${storagePath}`);
+    await db.delete(pstProjectDocumentsTable).where(eq(pstProjectDocumentsTable.id, document.id));
+    await addEvent("DOCUMENT_DELETED", `${document.name} was removed from the project.`, access.project.id);
+    res.status(204).send();
+  } catch (error) {
+    req.log.error({ err: error, documentId: document.id }, "Failed to delete project document");
+    res.status(500).json({ error: "Failed to delete project document" });
+  }
 });
 
 router.get("/pst/assets", async (req, res): Promise<void> => {

@@ -28,6 +28,7 @@ import type {
   BuildResult,
   ComponentSelection,
   DashboardSummary,
+  DocumentAccessTarget,
   ErrorResponse,
   FactoryEvent,
   FrameworkAnalysis,
@@ -763,6 +764,161 @@ export const useCreatePstProjectDocument = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCreatePstProjectDocumentMutationOptions(options));
+    }
+
+export const getGetPstProjectDocumentOpenUrlUrl = (projectId: string,
+    documentId: string,) => {
+
+
+
+
+  return `/api/pst/projects/${projectId}/documents/${documentId}/open-url`
+}
+
+/**
+ * @summary Get a short-lived private URL for a project document
+ */
+export const getPstProjectDocumentOpenUrl = async (projectId: string,
+    documentId: string, options?: Parameters<typeof customFetch>[1]): Promise<DocumentAccessTarget> => {
+
+  return customFetch<DocumentAccessTarget>(getGetPstProjectDocumentOpenUrlUrl(projectId,documentId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPstProjectDocumentOpenUrlQueryKey = (projectId: string,
+    documentId: string,) => {
+    return [
+    `/api/pst/projects/${projectId}/documents/${documentId}/open-url`
+    ] as const;
+    }
+
+
+export const getGetPstProjectDocumentOpenUrlQueryOptions = <TData = Awaited<ReturnType<typeof getPstProjectDocumentOpenUrl>>, TError = ErrorType<unknown>>(projectId: string,
+    documentId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPstProjectDocumentOpenUrl>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPstProjectDocumentOpenUrlQueryKey(projectId,documentId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPstProjectDocumentOpenUrl>>> = ({ signal }) => getPstProjectDocumentOpenUrl(projectId,documentId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: projectId !== null && projectId !== undefined && documentId !== null && documentId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPstProjectDocumentOpenUrl>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPstProjectDocumentOpenUrlQueryResult = NonNullable<Awaited<ReturnType<typeof getPstProjectDocumentOpenUrl>>>
+export type GetPstProjectDocumentOpenUrlQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get a short-lived private URL for a project document
+ */
+
+export function useGetPstProjectDocumentOpenUrl<TData = Awaited<ReturnType<typeof getPstProjectDocumentOpenUrl>>, TError = ErrorType<unknown>>(
+ projectId: string,
+    documentId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPstProjectDocumentOpenUrl>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPstProjectDocumentOpenUrlQueryOptions(projectId,documentId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getDeletePstProjectDocumentUrl = (projectId: string,
+    documentId: string,) => {
+
+
+
+
+  return `/api/pst/projects/${projectId}/documents/${documentId}`
+}
+
+/**
+ * @summary Delete a project document and its private object
+ */
+export const deletePstProjectDocument = async (projectId: string,
+    documentId: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeletePstProjectDocumentUrl(projectId,documentId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeletePstProjectDocumentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePstProjectDocument>>, TError,{projectId: string;documentId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deletePstProjectDocument>>, TError,{projectId: string;documentId: string}, TContext> => {
+
+const mutationKey = ['deletePstProjectDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deletePstProjectDocument>>, {projectId: string;documentId: string}> = (props) => {
+          const {projectId,documentId} = props ?? {};
+
+          return  deletePstProjectDocument(projectId,documentId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeletePstProjectDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof deletePstProjectDocument>>>
+
+    export type DeletePstProjectDocumentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete a project document and its private object
+ */
+export const useDeletePstProjectDocument = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePstProjectDocument>>, TError,{projectId: string;documentId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deletePstProjectDocument>>,
+        TError,
+        {projectId: string;documentId: string},
+        TContext
+      > => {
+      return useMutation(getDeletePstProjectDocumentMutationOptions(options));
     }
 
 export const getRequestUploadUrlUrl = () => {

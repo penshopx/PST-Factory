@@ -19,7 +19,7 @@ function parseObjectPath(path: string) {
   };
 }
 
-async function signUploadUrl(fullPath: string) {
+export async function signObjectUrl(fullPath: string, method: "PUT" | "GET" | "DELETE") {
   const { bucketName, objectName } = parseObjectPath(fullPath);
   const response = await fetch(`${sidecarEndpoint}/object-storage/signed-object-url`, {
     method: "POST",
@@ -27,7 +27,7 @@ async function signUploadUrl(fullPath: string) {
     body: JSON.stringify({
       bucket_name: bucketName,
       object_name: objectName,
-      method: "PUT",
+      method,
       expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
     }),
     signal: AbortSignal.timeout(30_000),
@@ -40,6 +40,17 @@ async function signUploadUrl(fullPath: string) {
     throw new Error("App Storage did not return a signed URL");
   }
   return result.signed_url;
+}
+
+export async function deleteObject(fullPath: string) {
+  const objectURL = await signObjectUrl(fullPath, "DELETE");
+  const response = await fetch(objectURL, {
+    method: "DELETE",
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (!response.ok && response.status !== 404) {
+    throw new Error(`App Storage delete failed with status ${response.status}`);
+  }
 }
 
 router.post("/storage/uploads/request-url", async (req, res): Promise<void> => {
@@ -56,7 +67,7 @@ router.post("/storage/uploads/request-url", async (req, res): Promise<void> => {
   try {
     const objectId = randomUUID();
     const objectPath = `/objects/uploads/${objectId}`;
-    const uploadURL = await signUploadUrl(`${privateObjectDir}/uploads/${objectId}`);
+    const uploadURL = await signObjectUrl(`${privateObjectDir}/uploads/${objectId}`, "PUT");
     res.json(RequestUploadUrlResponse.parse({ uploadURL, objectPath }));
   } catch (error) {
     req.log.error({ err: error }, "Failed to create document upload URL");

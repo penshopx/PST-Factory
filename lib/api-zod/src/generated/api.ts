@@ -588,6 +588,33 @@ export const CreatePstProjectDocumentResponse = zod.object({
 
 
 /**
+ * @summary Get a short-lived private URL for a project document
+ */
+export const GetPstProjectDocumentOpenUrlParams = zod.object({
+  "projectId": zod.coerce.string(),
+  "documentId": zod.coerce.string()
+})
+
+export const getPstProjectDocumentOpenUrlResponseUrlRegExp = new RegExp('^https://.+');
+
+
+export const GetPstProjectDocumentOpenUrlResponse = zod.object({
+  "url": zod.string().regex(getPstProjectDocumentOpenUrlResponseUrlRegExp)
+})
+
+
+/**
+ * @summary Delete a project document and its private object
+ */
+export const DeletePstProjectDocumentParams = zod.object({
+  "projectId": zod.coerce.string(),
+  "documentId": zod.coerce.string()
+})
+
+export const DeletePstProjectDocumentResponse = zod.void()
+
+
+/**
  * @summary Request a presigned URL for a private document upload
  */
 export const requestUploadUrlBodyNameMax = 255;
