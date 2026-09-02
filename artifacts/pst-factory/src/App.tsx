@@ -374,12 +374,81 @@ function ProjectRow({ project, onDuplicate, onArchive }: { project: PstProject; 
 function Create() {
   const [, setLocation] = useLocation();
   const create = useCreatePstProject();
+  const requestUpload = useRequestUploadUrl();
+  const createDocument = useCreatePstProjectDocument();
   const [form, setForm] = useState({ name: '', description: '', domain: '', family: '', series: '', problemStatement: '', targetUser: '', desiredOutcome: '' });
+  const [planningFile, setPlanningFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState('');
+  const [createError, setCreateError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const update = (key: keyof typeof form, value: string) => setForm((current) => ({ ...current, [key]: value }));
   const valid = form.name.trim() && form.problemStatement.trim() && form.targetUser.trim() && form.desiredOutcome.trim();
+  const selectPlanningFile = (file: File | undefined) => {
+    setFileError('');
+    if (!file) {
+      setPlanningFile(null);
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      setPlanningFile(null);
+      setFileError('Ukuran dokumen maksimal 20 MB.');
+      return;
+    }
+    const allowed = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain',
+    ];
+    if (!allowed.includes(file.type)) {
+      setPlanningFile(null);
+      setFileError('Format yang didukung: PDF, DOC, DOCX, dan TXT.');
+      return;
+    }
+    setPlanningFile(file);
+  };
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!valid || submitting) return;
+    setCreateError('');
+    setSubmitting(true);
+    try {
+      const project = await create.mutateAsync({ data: form });
+      if (planningFile) {
+        const target = await requestUpload.mutateAsync({
+          data: { name: planningFile.name, size: planningFile.size, contentType: planningFile.type },
+        });
+        const uploadResponse = await fetch(target.uploadURL, {
+          method: 'PUT',
+          headers: { 'Content-Type': planningFile.type },
+          body: planningFile,
+        });
+        if (!uploadResponse.ok) throw new Error('Upload file gagal');
+        await createDocument.mutateAsync({
+          projectId: project.id,
+          data: {
+            name: planningFile.name,
+            objectPath: target.objectPath,
+            contentType: planningFile.type,
+            size: planningFile.size,
+          },
+        });
+        window.sessionStorage.setItem(`pst-project-tab:${project.id}`, 'assets');
+      }
+      setLocation(`/projects/${project.id}`);
+    } catch {
+      setCreateError(planningFile
+        ? 'Project dibuat, tetapi dokumen belum berhasil diunggah. Buka tab Komponen untuk mencoba lagi.'
+        : 'Project belum dapat dibuat. Silakan coba lagi.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
   return <div className="mx-auto max-w-5xl"><PageIntro eyebrow="Buat PST baru" title="Jelaskan masalahnya dulu." testId="heading-define-the-problem-first." detail="Mulailah dari masalah, bukan daftar fitur. Beri Perancang informasi yang cukup agar dapat membuat solusi yang berguna." />
      <div className="mb-7 flex items-center overflow-x-auto border-b border-border">{['01 Masalah', '02 Pengguna', '03 Hasil', '04 Langkah berikutnya'].map((step, i) => <div className={cn('flex items-center gap-2 border-b-2 px-4 py-3 font-mono text-[10px] uppercase tracking-wider', i === 0 ? 'border-accent text-accent' : 'border-transparent text-muted-foreground')} key={step}><span className="grid h-5 w-5 place-items-center rounded-full border border-current">{i + 1}</span>{step}</div>)}</div>
-     <Card><CardHeader><CardTitle className="text-xl">Informasi utama</CardTitle><CardDescription>Empat informasi ini menjadi dasar rancangan PST.</CardDescription></CardHeader><CardContent className="grid gap-5 md:grid-cols-2"><Field label="Nama PST" value={form.name} onChange={(v) => update('name', v)} placeholder="mis. Panduan Minggu Pertama" test="input-create-name" /><Field label="Bidang penggunaan" value={form.domain} onChange={(v) => update('domain', v)} placeholder="mis. orientasi, operasional" test="input-create-domain" /><Field label="Kelompok produk" value={form.family} onChange={(v) => update('family', v)} placeholder="Opsional" test="input-create-family" /><Field label="Seri produk" value={form.series} onChange={(v) => update('series', v)} placeholder="Opsional" test="input-create-series" /><Field label="Masalah yang ingin diselesaikan" value={form.problemStatement} onChange={(v) => update('problemStatement', v)} placeholder="Situasi spesifik apa yang terus terjadi?" multiline test="input-create-problem" /><Field label="Siapa yang akan memakai" value={form.targetUser} onChange={(v) => update('targetUser', v)} placeholder="Siapa yang mengalami situasi itu?" multiline test="input-create-user" /><Field label="Hasil yang diharapkan" value={form.desiredOutcome} onChange={(v) => update('desiredOutcome', v)} placeholder="Perubahan apa yang bisa diukur setelah alat ini dipakai?" multiline test="input-create-outcome" /><Field label="Penjelasan singkat" value={form.description} onChange={(v) => update('description', v)} placeholder="Satu kalimat tentang PST ini" multiline test="input-create-description" /><div className="flex items-center justify-between md:col-span-2"><p className="text-xs text-muted-foreground">{valid ? 'Siap dikirim ke Perancang.' : 'Lengkapi empat informasi wajib untuk melanjutkan.'}</p><Button disabled={!valid || create.isPending} onClick={() => create.mutate({ data: form }, { onSuccess: (project) => setLocation(`/projects/${project.id}`) })} data-testid="button-create-pst">{create.isPending ? 'Membuat...' : 'Buat dan buka ruang kerja'} <ArrowRight size={16} /></Button></div></CardContent></Card>
+     <form onSubmit={(event) => void submit(event)}><Card><CardHeader><CardTitle className="text-xl">Informasi utama</CardTitle><CardDescription>Empat informasi ini menjadi dasar rancangan PST.</CardDescription></CardHeader><CardContent className="grid gap-5 md:grid-cols-2"><Field label="Nama PST" value={form.name} onChange={(v) => update('name', v)} placeholder="mis. Panduan Minggu Pertama" test="input-create-name" /><Field label="Bidang penggunaan" value={form.domain} onChange={(v) => update('domain', v)} placeholder="mis. orientasi, operasional" test="input-create-domain" /><Field label="Kelompok produk" value={form.family} onChange={(v) => update('family', v)} placeholder="Opsional" test="input-create-family" /><Field label="Seri produk" value={form.series} onChange={(v) => update('series', v)} placeholder="Opsional" test="input-create-series" /><Field label="Masalah yang ingin diselesaikan" value={form.problemStatement} onChange={(v) => update('problemStatement', v)} placeholder="Situasi spesifik apa yang terus terjadi?" multiline test="input-create-problem" /><Field label="Siapa yang akan memakai" value={form.targetUser} onChange={(v) => update('targetUser', v)} placeholder="Siapa yang mengalami situasi itu?" multiline test="input-create-user" /><Field label="Hasil yang diharapkan" value={form.desiredOutcome} onChange={(v) => update('desiredOutcome', v)} placeholder="Perubahan apa yang bisa diukur setelah alat ini dipakai?" multiline test="input-create-outcome" /><Field label="Penjelasan singkat" value={form.description} onChange={(v) => update('description', v)} placeholder="Satu kalimat tentang PST ini" multiline test="input-create-description" />
+       <div className="rounded-xl border border-dashed border-border bg-muted/20 p-4 md:col-span-2"><div className="flex items-start gap-3"><div className="rounded-lg bg-accent/10 p-2 text-accent"><Upload size={17} /></div><div className="min-w-0 flex-1"><p className="text-sm font-semibold">Dokumen pendukung perencanaan <span className="font-normal text-muted-foreground">(opsional)</span></p><p className="mt-1 text-xs text-muted-foreground">Tambahkan PDF, DOC, DOCX, atau TXT hingga 20 MB agar tersedia sebagai bahan perencanaan.</p><label className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs font-semibold transition-colors hover:border-primary hover:text-primary"><Upload size={14} /> {planningFile ? 'Ganti dokumen' : 'Pilih dokumen'}<input type="file" className="sr-only" accept=".pdf,.doc,.docx,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" onChange={(event) => selectPlanningFile(event.target.files?.[0])} data-testid="input-create-planning-document" /></label>{planningFile && <p className="mt-2 truncate font-mono text-[10px] text-accent" title={planningFile.name}>{planningFile.name} · {(planningFile.size / 1024).toFixed(0)} KB</p>}{fileError && <p className="mt-2 text-xs text-destructive" role="alert">{fileError}</p>}</div></div></div>
+       {createError && <p className="md:col-span-2 text-xs text-destructive" role="alert">{createError}</p>}<div className="flex items-center justify-between md:col-span-2"><p className="text-xs text-muted-foreground">{valid ? planningFile ? 'Siap membuat PST dan mengunggah dokumen pendukung.' : 'Siap dikirim ke Perancang.' : 'Lengkapi empat informasi wajib untuk melanjutkan.'}</p><Button type="submit" disabled={!valid || submitting || Boolean(fileError)} data-testid="button-create-pst">{submitting ? planningFile ? 'Membuat dan mengunggah...' : 'Membuat...' : 'Buat dan buka ruang kerja'} <ArrowRight size={16} /></Button></div></CardContent></Card></form>
   </div>;
 }
 
