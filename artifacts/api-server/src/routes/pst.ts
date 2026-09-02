@@ -10,6 +10,7 @@ import {
   pstProjectPatternsTable,
   pstProjectMembersTable,
   pstProjectComponentsTable,
+  pstProjectDocumentsTable,
   pstProjectsTable,
   pstProjectRecipesTable,
   pstReleasesTable,
@@ -31,6 +32,12 @@ import {
   BuildPstProjectResponse,
   CreatePstProjectBody,
   CreatePstProjectResponse,
+  CreatePstProjectComponentBody,
+  CreatePstProjectComponentParams,
+  CreatePstProjectComponentResponse,
+  CreatePstProjectDocumentBody,
+  CreatePstProjectDocumentParams,
+  CreatePstProjectDocumentResponse,
   DuplicatePstProjectParams,
   DuplicatePstProjectResponse,
   GetDashboardActivityResponse,
@@ -706,11 +713,26 @@ async function projectAggregate(projectId: string, userId: string) {
     })
     .from(pstProjectComponentsTable)
     .where(eq(pstProjectComponentsTable.projectId, projectId));
+  const documents = await db
+    .select({
+      id: pstProjectDocumentsTable.id,
+      projectId: pstProjectDocumentsTable.projectId,
+      name: pstProjectDocumentsTable.name,
+      objectPath: pstProjectDocumentsTable.objectPath,
+      contentType: pstProjectDocumentsTable.contentType,
+      size: pstProjectDocumentsTable.size,
+      status: pstProjectDocumentsTable.status,
+      createdAt: pstProjectDocumentsTable.createdAt,
+    })
+    .from(pstProjectDocumentsTable)
+    .where(eq(pstProjectDocumentsTable.projectId, projectId))
+    .orderBy(desc(pstProjectDocumentsTable.createdAt));
   const { selectedPatterns, selectedRecipes } = await getProjectReferences(projectId, userId);
   return {
     ...project,
     blueprint: blueprint ?? makeBlueprint(projectId, project.problemStatement, project.targetUser, project.desiredOutcome),
     components,
+    documents,
     selectedPatterns,
     selectedRecipes,
   };
@@ -1514,6 +1536,77 @@ router.patch("/pst/projects/:projectId/blueprint", async (req, res): Promise<voi
   await db.update(pstProjectsTable).set({ status: "BLUEPRINT_READY", updatedAt: new Date() }).where(eq(pstProjectsTable.id, access.project.id));
   await addEvent("BLUEPRINT_EDITED", "Blueprint changes were saved for human review.", access.project.id);
   res.json(UpdatePstBlueprintResponse.parse(updated));
+});
+
+router.post("/pst/projects/:projectId/components", async (req, res): Promise<void> => {
+  const params = CreatePstProjectComponentParams.safeParse(req.params);
+  const body = CreatePstProjectComponentBody.safeParse(req.body);
+  if (!params.success || !body.success) {
+    res.status(400).json({ error: !params.success ? params.error.message : body.error?.message ?? "Invalid request body" });
+    return;
+  }
+  const access = await authorizeProject(req, res, params.data.projectId, editorRoles);
+  if (!access) {
+    return;
+  }
+  const assetId = randomUUID();
+  const componentId = randomUUID();
+  await db.transaction(async (tx) => {
+    await tx.insert(pstAssetsTable).values({
+      id: assetId,
+      name: body.data.name,
+      type: body.data.type,
+      description: body.data.description,
+      version: "v1.0",
+      status: "ACTIVE",
+      tags: body.data.tags ?? [],
+      domain: access.project.domain,
+      compatibility: [access.project.family],
+    });
+    await tx.insert(pstProjectComponentsTable).values({
+      id: componentId,
+      projectId: access.project.id,
+      assetId,
+      name: body.data.name,
+      type: body.data.type,
+      source: "Input manual",
+      status: "READY",
+      required: true,
+    });
+  });
+  await addEvent("COMPONENT_ADDED", `${body.data.name} was added manually.`, access.project.id);
+  res.status(201).json(CreatePstProjectComponentResponse.parse({
+    id: componentId,
+    name: body.data.name,
+    type: body.data.type,
+    source: "Input manual",
+    status: "READY",
+  }));
+});
+
+router.post("/pst/projects/:projectId/documents", async (req, res): Promise<void> => {
+  const params = CreatePstProjectDocumentParams.safeParse(req.params);
+  const body = CreatePstProjectDocumentBody.safeParse(req.body);
+  if (!params.success || !body.success) {
+    res.status(400).json({ error: !params.success ? params.error.message : body.error?.message ?? "Invalid request body" });
+    return;
+  }
+  const access = await authorizeProject(req, res, params.data.projectId, editorRoles);
+  if (!access) {
+    return;
+  }
+  const [document] = await db.insert(pstProjectDocumentsTable).values({
+    id: randomUUID(),
+    projectId: access.project.id,
+    uploadedBy: access.userId,
+    name: body.data.name,
+    objectPath: body.data.objectPath,
+    contentType: body.data.contentType,
+    size: body.data.size,
+    status: "READY",
+  }).returning();
+  await addEvent("DOCUMENT_UPLOADED", `${body.data.name} was attached to the project.`, access.project.id);
+  res.status(201).json(CreatePstProjectDocumentResponse.parse(document));
 });
 
 router.get("/pst/assets", async (req, res): Promise<void> => {

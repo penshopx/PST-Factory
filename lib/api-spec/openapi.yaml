@@ -16,6 +16,7 @@ tags:
   - name: projects
   - name: libraries
   - name: manufacturing
+  - name: storage
 paths:
   /healthz:
     get:
@@ -132,6 +133,64 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PstProject"
+  /pst/projects/{projectId}/components:
+    post:
+      operationId: createPstProjectComponent
+      tags: [projects]
+      summary: Add a manual component to a PST project
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PstComponentInput"
+      responses:
+        "201":
+          description: Component added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComponentSelection"
+  /pst/projects/{projectId}/documents:
+    post:
+      operationId: createPstProjectDocument
+      tags: [projects]
+      summary: Attach an uploaded document to a PST project
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PstDocumentInput"
+      responses:
+        "201":
+          description: Document attached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PstDocument"
+  /storage/uploads/request-url:
+    post:
+      operationId: requestUploadUrl
+      tags: [storage]
+      summary: Request a presigned URL for a private document upload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadRequest"
+      responses:
+        "200":
+          description: Presigned upload URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadTarget"
   /pst/projects/{projectId}/duplicate:
     post:
       operationId: duplicatePstProject
@@ -592,7 +651,7 @@ components:
       enum: [DRAFT, ARCHITECTED, BLUEPRINT_READY, BUILDING, PREVIEW, QA, APPROVED, PUBLISHED, ARCHIVED]
     PstProject:
       type: object
-      required: [id, name, slug, description, status, version, domain, family, series, problemStatement, targetUser, desiredOutcome, productDna, blueprint, components, selectedPatterns, selectedRecipes, qaStatus, publicationStatus, createdAt, updatedAt]
+      required: [id, name, slug, description, status, version, domain, family, series, problemStatement, targetUser, desiredOutcome, productDna, blueprint, components, documents, selectedPatterns, selectedRecipes, qaStatus, publicationStatus, createdAt, updatedAt]
       properties:
         id: { type: string }
         name: { type: string }
@@ -611,6 +670,9 @@ components:
         components:
           type: array
           items: { $ref: "#/components/schemas/ComponentSelection" }
+        documents:
+          type: array
+          items: { $ref: "#/components/schemas/PstDocument" }
         selectedPatterns:
           type: array
           description: Pattern library records resolved through project reference relations.
@@ -940,6 +1002,50 @@ components:
     AssetType:
       type: string
       enum: [KNOWLEDGE, TOOL, MINI_APP, AI, WORKFLOW]
+    PstComponentInput:
+      type: object
+      required: [name, type, description]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 120 }
+        type: { $ref: "#/components/schemas/AssetType" }
+        description: { type: string, minLength: 5, maxLength: 1000 }
+        tags:
+          type: array
+          maxItems: 10
+          items: { type: string, minLength: 1, maxLength: 40 }
+    PstDocument:
+      type: object
+      required: [id, projectId, name, objectPath, contentType, size, status, createdAt]
+      properties:
+        id: { type: string }
+        projectId: { type: string }
+        name: { type: string }
+        objectPath: { type: string }
+        contentType: { type: string }
+        size: { type: number, multipleOf: 1, minimum: 1 }
+        status: { type: string, enum: [READY] }
+        createdAt: { type: string, format: date-time }
+    PstDocumentInput:
+      type: object
+      required: [name, objectPath, contentType, size]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 255 }
+        objectPath: { type: string, pattern: "^/objects/uploads/[a-zA-Z0-9-]+$" }
+        contentType: { type: string, minLength: 1, maxLength: 150 }
+        size: { type: number, multipleOf: 1, minimum: 1, maximum: 20971520 }
+    UploadRequest:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 255 }
+        size: { type: number, multipleOf: 1, minimum: 1, maximum: 20971520 }
+        contentType: { type: string, minLength: 1, maxLength: 150 }
+    UploadTarget:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL: { type: string, pattern: "^https://.+" }
+        objectPath: { type: string }
     PstAsset:
       type: object
       required: [id, name, type, description, version, status, tags, domain, compatibility, createdAt, updatedAt]

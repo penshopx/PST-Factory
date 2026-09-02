@@ -26,6 +26,7 @@ import type {
   BlueprintUpdate,
   BuildInput,
   BuildResult,
+  ComponentSelection,
   DashboardSummary,
   ErrorResponse,
   FactoryEvent,
@@ -37,6 +38,9 @@ import type {
   NotFoundResponse,
   PstAsset,
   PstBlueprint,
+  PstComponentInput,
+  PstDocument,
+  PstDocumentInput,
   PstPattern,
   PstProject,
   PstProjectInput,
@@ -49,7 +53,9 @@ import type {
   PstWorkspace,
   QaRun,
   SimulationInput,
-  SimulationReport
+  SimulationReport,
+  UploadRequest,
+  UploadTarget
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -613,6 +619,221 @@ export const useUpdatePstProject = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getUpdatePstProjectMutationOptions(options));
+    }
+
+export const getCreatePstProjectComponentUrl = (projectId: string,) => {
+
+
+
+
+  return `/api/pst/projects/${projectId}/components`
+}
+
+/**
+ * @summary Add a manual component to a PST project
+ */
+export const createPstProjectComponent = async (projectId: string,
+    pstComponentInput: PstComponentInput, options?: Parameters<typeof customFetch>[1]): Promise<ComponentSelection> => {
+
+  return customFetch<ComponentSelection>(getCreatePstProjectComponentUrl(projectId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pstComponentInput)
+  }
+);}
+
+
+
+
+
+export const getCreatePstProjectComponentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPstProjectComponent>>, TError,{projectId: string;data: BodyType<PstComponentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPstProjectComponent>>, TError,{projectId: string;data: BodyType<PstComponentInput>}, TContext> => {
+
+const mutationKey = ['createPstProjectComponent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPstProjectComponent>>, {projectId: string;data: BodyType<PstComponentInput>}> = (props) => {
+          const {projectId,data} = props ?? {};
+
+          return  createPstProjectComponent(projectId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePstProjectComponentMutationResult = NonNullable<Awaited<ReturnType<typeof createPstProjectComponent>>>
+    export type CreatePstProjectComponentMutationBody = BodyType<PstComponentInput>
+    export type CreatePstProjectComponentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Add a manual component to a PST project
+ */
+export const useCreatePstProjectComponent = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPstProjectComponent>>, TError,{projectId: string;data: BodyType<PstComponentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPstProjectComponent>>,
+        TError,
+        {projectId: string;data: BodyType<PstComponentInput>},
+        TContext
+      > => {
+      return useMutation(getCreatePstProjectComponentMutationOptions(options));
+    }
+
+export const getCreatePstProjectDocumentUrl = (projectId: string,) => {
+
+
+
+
+  return `/api/pst/projects/${projectId}/documents`
+}
+
+/**
+ * @summary Attach an uploaded document to a PST project
+ */
+export const createPstProjectDocument = async (projectId: string,
+    pstDocumentInput: PstDocumentInput, options?: Parameters<typeof customFetch>[1]): Promise<PstDocument> => {
+
+  return customFetch<PstDocument>(getCreatePstProjectDocumentUrl(projectId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pstDocumentInput)
+  }
+);}
+
+
+
+
+
+export const getCreatePstProjectDocumentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPstProjectDocument>>, TError,{projectId: string;data: BodyType<PstDocumentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPstProjectDocument>>, TError,{projectId: string;data: BodyType<PstDocumentInput>}, TContext> => {
+
+const mutationKey = ['createPstProjectDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPstProjectDocument>>, {projectId: string;data: BodyType<PstDocumentInput>}> = (props) => {
+          const {projectId,data} = props ?? {};
+
+          return  createPstProjectDocument(projectId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePstProjectDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof createPstProjectDocument>>>
+    export type CreatePstProjectDocumentMutationBody = BodyType<PstDocumentInput>
+    export type CreatePstProjectDocumentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Attach an uploaded document to a PST project
+ */
+export const useCreatePstProjectDocument = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPstProjectDocument>>, TError,{projectId: string;data: BodyType<PstDocumentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPstProjectDocument>>,
+        TError,
+        {projectId: string;data: BodyType<PstDocumentInput>},
+        TContext
+      > => {
+      return useMutation(getCreatePstProjectDocumentMutationOptions(options));
+    }
+
+export const getRequestUploadUrlUrl = () => {
+
+
+
+
+  return `/api/storage/uploads/request-url`
+}
+
+/**
+ * @summary Request a presigned URL for a private document upload
+ */
+export const requestUploadUrl = async (uploadRequest: UploadRequest, options?: Parameters<typeof customFetch>[1]): Promise<UploadTarget> => {
+
+  return customFetch<UploadTarget>(getRequestUploadUrlUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(uploadRequest)
+  }
+);}
+
+
+
+
+
+export const getRequestUploadUrlMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestUploadUrl>>, TError,{data: BodyType<UploadRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestUploadUrl>>, TError,{data: BodyType<UploadRequest>}, TContext> => {
+
+const mutationKey = ['requestUploadUrl'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestUploadUrl>>, {data: BodyType<UploadRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  requestUploadUrl(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestUploadUrlMutationResult = NonNullable<Awaited<ReturnType<typeof requestUploadUrl>>>
+    export type RequestUploadUrlMutationBody = BodyType<UploadRequest>
+    export type RequestUploadUrlMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Request a presigned URL for a private document upload
+ */
+export const useRequestUploadUrl = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestUploadUrl>>, TError,{data: BodyType<UploadRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestUploadUrl>>,
+        TError,
+        {data: BodyType<UploadRequest>},
+        TContext
+      > => {
+      return useMutation(getRequestUploadUrlMutationOptions(options));
     }
 
 export const getDuplicatePstProjectUrl = (projectId: string,) => {

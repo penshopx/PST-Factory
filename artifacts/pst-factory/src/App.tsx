@@ -7,9 +7,9 @@ import { shadcn } from '@clerk/themes';
 import {
   Activity, Archive, ArrowLeft, ArrowRight, Bot, Box, Check, CheckCircle2,
   ChevronRight, CircleDot, ClipboardCheck, Copy, Database, ExternalLink,
-  BriefcaseBusiness, FileCode2, FileSearch, FlaskConical, Gauge, Hammer, LayoutDashboard, Library, Menu,
+  BriefcaseBusiness, FileCode2, FileSearch, FileText, FlaskConical, Gauge, Hammer, LayoutDashboard, Library, Menu,
   MessageCircle, MoreHorizontal, Package, Pencil, Plus, Rocket, Search, Settings2, ShieldCheck, Sparkles,
-  Target, Trash2, TriangleAlert, UserRound, Users, Workflow, X,
+  Target, Trash2, TriangleAlert, Upload, UserRound, Users, Workflow, X,
 } from 'lucide-react';
 import {
   getGetDashboardActivityQueryKey, getGetDashboardSummaryQueryKey,
@@ -18,11 +18,11 @@ import {
   getListPstProjectMembersQueryKey,
   getListPstAssetsQueryKey, getListPstPatternsQueryKey, getListPstProjectsQueryKey,
   getListPstRecipesQueryKey, useApprovePstProject, useArchivePstProject,
-  useBuildPstProject, useCreatePstProject, useDuplicatePstProject,
+  useBuildPstProject, useCreatePstProject, useCreatePstProjectComponent, useCreatePstProjectDocument, useDuplicatePstProject,
   useGetDashboardActivity, useGetDashboardSummary, useGetPstBlueprint,
   useGetPstProject, useGetPstReleases, useGetPublicPstWorkspace, useListPstAssets, useListPstPatterns,
   useListPstProjectMembers, useListPstProjects, useListPstRecipes, usePublishPstProject, useRemovePstProjectMember, useRunPstArchitect,
-  useUpsertPstProjectMember,
+  useRequestUploadUrl, useUpsertPstProjectMember,
   useRestorePstRelease, useRunPstQa, useSimulatePstProject, useUpdatePstBlueprint, useUpdatePstProject,
 } from '@workspace/api-client-react';
 import type {
@@ -394,7 +394,7 @@ function ProjectWorkspace() {
   const patternsQuery = useListPstPatterns({ query: { queryKey: getListPstPatternsQueryKey() } });
   const recipesQuery = useListPstRecipes({ query: { queryKey: getListPstRecipesQueryKey() } });
   const project = projectQuery.data;
-  const [tab, setTab] = useState('overview');
+  const [tab, setTab] = useState(() => window.sessionStorage.getItem(`pst-project-tab:${projectId}`) ?? 'overview');
   const [architectContext, setArchitectContext] = useState('');
   const [selectedPatternId, setSelectedPatternId] = useState('');
   const [selectedRecipeId, setSelectedRecipeId] = useState('');
@@ -414,6 +414,9 @@ function ProjectWorkspace() {
   const qc = useQueryClient();
   const projectPatternId = project?.selectedPatterns?.[0]?.id ?? '';
   const projectRecipeId = project?.selectedRecipes?.[0]?.id ?? '';
+  useEffect(() => {
+    window.sessionStorage.setItem(`pst-project-tab:${projectId}`, tab);
+  }, [projectId, tab]);
   useEffect(() => {
     if (project) {
       setSelectedPatternId(projectPatternId);
@@ -473,7 +476,7 @@ function ProjectWorkspace() {
     {tab === 'problem' && <ProblemTab project={project} onSave={(data) => updateProject.mutate({ projectId, data }, { onSuccess: invalidate })} />}
      {tab === 'architect' && <ArchitectTab project={project} context={architectContext} setContext={setArchitectContext} patterns={patternsQuery.data ?? []} recipes={recipesQuery.data ?? []} selectedPatternId={selectedPatternId} selectedRecipeId={selectedRecipeId} setSelectedPatternId={setSelectedPatternId} setSelectedRecipeId={setSelectedRecipeId} onRun={() => run('architect')} pending={architect.isPending} />}
     {tab === 'blueprint' && <BlueprintTab projectId={projectId} blueprint={blueprint} onSave={(data) => updateBlueprint.mutate({ projectId, data }, { onSuccess: invalidate })} />}
-    {tab === 'assets' && <ProjectAssets project={project} />}
+    {tab === 'assets' && <ProjectAssetsEditor project={project} />}
     {tab === 'workflow' && <WorkflowTab workflow={blueprint?.workflow ?? []} />}
     {tab === 'ai' && <FrameworkAnalyzer project={project} blueprint={blueprint} />}
     {tab === 'preview' && <PreviewTab project={project} simulation={simulation} onSimulate={() => run('simulate')} pending={simulate.isPending} />}
@@ -536,6 +539,121 @@ function BlueprintTab({ projectId, blueprint, onSave }: { projectId: string; blu
 function ListBlock({ label, items = [] }: { label: string; items?: string[] }) { return <div><p className="mb-2 font-mono text-[10px] uppercase tracking-[.16em] text-muted-foreground">{label}</p>{items.length ? <div className="space-y-1.5">{items.map((item) => <div className="flex gap-2 rounded-md bg-muted/50 p-2 text-xs" key={item}><span className="text-accent">+</span>{item}</div>)}</div> : <p className="text-xs text-muted-foreground">Belum ada persyaratan.</p>}</div>; }
 
 function ProjectAssets({ project }: { project: PstProject }) { return <Card><CardHeader><CardTitle className="text-base">Komponen yang dipilih</CardTitle><CardDescription>Komponen yang akan dirakit menjadi PST ini.</CardDescription></CardHeader><CardContent>{project.components?.length ? <div className="grid gap-2 md:grid-cols-2">{project.components.map((component) => <div className="flex items-center gap-3 rounded-lg border border-border p-3" key={component.id}><div className="rounded-md bg-primary/10 p-2 text-primary"><Package size={15} /></div><div className="flex-1"><p className="text-sm font-semibold">{component.name}</p><p className="font-mono text-[10px] uppercase text-muted-foreground">{component.type} · {component.source}</p></div><StatusBadge value={component.status} /></div>)}</div> : <EmptyState icon={Package} title="Belum ada komponen" detail="Perancang atau panduan dapat menambahkan komponen ke sini." />}</CardContent></Card>; }
+
+function ProjectAssetsEditor({ project }: { project: PstProject }) {
+  const qc = useQueryClient();
+  const createComponent = useCreatePstProjectComponent();
+  const requestUpload = useRequestUploadUrl();
+  const createDocument = useCreatePstProjectDocument();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [componentForm, setComponentForm] = useState({
+    name: '',
+    type: 'KNOWLEDGE' as 'KNOWLEDGE' | 'TOOL' | 'MINI_APP' | 'AI' | 'WORKFLOW',
+    description: '',
+    tags: '',
+  });
+  const [notice, setNotice] = useState('');
+  const [assetError, setAssetError] = useState('');
+  const refresh = () => qc.invalidateQueries({ queryKey: getGetPstProjectQueryKey(project.id) });
+  const componentValid = componentForm.name.trim().length >= 2 && componentForm.description.trim().length >= 5;
+  const uploadPending = requestUpload.isPending || createDocument.isPending;
+
+  const submitComponent = (event: FormEvent) => {
+    event.preventDefault();
+    setAssetError('');
+    setNotice('');
+    createComponent.mutate({
+      projectId: project.id,
+      data: {
+        name: componentForm.name.trim(),
+        type: componentForm.type,
+        description: componentForm.description.trim(),
+        tags: componentForm.tags.split(',').map((tag) => tag.trim()).filter(Boolean).slice(0, 10),
+      },
+    }, {
+      onSuccess: () => {
+        setComponentForm({ name: '', type: 'KNOWLEDGE', description: '', tags: '' });
+        setNotice('Komponen berhasil ditambahkan ke proyek.');
+        void refresh();
+      },
+      onError: () => setAssetError('Komponen belum dapat disimpan. Silakan coba lagi.'),
+    });
+  };
+
+  const uploadDocument = async (file: File) => {
+    setAssetError('');
+    setNotice('');
+    if (file.size > 20 * 1024 * 1024) {
+      setAssetError('Ukuran dokumen maksimal 20 MB.');
+      return;
+    }
+    const allowed = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain',
+    ];
+    if (!allowed.includes(file.type)) {
+      setAssetError('Format yang didukung: PDF, DOC, DOCX, dan TXT.');
+      return;
+    }
+    try {
+      const target = await requestUpload.mutateAsync({
+        data: { name: file.name, size: file.size, contentType: file.type },
+      });
+      const uploadResponse = await fetch(target.uploadURL, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      });
+      if (!uploadResponse.ok) throw new Error('Upload file gagal');
+      await createDocument.mutateAsync({
+        projectId: project.id,
+        data: {
+          name: file.name,
+          objectPath: target.objectPath,
+          contentType: file.type,
+          size: file.size,
+        },
+      });
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      setNotice('Dokumen berhasil diunggah dan dihubungkan ke proyek.');
+      await refresh();
+    } catch {
+      setAssetError('Dokumen belum dapat diunggah. Silakan coba lagi.');
+    }
+  };
+
+  return <div className="space-y-6">
+    <div className="grid gap-6 xl:grid-cols-2">
+      <Card>
+        <CardHeader><CardTitle className="text-base">Tambah komponen</CardTitle><CardDescription>Masukkan bahan, alat, atau modul yang diperlukan PST ini.</CardDescription></CardHeader>
+        <CardContent>
+          <form className="space-y-4" onSubmit={submitComponent}>
+            <Field label="Nama komponen" value={componentForm.name} onChange={(name) => setComponentForm((form) => ({ ...form, name }))} placeholder="mis. Checklist kepatuhan proyek" test="input-component-name" />
+            <label className="block"><span className="mb-2 block font-mono text-[10px] uppercase tracking-[.16em] text-muted-foreground">Tipe komponen</span><select value={componentForm.type} onChange={(event) => setComponentForm((form) => ({ ...form, type: event.target.value as typeof form.type }))} className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm" data-testid="select-component-type"><option value="KNOWLEDGE">Pengetahuan</option><option value="TOOL">Alat</option><option value="MINI_APP">Mini app</option><option value="AI">AI</option><option value="WORKFLOW">Alur kerja</option></select></label>
+            <Field label="Deskripsi" value={componentForm.description} onChange={(description) => setComponentForm((form) => ({ ...form, description }))} placeholder="Jelaskan fungsi komponen dalam PST ini" multiline test="input-component-description" />
+            <Field label="Tag" value={componentForm.tags} onChange={(tags) => setComponentForm((form) => ({ ...form, tags }))} placeholder="pisahkan dengan koma" test="input-component-tags" />
+            <Button type="submit" disabled={!componentValid || createComponent.isPending} data-testid="button-add-project-component"><Plus size={15} /> {createComponent.isPending ? 'Menyimpan...' : 'Tambah komponen'}</Button>
+          </form>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader><CardTitle className="text-base">Upload dokumen</CardTitle><CardDescription>Tambahkan dokumen sumber sebagai konteks proyek. Maksimal 20 MB.</CardDescription></CardHeader>
+        <CardContent>
+          <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadDocument(file); }} data-testid="input-project-document" />
+          <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadPending} className="focus-ring flex min-h-48 w-full flex-col items-center justify-center rounded-xl border border-dashed border-primary/35 bg-primary/[.03] px-6 text-center transition-colors hover:border-primary hover:bg-primary/[.06] disabled:cursor-not-allowed disabled:opacity-60" data-testid="button-upload-project-document"><span className="mb-4 grid h-12 w-12 place-items-center rounded-full bg-primary/10 text-primary"><Upload size={20} /></span><span className="text-sm font-bold">{uploadPending ? 'Mengunggah dokumen...' : 'Pilih dokumen dari perangkat'}</span><span className="mt-2 text-xs text-muted-foreground">PDF, DOC, DOCX, atau TXT</span></button>
+        </CardContent>
+      </Card>
+    </div>
+    {(notice || assetError) && <div role={assetError ? 'alert' : 'status'} className={cn('rounded-lg border px-4 py-3 text-sm', assetError ? 'border-destructive/30 bg-destructive/5 text-destructive' : 'border-emerald-500/30 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300')} data-testid="status-project-assets">{assetError || notice}</div>}
+    <ProjectAssets project={project} />
+    <Card>
+      <CardHeader><CardTitle className="text-base">Dokumen proyek</CardTitle><CardDescription>Dokumen sumber yang sudah tersimpan dan terhubung ke proyek.</CardDescription></CardHeader>
+      <CardContent>{project.documents?.length ? <div className="grid gap-2 md:grid-cols-2">{project.documents.map((document) => <div className="flex items-center gap-3 rounded-lg border border-border p-3" key={document.id}><div className="rounded-md bg-accent/10 p-2 text-accent"><FileText size={16} /></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold" title={document.name}>{document.name}</p><p className="font-mono text-[10px] uppercase text-muted-foreground">{(document.size / 1024).toFixed(0)} KB · tersimpan</p></div><StatusBadge value={document.status} /></div>)}</div> : <EmptyState icon={FileText} title="Belum ada dokumen" detail="Upload dokumen sumber melalui area di atas." />}</CardContent>
+    </Card>
+  </div>;
+}
 function WorkflowTab({ workflow }: { workflow: WorkflowStep[] }) { return <Card><CardHeader><CardTitle className="text-base">Langkah kerja</CardTitle><CardDescription>Setiap langkah menjelaskan masukan, hasil, dan tindakan berikutnya.</CardDescription></CardHeader><CardContent>{workflow.length ? <div className="space-y-3">{workflow.map((step, i) => <div className="flex gap-4 rounded-xl border border-border p-4" key={step.id}><div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/10 font-mono text-xs text-primary">{String(i + 1).padStart(2, '0')}</div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="font-semibold">{step.title}</p><Badge variant="outline" className="font-mono text-[9px]">{step.type}</Badge></div><p className="mt-1 text-sm text-muted-foreground">{step.description}</p><div className="mt-3 flex flex-wrap gap-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground"><span>masukan: {step.inputs?.join(', ') || 'tidak ada'}</span><span>hasil: {step.outputs?.join(', ') || 'tidak ada'}</span></div></div><ChevronRight size={16} className="mt-1 text-muted-foreground" /></div>)}</div> : <EmptyState icon={Workflow} title="Langkah kerja belum ada" detail="Buat rancangan untuk menyusun langkah-langkah kerja." />}</CardContent></Card>; }
 function BuildTab({ build }: { build: BuildResult }) { return <Card><CardHeader><CardTitle className="flex items-center gap-2"><Hammer className="text-accent" size={19} /> Laporan perakitan <StatusBadge value={build.status} /></CardTitle><CardDescription>Pemilihan komponen setelah perakitan terakhir.</CardDescription></CardHeader><CardContent className="grid gap-6 md:grid-cols-2"><ListBlock label="Siap" items={build.ready} /><ListBlock label="Kurang" items={build.missing} /><ListBlock label="Peringatan" items={build.warnings} /><ListBlock label="Kesalahan" items={build.errors} /></CardContent></Card>; }
 function PreviewTab({ project, simulation, onSimulate, pending }: { project: PstProject; simulation: SimulationReport | null; onSimulate: () => void; pending: boolean }) { return <div className="grid gap-6 lg:grid-cols-[1.2fr_.8fr]"><Card className="min-h-[360px] overflow-hidden"><div className="flex items-center justify-between border-b border-border bg-muted/35 px-5 py-3"><div className="flex gap-1.5"><span className="h-2 w-2 rounded-full bg-destructive/60" /><span className="h-2 w-2 rounded-full bg-amber-400/70" /><span className="h-2 w-2 rounded-full bg-emerald-500/70" /></div><span className="font-mono text-[10px] uppercase tracking-[.15em] text-muted-foreground">pratinjau pengguna / {project.slug}</span><ExternalLink size={14} className="text-muted-foreground" /></div><div className="factory-grid flex min-h-[300px] items-center justify-center p-8 text-center"><div className="max-w-md"><div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-accent text-accent-foreground"><Target size={22} /></div><h2 className="text-2xl font-extrabold">{project.name}</h2><p className="mt-3 text-sm text-muted-foreground">{project.desiredOutcome}</p><Button className="mt-5" onClick={onSimulate} disabled={pending} data-testid="button-simulate-preview"><FlaskConical size={15} /> {pending ? 'Menjalankan uji coba...' : 'Jalankan uji coba'}</Button></div></div></Card><Card><CardHeader><CardTitle className="text-base">Hasil uji coba</CardTitle><CardDescription>Periksa alurnya sebelum dibuka untuk pengguna.</CardDescription></CardHeader><CardContent>{simulation ? <div><div className="flex items-center gap-3"><StatusBadge value={simulation.status} /><span className="font-mono text-[10px] text-muted-foreground">{new Date(simulation.createdAt).toLocaleString('id-ID')}</span></div><div className="mt-4 space-y-2">{simulation.checks?.map((check) => <div className="flex gap-2 text-sm" key={check}><CheckCircle2 className="shrink-0 text-emerald-500" size={16} />{check}</div>)}</div></div> : <EmptyState icon={FlaskConical} title="Belum ada uji coba" detail="Jalankan uji coba untuk menemukan bagian yang masih perlu diperbaiki." />}</CardContent></Card></div>; }

@@ -9,6 +9,7 @@ import type { ComponentSelection } from './componentSelection';
 import type { ProductDna } from './productDna';
 import type { ProjectStatus } from './projectStatus';
 import type { PstBlueprint } from './pstBlueprint';
+import type { PstDocument } from './pstDocument';
 import type { PstPattern } from './pstPattern';
 import type { PstProjectPublicationStatus } from './pstProjectPublicationStatus';
 import type { PstRecipe } from './pstRecipe';
@@ -30,6 +31,7 @@ export interface PstProject {
   productDna: ProductDna;
   blueprint: PstBlueprint;
   components: ComponentSelection[];
+  documents: PstDocument[];
   /** Pattern library records resolved through project reference relations. */
   selectedPatterns: PstPattern[];
   /** Recipe library records resolved through project reference relations. */

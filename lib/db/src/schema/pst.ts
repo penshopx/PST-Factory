@@ -187,6 +187,22 @@ export const pstProjectComponentsTable = pgTable("pst_project_components", {
   required: boolean("required").notNull().default(true),
 });
 
+export const pstProjectDocumentsTable = pgTable("pst_project_documents", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id")
+    .notNull()
+    .references(() => pstProjectsTable.id, { onDelete: "cascade" }),
+  uploadedBy: text("uploaded_by").notNull(),
+  name: text("name").notNull(),
+  objectPath: text("object_path").notNull(),
+  contentType: text("content_type").notNull(),
+  size: integer("size").notNull(),
+  status: text("status").notNull().default("READY"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export type PstReleaseComponentSnapshot = {
   id: string;
   assetId: string;
@@ -359,6 +375,7 @@ export type PstRecipe = typeof pstRecipesTable.$inferSelect;
 export type PstProjectPattern = typeof pstProjectPatternsTable.$inferSelect;
 export type PstProjectRecipe = typeof pstProjectRecipesTable.$inferSelect;
 export type PstProjectComponent = typeof pstProjectComponentsTable.$inferSelect;
+export type PstProjectDocument = typeof pstProjectDocumentsTable.$inferSelect;
 export type PstRelease = typeof pstReleasesTable.$inferSelect;
 export type PstFactoryEvent = typeof pstFactoryEventsTable.$inferSelect;
 export type PstQaRun = typeof pstQaRunsTable.$inferSelect;

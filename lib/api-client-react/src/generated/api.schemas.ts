@@ -92,6 +92,25 @@ export interface ComponentSelection {
   status: ComponentSelectionStatus;
 }
 
+export type PstDocumentStatus = typeof PstDocumentStatus[keyof typeof PstDocumentStatus];
+
+
+export const PstDocumentStatus = {
+  READY: 'READY',
+} as const;
+
+export interface PstDocument {
+  id: string;
+  projectId: string;
+  name: string;
+  objectPath: string;
+  contentType: string;
+  /** @minimum 1 */
+  size: number;
+  status: PstDocumentStatus;
+  createdAt: string;
+}
+
 export interface ReferenceProject {
   id: string;
   name: string;
@@ -145,6 +164,7 @@ export interface PstProject {
   productDna: ProductDna;
   blueprint: PstBlueprint;
   components: ComponentSelection[];
+  documents: PstDocument[];
   /** Pattern library records resolved through project reference relations. */
   selectedPatterns: PstPattern[];
   /** Recipe library records resolved through project reference relations. */
@@ -555,6 +575,70 @@ export const AssetType = {
   AI: 'AI',
   WORKFLOW: 'WORKFLOW',
 } as const;
+
+export interface PstComponentInput {
+  /**
+     * @minLength 2
+     * @maxLength 120
+     */
+  name: string;
+  type: AssetType;
+  /**
+     * @minLength 5
+     * @maxLength 1000
+     */
+  description: string;
+  /**
+     * @maxItems 10
+     * @items.minLength 1
+     * @items.maxLength 40
+     */
+  tags?: string[];
+}
+
+export interface PstDocumentInput {
+  /**
+     * @minLength 1
+     * @maxLength 255
+     */
+  name: string;
+  /** @pattern ^/objects/uploads/[a-zA-Z0-9-]+$ */
+  objectPath: string;
+  /**
+     * @minLength 1
+     * @maxLength 150
+     */
+  contentType: string;
+  /**
+     * @minimum 1
+     * @maximum 20971520
+     */
+  size: number;
+}
+
+export interface UploadRequest {
+  /**
+     * @minLength 1
+     * @maxLength 255
+     */
+  name: string;
+  /**
+     * @minimum 1
+     * @maximum 20971520
+     */
+  size: number;
+  /**
+     * @minLength 1
+     * @maxLength 150
+     */
+  contentType: string;
+}
+
+export interface UploadTarget {
+  /** @pattern ^https://.+ */
+  uploadURL: string;
+  objectPath: string;
+}
 
 export type PstAssetStatus = typeof PstAssetStatus[keyof typeof PstAssetStatus];
 

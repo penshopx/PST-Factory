@@ -51,6 +51,10 @@ export const ListPstProjectsQueryParams = zod.object({
   "search": zod.coerce.string().optional()
 })
 
+export const listPstProjectsResponseDocumentsItemSizeMultipleOf = 1;
+
+
+
 export const ListPstProjectsResponseItem = zod.object({
   "id": zod.string(),
   "name": zod.string(),
@@ -107,6 +111,16 @@ export const ListPstProjectsResponseItem = zod.object({
   "source": zod.string(),
   "status": zod.enum(['READY', 'MISSING', 'WARNING'])
 })),
+  "documents": zod.array(zod.object({
+  "id": zod.string(),
+  "projectId": zod.string(),
+  "name": zod.string(),
+  "objectPath": zod.string(),
+  "contentType": zod.string(),
+  "size": zod.number().min(1).multipleOf(listPstProjectsResponseDocumentsItemSizeMultipleOf),
+  "status": zod.enum(['READY']),
+  "createdAt": zod.coerce.date()
+})),
   "selectedPatterns": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
@@ -160,6 +174,10 @@ export const CreatePstProjectBody = zod.object({
   "targetUser": zod.string().min(1),
   "desiredOutcome": zod.string().min(1)
 })
+
+export const createPstProjectResponseDocumentsItemSizeMultipleOf = 1;
+
+
 
 export const CreatePstProjectResponse = zod.object({
   "id": zod.string(),
@@ -217,6 +235,16 @@ export const CreatePstProjectResponse = zod.object({
   "source": zod.string(),
   "status": zod.enum(['READY', 'MISSING', 'WARNING'])
 })),
+  "documents": zod.array(zod.object({
+  "id": zod.string(),
+  "projectId": zod.string(),
+  "name": zod.string(),
+  "objectPath": zod.string(),
+  "contentType": zod.string(),
+  "size": zod.number().min(1).multipleOf(createPstProjectResponseDocumentsItemSizeMultipleOf),
+  "status": zod.enum(['READY']),
+  "createdAt": zod.coerce.date()
+})),
   "selectedPatterns": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
@@ -256,6 +284,10 @@ export const CreatePstProjectResponse = zod.object({
 export const GetPstProjectParams = zod.object({
   "projectId": zod.coerce.string()
 })
+
+export const getPstProjectResponseDocumentsItemSizeMultipleOf = 1;
+
+
 
 export const GetPstProjectResponse = zod.object({
   "id": zod.string(),
@@ -313,6 +345,16 @@ export const GetPstProjectResponse = zod.object({
   "source": zod.string(),
   "status": zod.enum(['READY', 'MISSING', 'WARNING'])
 })),
+  "documents": zod.array(zod.object({
+  "id": zod.string(),
+  "projectId": zod.string(),
+  "name": zod.string(),
+  "objectPath": zod.string(),
+  "contentType": zod.string(),
+  "size": zod.number().min(1).multipleOf(getPstProjectResponseDocumentsItemSizeMultipleOf),
+  "status": zod.enum(['READY']),
+  "createdAt": zod.coerce.date()
+})),
   "selectedPatterns": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
@@ -366,6 +408,10 @@ export const UpdatePstProjectBody = zod.object({
   "targetUser": zod.string().optional(),
   "desiredOutcome": zod.string().optional()
 })
+
+export const updatePstProjectResponseDocumentsItemSizeMultipleOf = 1;
+
+
 
 export const UpdatePstProjectResponse = zod.object({
   "id": zod.string(),
@@ -423,6 +469,16 @@ export const UpdatePstProjectResponse = zod.object({
   "source": zod.string(),
   "status": zod.enum(['READY', 'MISSING', 'WARNING'])
 })),
+  "documents": zod.array(zod.object({
+  "id": zod.string(),
+  "projectId": zod.string(),
+  "name": zod.string(),
+  "objectPath": zod.string(),
+  "contentType": zod.string(),
+  "size": zod.number().min(1).multipleOf(updatePstProjectResponseDocumentsItemSizeMultipleOf),
+  "status": zod.enum(['READY']),
+  "createdAt": zod.coerce.date()
+})),
   "selectedPatterns": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
@@ -457,11 +513,117 @@ export const UpdatePstProjectResponse = zod.object({
 
 
 /**
+ * @summary Add a manual component to a PST project
+ */
+export const CreatePstProjectComponentParams = zod.object({
+  "projectId": zod.coerce.string()
+})
+
+export const createPstProjectComponentBodyNameMin = 2;
+export const createPstProjectComponentBodyNameMax = 120;
+
+export const createPstProjectComponentBodyDescriptionMin = 5;
+export const createPstProjectComponentBodyDescriptionMax = 1000;
+
+export const createPstProjectComponentBodyTagsItemMax = 40;
+
+export const createPstProjectComponentBodyTagsMax = 10;
+
+
+
+export const CreatePstProjectComponentBody = zod.object({
+  "name": zod.string().min(createPstProjectComponentBodyNameMin).max(createPstProjectComponentBodyNameMax),
+  "type": zod.enum(['KNOWLEDGE', 'TOOL', 'MINI_APP', 'AI', 'WORKFLOW']),
+  "description": zod.string().min(createPstProjectComponentBodyDescriptionMin).max(createPstProjectComponentBodyDescriptionMax),
+  "tags": zod.array(zod.string().min(1).max(createPstProjectComponentBodyTagsItemMax)).max(createPstProjectComponentBodyTagsMax).optional()
+})
+
+export const CreatePstProjectComponentResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "type": zod.string(),
+  "source": zod.string(),
+  "status": zod.enum(['READY', 'MISSING', 'WARNING'])
+})
+
+
+/**
+ * @summary Attach an uploaded document to a PST project
+ */
+export const CreatePstProjectDocumentParams = zod.object({
+  "projectId": zod.coerce.string()
+})
+
+export const createPstProjectDocumentBodyNameMax = 255;
+
+export const createPstProjectDocumentBodyObjectPathRegExp = new RegExp('^/objects/uploads/[a-zA-Z0-9-]+$');
+export const createPstProjectDocumentBodyContentTypeMax = 150;
+
+export const createPstProjectDocumentBodySizeMax = 20971520;
+export const createPstProjectDocumentBodySizeMultipleOf = 1;
+
+
+
+export const CreatePstProjectDocumentBody = zod.object({
+  "name": zod.string().min(1).max(createPstProjectDocumentBodyNameMax),
+  "objectPath": zod.string().regex(createPstProjectDocumentBodyObjectPathRegExp),
+  "contentType": zod.string().min(1).max(createPstProjectDocumentBodyContentTypeMax),
+  "size": zod.number().min(1).max(createPstProjectDocumentBodySizeMax).multipleOf(createPstProjectDocumentBodySizeMultipleOf)
+})
+
+export const createPstProjectDocumentResponseSizeMultipleOf = 1;
+
+
+
+export const CreatePstProjectDocumentResponse = zod.object({
+  "id": zod.string(),
+  "projectId": zod.string(),
+  "name": zod.string(),
+  "objectPath": zod.string(),
+  "contentType": zod.string(),
+  "size": zod.number().min(1).multipleOf(createPstProjectDocumentResponseSizeMultipleOf),
+  "status": zod.enum(['READY']),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Request a presigned URL for a private document upload
+ */
+export const requestUploadUrlBodyNameMax = 255;
+
+export const requestUploadUrlBodySizeMax = 20971520;
+export const requestUploadUrlBodySizeMultipleOf = 1;
+
+export const requestUploadUrlBodyContentTypeMax = 150;
+
+
+
+export const RequestUploadUrlBody = zod.object({
+  "name": zod.string().min(1).max(requestUploadUrlBodyNameMax),
+  "size": zod.number().min(1).max(requestUploadUrlBodySizeMax).multipleOf(requestUploadUrlBodySizeMultipleOf),
+  "contentType": zod.string().min(1).max(requestUploadUrlBodyContentTypeMax)
+})
+
+export const requestUploadUrlResponseUploadURLRegExp = new RegExp('^https://.+');
+
+
+export const RequestUploadUrlResponse = zod.object({
+  "uploadURL": zod.string().regex(requestUploadUrlResponseUploadURLRegExp),
+  "objectPath": zod.string()
+})
+
+
+/**
  * @summary Duplicate a PST project for reuse
  */
 export const DuplicatePstProjectParams = zod.object({
   "projectId": zod.coerce.string()
 })
+
+export const duplicatePstProjectResponseDocumentsItemSizeMultipleOf = 1;
+
+
 
 export const DuplicatePstProjectResponse = zod.object({
   "id": zod.string(),
@@ -519,6 +681,16 @@ export const DuplicatePstProjectResponse = zod.object({
   "source": zod.string(),
   "status": zod.enum(['READY', 'MISSING', 'WARNING'])
 })),
+  "documents": zod.array(zod.object({
+  "id": zod.string(),
+  "projectId": zod.string(),
+  "name": zod.string(),
+  "objectPath": zod.string(),
+  "contentType": zod.string(),
+  "size": zod.number().min(1).multipleOf(duplicatePstProjectResponseDocumentsItemSizeMultipleOf),
+  "status": zod.enum(['READY']),
+  "createdAt": zod.coerce.date()
+})),
   "selectedPatterns": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
@@ -558,6 +730,10 @@ export const DuplicatePstProjectResponse = zod.object({
 export const ArchivePstProjectParams = zod.object({
   "projectId": zod.coerce.string()
 })
+
+export const archivePstProjectResponseDocumentsItemSizeMultipleOf = 1;
+
+
 
 export const ArchivePstProjectResponse = zod.object({
   "id": zod.string(),
@@ -614,6 +790,16 @@ export const ArchivePstProjectResponse = zod.object({
   "type": zod.string(),
   "source": zod.string(),
   "status": zod.enum(['READY', 'MISSING', 'WARNING'])
+})),
+  "documents": zod.array(zod.object({
+  "id": zod.string(),
+  "projectId": zod.string(),
+  "name": zod.string(),
+  "objectPath": zod.string(),
+  "contentType": zod.string(),
+  "size": zod.number().min(1).multipleOf(archivePstProjectResponseDocumentsItemSizeMultipleOf),
+  "status": zod.enum(['READY']),
+  "createdAt": zod.coerce.date()
 })),
   "selectedPatterns": zod.array(zod.object({
   "id": zod.string(),
@@ -1039,6 +1225,10 @@ export const ApprovePstProjectParams = zod.object({
   "projectId": zod.coerce.string()
 })
 
+export const approvePstProjectResponseDocumentsItemSizeMultipleOf = 1;
+
+
+
 export const ApprovePstProjectResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
@@ -1095,6 +1285,16 @@ export const ApprovePstProjectResponse = zod.object({
   "source": zod.string(),
   "status": zod.enum(['READY', 'MISSING', 'WARNING'])
 })),
+  "documents": zod.array(zod.object({
+  "id": zod.string(),
+  "projectId": zod.string(),
+  "name": zod.string(),
+  "objectPath": zod.string(),
+  "contentType": zod.string(),
+  "size": zod.number().min(1).multipleOf(approvePstProjectResponseDocumentsItemSizeMultipleOf),
+  "status": zod.enum(['READY']),
+  "createdAt": zod.coerce.date()
+})),
   "selectedPatterns": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
@@ -1134,6 +1334,10 @@ export const ApprovePstProjectResponse = zod.object({
 export const PublishPstProjectParams = zod.object({
   "projectId": zod.coerce.string()
 })
+
+export const publishPstProjectResponseDocumentsItemSizeMultipleOf = 1;
+
+
 
 export const PublishPstProjectResponse = zod.object({
   "id": zod.string(),
@@ -1191,6 +1395,16 @@ export const PublishPstProjectResponse = zod.object({
   "source": zod.string(),
   "status": zod.enum(['READY', 'MISSING', 'WARNING'])
 })),
+  "documents": zod.array(zod.object({
+  "id": zod.string(),
+  "projectId": zod.string(),
+  "name": zod.string(),
+  "objectPath": zod.string(),
+  "contentType": zod.string(),
+  "size": zod.number().min(1).multipleOf(publishPstProjectResponseDocumentsItemSizeMultipleOf),
+  "status": zod.enum(['READY']),
+  "createdAt": zod.coerce.date()
+})),
   "selectedPatterns": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
@@ -1230,6 +1444,10 @@ export const PublishPstProjectResponse = zod.object({
 export const GetPstWorkspaceParams = zod.object({
   "projectId": zod.coerce.string()
 })
+
+export const getPstWorkspaceResponseProjectDocumentsItemSizeMultipleOf = 1;
+
+
 
 export const GetPstWorkspaceResponse = zod.object({
   "project": zod.object({
@@ -1287,6 +1505,16 @@ export const GetPstWorkspaceResponse = zod.object({
   "type": zod.string(),
   "source": zod.string(),
   "status": zod.enum(['READY', 'MISSING', 'WARNING'])
+})),
+  "documents": zod.array(zod.object({
+  "id": zod.string(),
+  "projectId": zod.string(),
+  "name": zod.string(),
+  "objectPath": zod.string(),
+  "contentType": zod.string(),
+  "size": zod.number().min(1).multipleOf(getPstWorkspaceResponseProjectDocumentsItemSizeMultipleOf),
+  "status": zod.enum(['READY']),
+  "createdAt": zod.coerce.date()
 })),
   "selectedPatterns": zod.array(zod.object({
   "id": zod.string(),
@@ -1465,6 +1693,10 @@ export const RestorePstReleaseParams = zod.object({
   "releaseId": zod.coerce.string()
 })
 
+export const restorePstReleaseResponseDocumentsItemSizeMultipleOf = 1;
+
+
+
 export const RestorePstReleaseResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
@@ -1520,6 +1752,16 @@ export const RestorePstReleaseResponse = zod.object({
   "type": zod.string(),
   "source": zod.string(),
   "status": zod.enum(['READY', 'MISSING', 'WARNING'])
+})),
+  "documents": zod.array(zod.object({
+  "id": zod.string(),
+  "projectId": zod.string(),
+  "name": zod.string(),
+  "objectPath": zod.string(),
+  "contentType": zod.string(),
+  "size": zod.number().min(1).multipleOf(restorePstReleaseResponseDocumentsItemSizeMultipleOf),
+  "status": zod.enum(['READY']),
+  "createdAt": zod.coerce.date()
 })),
   "selectedPatterns": zod.array(zod.object({
   "id": zod.string(),
