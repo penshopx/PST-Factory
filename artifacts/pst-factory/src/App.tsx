@@ -26,18 +26,12 @@ import {
   useUpdatePstAssemblyChecklistItem, useUpdatePstAssemblyRisk,
   useListPstProjectMembers, useListPstProjects, useListPstRecipes, usePublishPstProject, useRemovePstProjectMember, useRunPstArchitect,
   useRequestUploadUrl, useUpsertPstProjectMember,
-  useRestorePstRelease, useRunPstQa, useSimulatePstProject, useUpdatePstBlueprint, useUpdatePstProject,
+  useRestorePstRelease, useRunPstQa, useSimulatePstProject, useUpdatePstBlueprint, useUpdatePstProject, useStartPublicPstRuntimeSession, useAdvancePublicPstRuntimeSession,
 } from '@workspace/api-client-react';
 import type {
   BuildResult, FactoryEvent, PstAssembly, AssemblyChecklistItem, AssemblyRisk, PstAsset, PstBlueprint, PstDocument, PstPattern, PstProject,
-  PstProjectMember, PstRecipe, PstRelease, QaRun, SimulationReport, WorkflowStep,
+  PstProjectMember, PstRecipe, PstRelease, QaRun, SimulationReport, WorkflowStep, PstPublicRuntimeSession, PstPublicRuntimeStep, PstPublicRuntimeDiagnostic, PublicWorkflowStep,
 } from '@workspace/api-client-react';
-import { createPstRuntime, advancePstRuntime } from '@workspace/db/schema/pst-runtime';
-import type {
-  PstExecutableStepV1, PstRuntimeAdvanceResultV1, PstRuntimeDiagnosticV1,
-  PstRuntimeInputV1, PstRuntimeSessionV1, PstRuntimeStartResultV1,
-  PstRuntimeStepViewV1,
-} from '@workspace/db/schema/pst-runtime';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -1140,26 +1134,59 @@ function CustomerWorkspace() {
   const { slug = '' } = useParams<{ slug: string }>();
   const workspaceQuery = useGetPublicPstWorkspace(slug, { query: { queryKey: getGetPublicPstWorkspaceQueryKey(slug) } });
 
-  const [runtimeState, setRuntimeState] = useState<RuntimeUiState | null>(null);
+  const startSession = useStartPublicPstRuntimeSession();
+  const advanceSession = useAdvancePublicPstRuntimeSession();
+
+  const [session, setSession] = useState<PstPublicRuntimeSession | null>(null);
+
+  const initializedSlug = useRef<string | null>(null);
 
   useEffect(() => {
-    if (workspaceQuery.data?.definition) {
-      const def = workspaceQuery.data.definition;
-      const started = createPstRuntime(def);
-      if (started.status === "READY") {
-        setRuntimeState(advancePstRuntime(started.session));
-      } else {
-        setRuntimeState(started);
-      }
+    if (workspaceQuery.data && !session && !startSession.isPending && !startSession.isError && initializedSlug.current !== slug) {
+      initializedSlug.current = slug;
+      startSession.mutate({ slug }, {
+        onSuccess: (data) => setSession(data),
+        // On error, keep the slug guard set so automatic retries do not loop.
+        // The user can click "Coba lagi" to manually retry.
+      });
     }
-  }, [workspaceQuery.data?.definition]);
+  }, [workspaceQuery.data, session, startSession.isPending, startSession.isError, slug, startSession.mutate]);
 
   if (workspaceQuery.isLoading) return <div className="flex min-h-[100dvh] items-center justify-center bg-[#07111d]"><Loading label="Menyiapkan workspace terpandu" /></div>;
   if (workspaceQuery.isError || !workspaceQuery.data) return <div className="flex min-h-[100dvh] items-center justify-center bg-[#07111d] p-6"><ErrorState onRetry={() => void workspaceQuery.refetch()} label="Workspace customer ini tidak tersedia" /></div>;
 
-  const { project, definition } = workspaceQuery.data;
+  if (startSession.isError) return (
+    <div className="flex min-h-[100dvh] items-center justify-center bg-[#07111d] p-6">
+      <ErrorState
+        onRetry={() => {
+          startSession.mutate({ slug }, { onSuccess: (data) => setSession(data) });
+        }}
+        label="Gagal memulai sesi pabrik"
+      />
+    </div>
+  );
 
-  if (!runtimeState) return <div className="flex min-h-[100dvh] items-center justify-center bg-[#07111d]"><Loading label="Memulai Runtime..." /></div>;
+  const { project, steps } = workspaceQuery.data;
+
+  if (!session) return <div className="flex min-h-[100dvh] items-center justify-center bg-[#07111d]"><Loading label="Memulai Runtime..." /></div>;
+
+  const handleRestart = () => {
+    startSession.mutate({ slug }, {
+      onSuccess: (data) => setSession(data)
+    });
+  };
+
+  const handleAdvance = (input: Record<string, unknown>) => {
+    if (!session) return;
+    advanceSession.mutate(
+      { slug, sessionId: session.sessionId, data: { revision: session.revision, input } },
+      {
+        onSuccess: (data) => setSession(data)
+      }
+    );
+  };
+
+  const advanceError = (advanceSession.error as any)?.error;
 
   return (
     <div className="min-h-[100dvh] bg-[#07111d] text-[#edf7ff] font-sans flex flex-col selection:bg-[#16d9f5]/30 selection:text-[#edf7ff]">
@@ -1185,36 +1212,28 @@ function CustomerWorkspace() {
           </div>
 
           <WorkspaceRuntime
-            activeState={runtimeState}
-            onAdvance={(next) => setRuntimeState(next)}
-            onRestart={() => {
-              if (definition) {
-                const started = createPstRuntime(definition);
-                if (started.status === "READY") {
-                  setRuntimeState(advancePstRuntime(started.session));
-                } else {
-                  setRuntimeState(started);
-                }
-              }
-            }}
+            activeState={session}
+            onAdvance={handleAdvance}
+            onRestart={handleRestart}
+            isAdvancing={advanceSession.isPending || startSession.isPending}
+            advanceError={advanceError}
           />
         </div>
 
         <aside className="hidden lg:block">
-          <WorkspaceProgress state={runtimeState} />
+          <WorkspaceProgress state={session} steps={steps} />
         </aside>
       </main>
     </div>
   );
 }
 
-type RuntimeUiState = PstRuntimeAdvanceResultV1
-  | Extract<PstRuntimeStartResultV1, { status: 'BLOCKED' }>;
-
-function WorkspaceRuntime({ activeState, onAdvance, onRestart }: {
-  activeState: RuntimeUiState;
-  onAdvance: (state: PstRuntimeAdvanceResultV1) => void;
+function WorkspaceRuntime({ activeState, onAdvance, onRestart, isAdvancing, advanceError }: {
+  activeState: PstPublicRuntimeSession;
+  onAdvance: (input: Record<string, unknown>) => void;
   onRestart: () => void;
+  isAdvancing: boolean;
+  advanceError?: string;
 }) {
   if (activeState.status === "BLOCKED") {
     return (
@@ -1226,7 +1245,7 @@ function WorkspaceRuntime({ activeState, onAdvance, onRestart }: {
           <h2 className="text-xl font-bold mb-2 text-center text-[#edf7ff]">Terjadi Kesalahan Runtime</h2>
           <p className="text-[#a9c1d3] text-sm mb-6 text-center">PST ini tidak dapat dilanjutkan karena ada masalah pada definisinya.</p>
           <div className="space-y-3 mb-8 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-            {activeState.errors.map((err: PstRuntimeDiagnosticV1, i: number) => (
+            {activeState.errors?.map((err, i) => (
               <div key={i} className="bg-[#101a2a] border border-[#ff7184]/20 p-4 rounded-xl font-mono text-xs text-[#ffb4be]">
                 <div className="mb-2 pb-2 border-b border-[#ff7184]/20 flex justify-between items-start gap-4">
                   <span className="font-bold text-[#ff7184] bg-[#ff7184]/10 px-2 py-0.5 rounded">{err.code}</span>
@@ -1237,7 +1256,7 @@ function WorkspaceRuntime({ activeState, onAdvance, onRestart }: {
             ))}
           </div>
           <div className="flex justify-center">
-            <Button onClick={onRestart} className="font-bold bg-[#2a4054] text-[#edf7ff] hover:bg-[#3b556e]" data-testid="button-restart">Mulai Ulang</Button>
+            <Button onClick={onRestart} disabled={isAdvancing} className="font-bold bg-[#2a4054] text-[#edf7ff] hover:bg-[#3b556e]" data-testid="button-restart">Mulai Ulang</Button>
           </div>
         </div>
       </div>
@@ -1261,21 +1280,22 @@ function WorkspaceRuntime({ activeState, onAdvance, onRestart }: {
                 <Database size={14} className="text-emerald-400" />
                 Output Akhir
               </h3>
-              {Object.keys(activeState.output).length === 0 ? (
+              {!activeState.output || Object.keys(activeState.output).length === 0 ? (
                 <p className="text-sm italic text-[#6f8ca3]">Tidak ada output yang dihasilkan.</p>
               ) : (
                 <div className="space-y-6">
                   {Object.entries(activeState.output).map(([key, value]) => (
                     <div key={key}>
                       <p className="font-semibold text-sm mb-2 text-[#edf7ff]">{key}</p>
-                      <pre className="text-xs p-4 rounded-lg bg-[#07111d] border border-[#2a4054] overflow-auto whitespace-pre-wrap text-[#a9c1d3] leading-relaxed shadow-inner">{JSON.stringify(value, null, 2)}</pre>
+                      <pre className="text-xs p-4 rounded-lg bg-[#07111d] border border-[#2a4054] overflow-x-auto text-[#a9c1d3] leading-relaxed custom-scrollbar whitespace-pre-wrap word-break-all">
+                        {typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
+                      </pre>
                     </div>
                   ))}
                 </div>
               )}
             </div>
-
-            <Button onClick={onRestart} size="lg" className="font-bold gap-2 bg-[#16d9f5] text-[#07111d] hover:bg-[#72edff] transition-transform hover:-translate-y-0.5" data-testid="button-restart">
+            <Button onClick={onRestart} disabled={isAdvancing} size="lg" className="font-extrabold gap-2 px-8 bg-[#16d9f5] text-[#07111d] hover:bg-[#72edff] transition-transform hover:-translate-y-0.5" data-testid="button-restart">
               <Rocket size={18} />
               Mulai Ulang Proses
             </Button>
@@ -1285,26 +1305,41 @@ function WorkspaceRuntime({ activeState, onAdvance, onRestart }: {
     );
   }
 
-  if (activeState.status === "WAITING_INPUT") {
-    return <WorkspaceStep step={activeState.step} session={activeState.session} onAdvance={onAdvance} />;
+  if (activeState.status === "WAITING_INPUT" && activeState.step) {
+    return (
+      <WorkspaceStep
+        step={activeState.step}
+        onAdvance={onAdvance}
+        isAdvancing={isAdvancing}
+        advanceError={advanceError}
+      />
+    );
+  }
+
+  if (activeState.status === "RUNNING") {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 bg-[#101a2a] border border-[#2a4054] rounded-2xl animate-pulse" data-testid="runtime-running">
+        <div className="w-12 h-12 rounded-full border-4 border-[#16d9f5]/20 border-t-[#16d9f5] animate-spin mb-4" />
+        <p className="text-[#a9c1d3] font-semibold">Sedang memproses...</p>
+      </div>
+    );
   }
 
   return null;
 }
 
-function WorkspaceStep({ step, session, onAdvance }: {
-  step: PstRuntimeStepViewV1;
-  session: PstRuntimeSessionV1;
-  onAdvance: (state: PstRuntimeAdvanceResultV1) => void;
+function WorkspaceStep({ step, onAdvance, isAdvancing, advanceError }: {
+  step: PstPublicRuntimeStep;
+  onAdvance: (input: Record<string, unknown>) => void;
+  isAdvancing: boolean;
+  advanceError?: string;
 }) {
   const [formData, setFormData] = useState<Record<string, unknown>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isTransitioning, setIsTransitioning] = useState(false);
 
   useEffect(() => {
     setFormData({});
     setErrors({});
-    setIsTransitioning(false);
   }, [step.id]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -1312,7 +1347,7 @@ function WorkspaceStep({ step, session, onAdvance }: {
     const newErrors: Record<string, string> = {};
     let valid = true;
 
-    const runtimeInput: PstRuntimeInputV1 = {};
+    const runtimeInput: Record<string, unknown> = {};
     step.requiredInputs.forEach((input) => {
       if (input.required && (formData[input.key] === undefined || formData[input.key] === '')) {
         newErrors[input.key] = "Bidang ini wajib diisi";
@@ -1332,15 +1367,11 @@ function WorkspaceStep({ step, session, onAdvance }: {
     setErrors(newErrors);
     if (!valid) return;
 
-    setIsTransitioning(true);
-    setTimeout(() => {
-      const next = advancePstRuntime(session, runtimeInput);
-      onAdvance(next);
-    }, 250);
+    onAdvance(runtimeInput);
   };
 
   return (
-    <div className={cn("transition-all duration-300", isTransitioning ? "opacity-0 translate-y-[-15px]" : "opacity-100 translate-y-0")} data-testid="runtime-input">
+    <div className={cn("transition-all duration-300", isAdvancing ? "opacity-50 pointer-events-none" : "opacity-100")} data-testid="runtime-input">
       <div className="mb-10">
         <Badge variant="outline" className="mb-5 text-[#16d9f5] border-[#16d9f5]/30 bg-[#16d9f5]/10 px-3 py-1 font-mono uppercase tracking-widest text-[10px]">Langkah saat ini</Badge>
         <h2 className="text-3xl font-extrabold tracking-[-.02em] mb-4 text-[#edf7ff]">{step.title}</h2>
@@ -1350,13 +1381,32 @@ function WorkspaceStep({ step, session, onAdvance }: {
       <form onSubmit={handleSubmit} className="bg-[#101a2a] border border-[#2a4054] p-6 md:p-10 rounded-2xl shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#16d9f5] via-[#16d9f5]/50 to-transparent" />
 
+        {advanceError && (
+          <div className="mb-6 rounded-xl border border-[#ff7184]/30 bg-[#ff7184]/10 p-4" data-testid="error-advance">
+            <div className="flex items-start gap-3">
+              <TriangleAlert className="text-[#ff7184] shrink-0 mt-0.5" size={16} />
+              <div>
+                <p className="text-sm font-semibold text-[#ffb4be]">Gagal menyimpan langkah</p>
+                <p className="text-xs text-[#ffb4be]/80 mt-1">{advanceError}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {step.requiredInputs.length === 0 ? (
           <div className="py-8 text-center">
             <div className="mx-auto w-12 h-12 bg-[#2a4054]/50 text-[#a9c1d3] rounded-full flex items-center justify-center mb-4">
               <Check size={20} />
             </div>
             <p className="text-[#a9c1d3] mb-2 text-sm font-semibold">Tidak ada input yang diperlukan.</p>
-            <p className="text-[#6f8ca3] text-xs">Silakan lanjutkan ke langkah berikutnya.</p>
+            <p className="text-[#6f8ca3] text-xs mb-8">Silakan lanjutkan ke langkah berikutnya.</p>
+
+            <div className="flex justify-end pt-4 border-t border-[#2a4054]">
+              <Button type="submit" disabled={isAdvancing} className="h-12 px-8 font-bold bg-[#16d9f5] text-[#07111d] hover:bg-[#72edff] transition-transform hover:-translate-y-0.5" data-testid="button-advance">
+                {isAdvancing ? "Menyimpan..." : "Lanjutkan Langkah"}
+                {!isAdvancing && <ArrowRight size={18} className="ml-2" />}
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="space-y-8">
@@ -1431,15 +1481,15 @@ function WorkspaceStep({ step, session, onAdvance }: {
                 )}
               </div>
             ))}
+
+            <div className="pt-8 mt-8 border-t border-[#2a4054] flex justify-end">
+              <Button type="submit" size="lg" disabled={isAdvancing} className="font-extrabold gap-2 px-8 bg-[#16d9f5] text-[#07111d] hover:bg-[#72edff] transition-transform hover:-translate-y-0.5" data-testid="button-submit">
+                {isAdvancing ? "Menyimpan..." : "Kirim & Lanjut"}
+                {!isAdvancing && <ArrowRight size={18} strokeWidth={2.5} />}
+              </Button>
+            </div>
           </div>
         )}
-
-        <div className="pt-8 mt-8 border-t border-[#2a4054] flex justify-end">
-          <Button type="submit" size="lg" className="font-extrabold gap-2 px-8 bg-[#16d9f5] text-[#07111d] hover:bg-[#72edff] transition-transform hover:-translate-y-0.5" disabled={isTransitioning} data-testid="button-submit">
-            {step.requiredInputs.length === 0 ? "Lanjut" : "Kirim & Lanjut"}
-            <ArrowRight size={18} strokeWidth={2.5} />
-          </Button>
-        </div>
       </form>
     </div>
   );
@@ -1455,19 +1505,14 @@ function numberRuntimeField(values: Record<string, unknown>, key: string) {
   return typeof value === 'number' ? value : '';
 }
 
-function WorkspaceProgress({ state }: { state: RuntimeUiState | null }) {
+function WorkspaceProgress({ state, steps }: { state: PstPublicRuntimeSession | null, steps: PublicWorkflowStep[] }) {
   if (!state || state.status === "BLOCKED") return null;
-
-  const session = state.session;
-  if (!session) return null;
-
-  const definition = session.definition;
-  const steps = definition?.steps || [];
 
   const total = steps.length;
   const currentIndex = state.status === "COMPLETED"
     ? total
-    : steps.findIndex((step: PstExecutableStepV1) => step.id === session.currentStepId);
+    : steps.findIndex(step => step.id === state.step?.id);
+
   const progressPercent = total ? Math.round((Math.max(0, currentIndex) / total) * 100) : 0;
 
   return (
@@ -1488,9 +1533,9 @@ function WorkspaceProgress({ state }: { state: RuntimeUiState | null }) {
       <div className="pl-2">
         <h3 className="font-mono text-[11px] uppercase tracking-[.2em] text-[#6f8ca3] mb-6">Peta Perjalanan</h3>
         <div className="space-y-1 relative before:absolute before:inset-0 before:ml-[15px] before:h-full before:w-px before:bg-gradient-to-b before:from-[#2a4054] before:via-[#2a4054] before:to-transparent">
-          {steps.map((step: PstExecutableStepV1, idx: number) => {
-            const isVisited = session.visitedStepIds.includes(step.id);
-            const isCurrent = session.currentStepId === step.id && state.status !== "COMPLETED";
+          {steps.map((step, idx) => {
+            const isVisited = idx <= currentIndex;
+            const isCurrent = idx === currentIndex && state.status !== "COMPLETED";
             const isCompleted = state.status === "COMPLETED";
             const isPast = isVisited && !isCurrent;
 
@@ -1506,12 +1551,12 @@ function WorkspaceProgress({ state }: { state: RuntimeUiState | null }) {
             }
 
             return (
-              <div key={step.id} className="relative flex items-start gap-5 z-10 py-3">
-                <div className={cn("w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-500", statusColor)}>
-                  {(isPast || isCompleted) ? <Check size={14} strokeWidth={3} /> : <span className="text-[10px] font-bold font-mono">{idx + 1}</span>}
+              <div key={step.id} className="relative flex gap-4 p-2 pl-0 group" data-testid={`progress-step-${step.id}`}>
+                <div className={cn("relative z-10 w-8 h-8 rounded-full border-[2px] flex items-center justify-center shrink-0 transition-colors duration-300", statusColor)}>
+                  {isPast || isCompleted ? <Check size={14} strokeWidth={3} /> : <span className="font-mono text-[10px] font-bold">{idx + 1}</span>}
                 </div>
-                <div className="flex-1 pt-1.5 pb-2">
-                  <p className={cn("text-sm transition-colors", textColor, !isCurrent && !isPast && !isCompleted && "opacity-50")}>{step.title}</p>
+                <div className="pt-1.5 flex-1 min-w-0">
+                  <p className={cn("text-sm truncate transition-colors duration-300", textColor)}>{step.title}</p>
                 </div>
               </div>
             );
@@ -1521,7 +1566,6 @@ function WorkspaceProgress({ state }: { state: RuntimeUiState | null }) {
     </div>
   );
 }
-
 function Settings() {
   const [name, setName] = useState('PST factory');
   const [description, setDescription] = useState('Studio produk terarah untuk membuat solusi masalah yang hasilnya bisa diukur.');

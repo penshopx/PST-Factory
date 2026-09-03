@@ -5,12 +5,10 @@
  * PST Factory product manufacturing platform API
  * OpenAPI spec version: 0.1.0
  */
-import type { ExecutablePstDefinition } from './executablePstDefinition';
 import type { PstPublicProject } from './pstPublicProject';
 import type { PublicWorkflowStep } from './publicWorkflowStep';
 
 export interface PstPublicWorkspace {
   project: PstPublicProject;
   steps: PublicWorkflowStep[];
-  definition: ExecutablePstDefinition;
 }

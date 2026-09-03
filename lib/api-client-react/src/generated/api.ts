@@ -51,6 +51,8 @@ import type {
   PstProjectMember,
   PstProjectMemberInput,
   PstProjectUpdate,
+  PstPublicRuntimeSession,
+  PstPublicRuntimeSessionAdvanceInput,
   PstPublicWorkspace,
   PstRecipe,
   PstRelease,
@@ -2845,4 +2847,149 @@ export function useGetPublicPstWorkspace<TData = Awaited<ReturnType<typeof getPu
 
 
 
+
+export const getStartPublicPstRuntimeSessionUrl = (slug: string,) => {
+
+
+
+
+  return `/api/pst/public/workspaces/${slug}/sessions`
+}
+
+/**
+ * @summary Start a public customer runtime session
+ */
+export const startPublicPstRuntimeSession = async (slug: string, options?: Parameters<typeof customFetch>[1]): Promise<PstPublicRuntimeSession> => {
+
+  return customFetch<PstPublicRuntimeSession>(getStartPublicPstRuntimeSessionUrl(slug),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getStartPublicPstRuntimeSessionMutationOptions = <TError = ErrorType<NotFoundResponse | ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startPublicPstRuntimeSession>>, TError,{slug: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof startPublicPstRuntimeSession>>, TError,{slug: string}, TContext> => {
+
+const mutationKey = ['startPublicPstRuntimeSession'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startPublicPstRuntimeSession>>, {slug: string}> = (props) => {
+          const {slug} = props ?? {};
+
+          return  startPublicPstRuntimeSession(slug,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StartPublicPstRuntimeSessionMutationResult = NonNullable<Awaited<ReturnType<typeof startPublicPstRuntimeSession>>>
+
+    export type StartPublicPstRuntimeSessionMutationError = ErrorType<NotFoundResponse | ErrorResponse>
+
+    /**
+ * @summary Start a public customer runtime session
+ */
+export const useStartPublicPstRuntimeSession = <TError = ErrorType<NotFoundResponse | ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startPublicPstRuntimeSession>>, TError,{slug: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof startPublicPstRuntimeSession>>,
+        TError,
+        {slug: string},
+        TContext
+      > => {
+      return useMutation(getStartPublicPstRuntimeSessionMutationOptions(options));
+    }
+
+export const getAdvancePublicPstRuntimeSessionUrl = (slug: string,
+    sessionId: string,) => {
+
+
+
+
+  return `/api/pst/public/workspaces/${slug}/sessions/${sessionId}/advance`
+}
+
+/**
+ * @summary Advance a public customer runtime session
+ */
+export const advancePublicPstRuntimeSession = async (slug: string,
+    sessionId: string,
+    pstPublicRuntimeSessionAdvanceInput: PstPublicRuntimeSessionAdvanceInput, options?: Parameters<typeof customFetch>[1]): Promise<PstPublicRuntimeSession> => {
+
+  return customFetch<PstPublicRuntimeSession>(getAdvancePublicPstRuntimeSessionUrl(slug,sessionId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pstPublicRuntimeSessionAdvanceInput)
+  }
+);}
+
+
+
+
+
+export const getAdvancePublicPstRuntimeSessionMutationOptions = <TError = ErrorType<NotFoundResponse | ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof advancePublicPstRuntimeSession>>, TError,{slug: string;sessionId: string;data: BodyType<PstPublicRuntimeSessionAdvanceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof advancePublicPstRuntimeSession>>, TError,{slug: string;sessionId: string;data: BodyType<PstPublicRuntimeSessionAdvanceInput>}, TContext> => {
+
+const mutationKey = ['advancePublicPstRuntimeSession'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof advancePublicPstRuntimeSession>>, {slug: string;sessionId: string;data: BodyType<PstPublicRuntimeSessionAdvanceInput>}> = (props) => {
+          const {slug,sessionId,data} = props ?? {};
+
+          return  advancePublicPstRuntimeSession(slug,sessionId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdvancePublicPstRuntimeSessionMutationResult = NonNullable<Awaited<ReturnType<typeof advancePublicPstRuntimeSession>>>
+    export type AdvancePublicPstRuntimeSessionMutationBody = BodyType<PstPublicRuntimeSessionAdvanceInput>
+    export type AdvancePublicPstRuntimeSessionMutationError = ErrorType<NotFoundResponse | ErrorResponse>
+
+    /**
+ * @summary Advance a public customer runtime session
+ */
+export const useAdvancePublicPstRuntimeSession = <TError = ErrorType<NotFoundResponse | ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof advancePublicPstRuntimeSession>>, TError,{slug: string;sessionId: string;data: BodyType<PstPublicRuntimeSessionAdvanceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof advancePublicPstRuntimeSession>>,
+        TError,
+        {slug: string;sessionId: string;data: BodyType<PstPublicRuntimeSessionAdvanceInput>},
+        TContext
+      > => {
+      return useMutation(getAdvancePublicPstRuntimeSessionMutationOptions(options));
+    }
 

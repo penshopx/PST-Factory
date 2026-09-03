@@ -14,6 +14,7 @@ import {
   pstProjectDocumentsTable,
   pstProjectsTable,
   pstProjectRecipesTable,
+  pstPublicRuntimeSessionsTable,
   pstReleasesTable,
   pstQaRunsTable,
   pstRecipesTable,
@@ -25,6 +26,7 @@ import {
   type PstAssemblyChecklistItem,
   type PstAssemblyRisk,
   type PstReleaseSnapshot,
+  type PstRuntimeInputV1,
 } from "@workspace/db";
 import {
   ArchivePstProjectParams,
@@ -56,6 +58,11 @@ import {
   GetPstProjectParams,
   GetPstProjectResponse,
   GetPublicPstWorkspaceResponse,
+  StartPublicPstRuntimeSessionParams,
+  StartPublicPstRuntimeSessionResponse,
+  AdvancePublicPstRuntimeSessionBody,
+  AdvancePublicPstRuntimeSessionParams,
+  AdvancePublicPstRuntimeSessionResponse,
   GetPstWorkspaceParams,
   GetPstWorkspaceResponse,
   ListPstAssetsQueryParams,
@@ -114,6 +121,11 @@ import {
   resolveReleaseDeclarations,
 } from "../lib/services/pst/release-snapshot";
 import { compileExecutableRelease } from "../lib/services/pst/executable-release";
+import {
+  persistedRuntimeAdvance,
+  publicRuntimeSessionView,
+} from "../lib/services/pst/public-runtime-session";
+import { advancePstRuntime, createPstRuntime } from "@workspace/db/schema";
 import { consumeAnalysisQuota } from "../lib/services/ai/quota";
 import { randomUUID } from "node:crypto";
 import { deleteObject, signObjectUrl } from "./storage";
@@ -782,8 +794,8 @@ async function projectAggregate(projectId: string, userId: string) {
   };
 }
 
-async function latestRelease(projectId: string) {
-  const [release] = await db
+async function latestRelease(projectId: string, query: PstSelectExecutor = db) {
+  const [release] = await query
     .select()
     .from(pstReleasesTable)
     .where(eq(pstReleasesTable.projectId, projectId))
@@ -1178,8 +1190,8 @@ async function authorizeProject(
 const editorRoles: readonly PstProjectRole[] = ["admin", "editor"];
 const adminRoles: readonly PstProjectRole[] = ["admin"];
 
-async function publicWorkspace(slug: string) {
-  const [project] = await db
+async function publicWorkspace(slug: string, query: PstSelectExecutor = db) {
+  const [project] = await query
     .select()
     .from(pstProjectsTable)
     .where(eq(pstProjectsTable.slug, slug));
@@ -1187,7 +1199,7 @@ async function publicWorkspace(slug: string) {
   if (project.publicationStatus !== "PUBLISHED") {
     return undefined;
   }
-  const release = await latestRelease(project.id);
+  const release = await latestRelease(project.id, query);
   if (!release) {
     throw new PublicWorkspaceConsistencyError(
       "Published customer workspace is missing its active release snapshot.",
@@ -1245,6 +1257,7 @@ async function publicWorkspace(slug: string) {
       updatedAt: new Date(release.createdAt),
     },
     definition: executable.definition,
+    release,
   };
 }
 
@@ -2582,8 +2595,161 @@ router.get("/pst/public/workspaces/:slug", async (req, res): Promise<void> => {
   res.json(GetPublicPstWorkspaceResponse.parse({
     project,
     steps: project.blueprint.workflow,
-    definition: project.definition,
   }));
+});
+
+router.post("/pst/public/workspaces/:slug/sessions", async (req, res): Promise<void> => {
+  const params = StartPublicPstRuntimeSessionParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  let workspace;
+  try {
+    workspace = await publicWorkspace(params.data.slug);
+  } catch (error) {
+    if (error instanceof PublicWorkspaceConsistencyError) {
+      res.status(503).json({ error: error.message });
+      return;
+    }
+    throw error;
+  }
+  if (!workspace) {
+    res.status(404).json({ error: "Published customer workspace not found" });
+    return;
+  }
+
+  const started = createPstRuntime(workspace.definition);
+  if (started.status === "BLOCKED") {
+    res.status(503).json({ error: "Published customer workspace cannot start a runtime session." });
+    return;
+  }
+  const result = advancePstRuntime(started.session);
+  const persisted = persistedRuntimeAdvance(result);
+  if (!persisted) {
+    res.status(503).json({ error: "Published customer workspace cannot start a runtime session." });
+    return;
+  }
+
+  const sessionId = randomUUID();
+  const revision = 0;
+  await db.insert(pstPublicRuntimeSessionsTable).values({
+    id: sessionId,
+    projectId: workspace.id,
+    releaseId: workspace.release.id,
+    releaseVersion: workspace.release.version,
+    runtimeSession: persisted.runtimeSession,
+    status: persisted.status,
+    outcomeId: persisted.outcomeId,
+    output: persisted.output,
+    errors: persisted.errors,
+    revision,
+  });
+  res.status(201).json(StartPublicPstRuntimeSessionResponse.parse(
+    publicRuntimeSessionView(sessionId, revision, result),
+  ));
+});
+
+router.post("/pst/public/workspaces/:slug/sessions/:sessionId/advance", async (req, res): Promise<void> => {
+  const params = AdvancePublicPstRuntimeSessionParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const body = AdvancePublicPstRuntimeSessionBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+
+  type AdvanceTransactionResult =
+    | { kind: "NOT_FOUND" }
+    | { kind: "STALE"; revision: number }
+    | { kind: "RELEASE_CHANGED" }
+    | { kind: "UNAVAILABLE"; error: string }
+    | { kind: "SUCCESS"; response: ReturnType<typeof publicRuntimeSessionView> };
+  const outcome = await db.transaction(async (tx): Promise<AdvanceTransactionResult> => {
+    const [session] = await tx
+      .select()
+      .from(pstPublicRuntimeSessionsTable)
+      .where(eq(pstPublicRuntimeSessionsTable.id, params.data.sessionId))
+      .for("update");
+    if (!session) return { kind: "NOT_FOUND" };
+
+    let workspace;
+    try {
+      workspace = await publicWorkspace(params.data.slug, tx);
+    } catch (error) {
+      if (error instanceof PublicWorkspaceConsistencyError) {
+        return { kind: "UNAVAILABLE", error: error.message };
+      }
+      throw error;
+    }
+    if (!workspace || session.projectId !== workspace.id) return { kind: "NOT_FOUND" };
+    if (
+      session.releaseId !== workspace.release.id
+      || session.releaseVersion !== workspace.release.version
+    ) {
+      return { kind: "RELEASE_CHANGED" };
+    }
+    if (session.revision !== body.data.revision) {
+      return { kind: "STALE", revision: session.revision };
+    }
+    if (session.status === "COMPLETED") {
+      return {
+        kind: "SUCCESS",
+        response: {
+          sessionId: session.id,
+          revision: session.revision,
+          status: "COMPLETED",
+          outcomeId: session.outcomeId ?? undefined,
+          output: session.output ?? undefined,
+        },
+      };
+    }
+
+    const result = advancePstRuntime(session.runtimeSession, body.data.input as PstRuntimeInputV1);
+    const persisted = persistedRuntimeAdvance(result);
+    if (!persisted) {
+      return { kind: "UNAVAILABLE", error: "Public runtime session could not be advanced." };
+    }
+    const revision = session.revision + 1;
+    await tx
+      .update(pstPublicRuntimeSessionsTable)
+      .set({
+        runtimeSession: persisted.runtimeSession,
+        status: persisted.status,
+        outcomeId: persisted.outcomeId ?? null,
+        output: persisted.output ?? null,
+        errors: persisted.errors ?? null,
+        revision,
+        updatedAt: new Date(),
+      })
+      .where(eq(pstPublicRuntimeSessionsTable.id, session.id));
+    return {
+      kind: "SUCCESS",
+      response: publicRuntimeSessionView(session.id, revision, result),
+    };
+  });
+
+  if (outcome.kind === "NOT_FOUND") {
+    res.status(404).json({ error: "Public runtime session not found" });
+    return;
+  }
+  if (outcome.kind === "UNAVAILABLE") {
+    res.status(503).json({ error: outcome.error });
+    return;
+  }
+  if (outcome.kind === "STALE") {
+    res.status(409).json({ error: "Public runtime session revision is stale", revision: outcome.revision });
+    return;
+  }
+  if (outcome.kind === "RELEASE_CHANGED") {
+    res.status(409).json({ error: "Public runtime session release is no longer active" });
+    return;
+  }
+  res.json(AdvancePublicPstRuntimeSessionResponse.parse(outcome.response));
 });
 
 export async function initializePstData() {

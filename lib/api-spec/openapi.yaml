@@ -712,6 +712,74 @@ paths:
                 $ref: "#/components/schemas/PstPublicWorkspace"
         "404":
           $ref: "#/components/responses/NotFound"
+  /pst/public/workspaces/{slug}/sessions:
+    post:
+      operationId: startPublicPstRuntimeSession
+      security: []
+      tags: [projects]
+      summary: Start a public customer runtime session
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "201":
+          description: Started public runtime session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PstPublicRuntimeSession"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          description: Published workspace is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /pst/public/workspaces/{slug}/sessions/{sessionId}/advance:
+    post:
+      operationId: advancePublicPstRuntimeSession
+      security: []
+      tags: [projects]
+      summary: Advance a public customer runtime session
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string }
+        - name: sessionId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PstPublicRuntimeSessionAdvanceInput"
+      responses:
+        "200":
+          description: Advanced public runtime session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PstPublicRuntimeSession"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Session revision is stale
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Published workspace is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   securitySchemes:
     clerkSession:
@@ -740,6 +808,59 @@ components:
           type: string
       required:
         - status
+    PstPublicRuntimeDiagnostic:
+      type: object
+      required: [code, path, message]
+      properties:
+        code: { type: string }
+        path: { type: string }
+        message: { type: string }
+    PstPublicRuntimeStep:
+      type: object
+      required: [id, kind, title, description, operation, requiredInputs]
+      properties:
+        id: { type: string }
+        kind: { type: string }
+        title: { type: string }
+        description: { type: string }
+        operation: { type: object, additionalProperties: true }
+        requiredInputs:
+          type: array
+          items:
+            type: object
+            required: [key, label, type, required]
+            properties:
+              key: { type: string }
+              label: { type: string }
+              type: { type: string }
+              required: { type: boolean }
+              options:
+                type: array
+                items:
+                  type: object
+                  required: [value, label]
+                  properties:
+                    value: { type: string }
+                    label: { type: string }
+    PstPublicRuntimeSession:
+      type: object
+      required: [sessionId, revision, status]
+      properties:
+        sessionId: { type: string }
+        revision: { type: number, multipleOf: 1, minimum: 0 }
+        status: { type: string, enum: [WAITING_INPUT, RUNNING, COMPLETED, BLOCKED] }
+        step: { $ref: "#/components/schemas/PstPublicRuntimeStep" }
+        outcomeId: { type: string }
+        output: { type: object, additionalProperties: true }
+        errors:
+          type: array
+          items: { $ref: "#/components/schemas/PstPublicRuntimeDiagnostic" }
+    PstPublicRuntimeSessionAdvanceInput:
+      type: object
+      required: [revision, input]
+      properties:
+        revision: { type: number, multipleOf: 1, minimum: 0 }
+        input: { type: object, additionalProperties: true }
     ProjectStatus:
       type: string
       enum: [DRAFT, ARCHITECTED, BLUEPRINT_READY, BUILDING, PREVIEW, QA, APPROVED, PUBLISHED, ARCHIVED]
@@ -1306,11 +1427,10 @@ components:
         steps: { type: array, items: { $ref: "#/components/schemas/WorkflowStep" } }
     PstPublicWorkspace:
       type: object
-      required: [project, steps, definition]
+      required: [project, steps]
       properties:
         project: { $ref: "#/components/schemas/PstPublicProject" }
         steps: { type: array, items: { $ref: "#/components/schemas/PublicWorkflowStep" } }
-        definition: { $ref: "#/components/schemas/ExecutablePstDefinition" }
     ExecutablePstDefinition:
       type: object
       description: Validated, data-only ExecutablePstDefinitionV1 emitted from the immutable release.

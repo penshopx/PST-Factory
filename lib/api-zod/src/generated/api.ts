@@ -2097,8 +2097,104 @@ export const GetPublicPstWorkspaceResponse = zod.object({
   "outputs": zod.array(zod.string()),
   "dependencies": zod.array(zod.string()),
   "nextStep": zod.string()
-})),
-  "definition": zod.record(zod.string(), zod.unknown()).describe('Validated, data-only ExecutablePstDefinitionV1 emitted from the immutable release.')
+}))
+})
+
+
+/**
+ * @summary Start a public customer runtime session
+ */
+export const StartPublicPstRuntimeSessionParams = zod.object({
+  "slug": zod.coerce.string()
+})
+
+export const startPublicPstRuntimeSessionResponseRevisionMin = 0;
+export const startPublicPstRuntimeSessionResponseRevisionMultipleOf = 1;
+
+
+
+export const StartPublicPstRuntimeSessionResponse = zod.object({
+  "sessionId": zod.string(),
+  "revision": zod.number().min(startPublicPstRuntimeSessionResponseRevisionMin).multipleOf(startPublicPstRuntimeSessionResponseRevisionMultipleOf),
+  "status": zod.enum(['WAITING_INPUT', 'RUNNING', 'COMPLETED', 'BLOCKED']),
+  "step": zod.object({
+  "id": zod.string(),
+  "kind": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "operation": zod.record(zod.string(), zod.unknown()),
+  "requiredInputs": zod.array(zod.object({
+  "key": zod.string(),
+  "label": zod.string(),
+  "type": zod.string(),
+  "required": zod.boolean(),
+  "options": zod.array(zod.object({
+  "value": zod.string(),
+  "label": zod.string()
+})).optional()
+}))
+}).optional(),
+  "outcomeId": zod.string().optional(),
+  "output": zod.record(zod.string(), zod.unknown()).optional(),
+  "errors": zod.array(zod.object({
+  "code": zod.string(),
+  "path": zod.string(),
+  "message": zod.string()
+})).optional()
+})
+
+
+/**
+ * @summary Advance a public customer runtime session
+ */
+export const AdvancePublicPstRuntimeSessionParams = zod.object({
+  "slug": zod.coerce.string(),
+  "sessionId": zod.coerce.string()
+})
+
+export const advancePublicPstRuntimeSessionBodyRevisionMin = 0;
+export const advancePublicPstRuntimeSessionBodyRevisionMultipleOf = 1;
+
+
+
+export const AdvancePublicPstRuntimeSessionBody = zod.object({
+  "revision": zod.number().min(advancePublicPstRuntimeSessionBodyRevisionMin).multipleOf(advancePublicPstRuntimeSessionBodyRevisionMultipleOf),
+  "input": zod.record(zod.string(), zod.unknown())
+})
+
+export const advancePublicPstRuntimeSessionResponseRevisionMin = 0;
+export const advancePublicPstRuntimeSessionResponseRevisionMultipleOf = 1;
+
+
+
+export const AdvancePublicPstRuntimeSessionResponse = zod.object({
+  "sessionId": zod.string(),
+  "revision": zod.number().min(advancePublicPstRuntimeSessionResponseRevisionMin).multipleOf(advancePublicPstRuntimeSessionResponseRevisionMultipleOf),
+  "status": zod.enum(['WAITING_INPUT', 'RUNNING', 'COMPLETED', 'BLOCKED']),
+  "step": zod.object({
+  "id": zod.string(),
+  "kind": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "operation": zod.record(zod.string(), zod.unknown()),
+  "requiredInputs": zod.array(zod.object({
+  "key": zod.string(),
+  "label": zod.string(),
+  "type": zod.string(),
+  "required": zod.boolean(),
+  "options": zod.array(zod.object({
+  "value": zod.string(),
+  "label": zod.string()
+})).optional()
+}))
+}).optional(),
+  "outcomeId": zod.string().optional(),
+  "output": zod.record(zod.string(), zod.unknown()).optional(),
+  "errors": zod.array(zod.object({
+  "code": zod.string(),
+  "path": zod.string(),
+  "message": zod.string()
+})).optional()
 })
 
 

@@ -9,6 +9,67 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface PstPublicRuntimeDiagnostic {
+  code: string;
+  path: string;
+  message: string;
+}
+
+export type PstPublicRuntimeStepOperation = { [key: string]: unknown };
+
+export type PstPublicRuntimeStepRequiredInputsItemOptionsItem = {
+  value: string;
+  label: string;
+};
+
+export type PstPublicRuntimeStepRequiredInputsItem = {
+  key: string;
+  label: string;
+  type: string;
+  required: boolean;
+  options?: PstPublicRuntimeStepRequiredInputsItemOptionsItem[];
+};
+
+export interface PstPublicRuntimeStep {
+  id: string;
+  kind: string;
+  title: string;
+  description: string;
+  operation: PstPublicRuntimeStepOperation;
+  requiredInputs: PstPublicRuntimeStepRequiredInputsItem[];
+}
+
+export type PstPublicRuntimeSessionStatus = typeof PstPublicRuntimeSessionStatus[keyof typeof PstPublicRuntimeSessionStatus];
+
+
+export const PstPublicRuntimeSessionStatus = {
+  WAITING_INPUT: 'WAITING_INPUT',
+  RUNNING: 'RUNNING',
+  COMPLETED: 'COMPLETED',
+  BLOCKED: 'BLOCKED',
+} as const;
+
+export type PstPublicRuntimeSessionOutput = { [key: string]: unknown };
+
+export interface PstPublicRuntimeSession {
+  sessionId: string;
+  /** @minimum 0 */
+  revision: number;
+  status: PstPublicRuntimeSessionStatus;
+  step?: PstPublicRuntimeStep;
+  outcomeId?: string;
+  output?: PstPublicRuntimeSessionOutput;
+  errors?: PstPublicRuntimeDiagnostic[];
+}
+
+export type PstPublicRuntimeSessionAdvanceInputInput = { [key: string]: unknown };
+
+export interface PstPublicRuntimeSessionAdvanceInput {
+  /** @minimum 0 */
+  revision: number;
+  input: PstPublicRuntimeSessionAdvanceInputInput;
+}
+
 export type ProjectStatus = typeof ProjectStatus[keyof typeof ProjectStatus];
 
 
@@ -871,16 +932,15 @@ export interface PstPublicProject {
   blueprint: PublicPstBlueprint;
 }
 
+export interface PstPublicWorkspace {
+  project: PstPublicProject;
+  steps: PublicWorkflowStep[];
+}
+
 /**
  * Validated, data-only ExecutablePstDefinitionV1 emitted from the immutable release.
  */
 export interface ExecutablePstDefinition { [key: string]: unknown }
-
-export interface PstPublicWorkspace {
-  project: PstPublicProject;
-  steps: PublicWorkflowStep[];
-  definition: ExecutablePstDefinition;
-}
 
 export interface FactoryEvent {
   id: string;
