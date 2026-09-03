@@ -13,6 +13,11 @@ import {
   type PstReleaseRuleSnapshot,
   type WorkflowStep,
 } from "@workspace/db/schema";
+import { compileExecutableRelease } from "./executable-release";
+import {
+  materializeCompilerReadySnapshot,
+  releaseSnapshotHashMatches,
+} from "./release-snapshot";
 
 type ThreePstFixture = {
   key: "cashflow" | "decision" | "compliance";
@@ -781,4 +786,135 @@ test("an incomplete three-PST snapshot is blocked before compilation", () => {
       code === "UNRESOLVED_REFERENCE" && path.includes("strategyRef")),
     true,
   );
+});
+
+test("published executable remains immutable when its source Library changes", () => {
+  const { release, snapshot } = snapshotFor(fixtureFor("compliance"));
+  const draft = structuredClone(snapshot);
+  // Materialization is the publication boundary: authoring components are copied
+  // into the release payload and stripped from the executable workflow.
+  draft.workflow[0] = {
+    ...draft.workflow[0]!,
+    configuration: {
+      ...draft.workflow[0]!.configuration,
+      authoredComponents: draft.components,
+    },
+  };
+  draft.blueprint.workflow = draft.workflow;
+
+  const materialized = materializeCompilerReadySnapshot(draft);
+  assert.equal(materialized.status, "READY");
+  if (materialized.status !== "READY") return;
+  const publishedSnapshot = structuredClone(materialized.snapshot);
+  const publishedRelease = {
+    id: release.releaseId,
+    projectId: release.projectId,
+    version: release.version,
+    createdAt: new Date(release.publishedAt),
+  };
+  const inputs = [
+    { "context.organization": "Acme" },
+    { "answers.primary": "complete" },
+  ];
+  const first = compileExecutableRelease(publishedRelease, release.slug, publishedSnapshot);
+  assert.equal(first.status, "COMPILED");
+  if (first.status !== "COMPILED") return;
+  const firstRuntime = runPstRuntime(first.definition, inputs);
+  assert.equal(firstRuntime.status, "COMPLETED");
+
+  const savedHash = publishedSnapshot.snapshotHash;
+  const savedDefinition = structuredClone(first.definition);
+  const savedRuntime = structuredClone(firstRuntime);
+
+  // These represent later mutable Library/draft edits: selected pattern and
+  // recipe metadata, provider identity, rule behavior, component behavior,
+  // and the authored workflow all change after the prior release was published.
+  const mutatedDraft = structuredClone(draft);
+  mutatedDraft.pattern = {
+    ...mutatedDraft.pattern!,
+    version: "2.0.0",
+    steps: [...mutatedDraft.pattern!.steps, "Escalate"],
+  };
+  mutatedDraft.recipe = {
+    ...mutatedDraft.recipe!,
+    version: "2.0.0",
+    components: [...mutatedDraft.recipe!.components, "Escalation guide"],
+  };
+  mutatedDraft.providers[0] = {
+    ...mutatedDraft.providers[0]!,
+    id: "new-library-provider",
+    configuration: {},
+  };
+  const analysisStep = mutatedDraft.workflow.find(({ id }) => id === "analysis");
+  assert.ok(analysisStep);
+  const analysisCompilerReady = analysisStep!.configuration!
+    .compilerReady as { operation: { providerId: string } };
+  analysisCompilerReady.operation.providerId = mutatedDraft.providers[0]!.id;
+  mutatedDraft.rules[0] = {
+    ...mutatedDraft.rules[0]!,
+    version: "2.0.0",
+    when: {
+      all: [{
+        field: "answers.primary",
+        operator: "equals",
+        value: "requires-review",
+      }],
+    },
+  };
+  mutatedDraft.workflow[2] = {
+    ...mutatedDraft.workflow[2]!,
+    title: "Mutated Library rules workflow",
+  };
+  const authoredComponents = mutatedDraft.workflow[0]!.configuration!
+    .authoredComponents as Array<{ id: string; configuration?: { compilerReady?: { definition?: { template?: string } } } }>;
+  const analysis = authoredComponents.find(({ id }) => id === "compliance-analysis");
+  assert.ok(analysis);
+  analysis!.configuration!.compilerReady!.definition!.template = "Use revised Library analysis.";
+  mutatedDraft.blueprint.workflow = mutatedDraft.workflow;
+
+  const candidate = materializeCompilerReadySnapshot(mutatedDraft);
+  assert.equal(candidate.status, "READY");
+  if (candidate.status !== "READY") return;
+  const candidateCompiled = compileExecutableRelease(
+    {
+      ...publishedRelease,
+      id: "release-compliance-proof-candidate",
+      version: candidate.snapshot.blueprint.version,
+    },
+    release.slug,
+    candidate.snapshot,
+  );
+  assert.equal(
+    candidateCompiled.status,
+    "COMPILED",
+    candidateCompiled.status === "BLOCKED"
+      ? JSON.stringify(candidateCompiled.diagnostics, null, 2)
+      : undefined,
+  );
+  if (candidateCompiled.status !== "COMPILED") return;
+  const candidateRuntime = runPstRuntime(candidateCompiled.definition, inputs);
+  assert.equal(candidateRuntime.status, "COMPLETED");
+
+  // The public executable pipeline sees only the persisted old snapshot, never
+  // the mutable Library draft.
+  const replay = compileExecutableRelease(publishedRelease, release.slug, publishedSnapshot);
+  assert.equal(replay.status, "COMPILED");
+  if (replay.status !== "COMPILED") return;
+  const replayRuntime = runPstRuntime(replay.definition, inputs);
+  assert.equal(publishedSnapshot.snapshotHash, savedHash);
+  assert.equal(releaseSnapshotHashMatches(publishedSnapshot), true);
+  assert.deepEqual(publishedSnapshot, materialized.snapshot);
+  assert.deepEqual(replay.definition, savedDefinition);
+  assert.equal(JSON.stringify(replay.definition), JSON.stringify(savedDefinition));
+  assert.deepEqual(replay.definition.steps, savedDefinition.steps);
+  assert.deepEqual(replay.definition.outcomeStepIds, savedDefinition.outcomeStepIds);
+  assert.deepEqual(replayRuntime, savedRuntime);
+  assert.equal(JSON.stringify(replayRuntime), JSON.stringify(savedRuntime));
+
+  // A new release candidate demonstrably contains the Library changes, so the
+  // immutability assertion is not a no-op.
+  assert.notEqual(candidate.snapshot.snapshotHash, savedHash);
+  assert.notDeepEqual(candidateCompiled.definition, savedDefinition);
+  assert.notDeepEqual(candidateCompiled.definition.steps, savedDefinition.steps);
+  assert.notDeepEqual(candidateRuntime, savedRuntime);
 });
