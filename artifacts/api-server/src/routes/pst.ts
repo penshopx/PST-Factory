@@ -102,6 +102,7 @@ import {
   resolveReleaseDeclarations,
 } from "../lib/services/pst/release-snapshot";
 import { compileExecutableRelease } from "../lib/services/pst/executable-release";
+import { consumeAnalysisQuota } from "../lib/services/ai/quota";
 import { randomUUID } from "node:crypto";
 import { deleteObject, signObjectUrl } from "./storage";
 
@@ -1468,22 +1469,70 @@ router.post("/pst/projects/:projectId/architect", async (req, res): Promise<void
     return;
   }
   const references = await currentProjectReferences(project.id, access.userId);
-  const proposal = await aiProvider.proposeBlueprint({
-    problem: project.problemStatement,
-    targetUser: project.targetUser,
-    desiredOutcome: project.desiredOutcome,
-    additionalContext: [
-      body.data.additionalContext,
-      references.pattern ? `Use the "${references.pattern.name}" pattern as the journey structure.` : undefined,
-      references.recipe ? `Use the "${references.recipe.name}" recipe as the component structure.` : undefined,
-    ].filter(Boolean).join(" "),
-    pattern: references.pattern
-      ? { name: references.pattern.name, steps: references.pattern.steps }
-      : undefined,
-    recipe: references.recipe
-      ? { name: references.recipe.name, components: references.recipe.components }
-      : undefined,
-  });
+  const documentIds = [...new Set(body.data.documentIds ?? [])];
+  const documents = documentIds.length
+    ? await db
+      .select()
+      .from(pstProjectDocumentsTable)
+      .where(and(
+        eq(pstProjectDocumentsTable.projectId, project.id),
+        inArray(pstProjectDocumentsTable.id, documentIds),
+      ))
+    : [];
+  if (documents.length !== documentIds.length) {
+    res.status(400).json({ error: "One or more selected planning documents are unavailable." });
+    return;
+  }
+  if (documents.reduce((total, document) => total + document.size, 0) > 20 * 1024 * 1024) {
+    res.status(400).json({ error: "Selected planning documents exceed the 20 MB analysis limit." });
+    return;
+  }
+  const privateObjectDir = process.env.PRIVATE_OBJECT_DIR;
+  if (documents.length && !privateObjectDir) {
+    res.status(503).json({ error: "Document storage is not configured." });
+    return;
+  }
+  const architectDocuments = await Promise.all(documents.map(async (document) => {
+    const storagePath = document.objectPath.replace(/^\/objects/, "");
+    const url = await signObjectUrl(`${privateObjectDir}${storagePath}`, "GET");
+    const response = await fetch(url, { signal: AbortSignal.timeout(30_000) });
+    if (!response.ok) {
+      throw new Error(`Planning document download failed with status ${response.status}`);
+    }
+    return {
+      name: document.name,
+      contentType: document.contentType,
+      data: Buffer.from(await response.arrayBuffer()),
+    };
+  }));
+  if (!consumeAnalysisQuota(access.userId)) {
+    res.status(429).json({ error: "Batas analisis tercapai. Coba lagi dalam beberapa menit.", retryable: true });
+    return;
+  }
+  let proposal;
+  try {
+    proposal = await aiProvider.proposeBlueprint({
+      problem: project.problemStatement,
+      targetUser: project.targetUser,
+      desiredOutcome: project.desiredOutcome,
+      additionalContext: [
+        body.data.additionalContext,
+        references.pattern ? `Use the "${references.pattern.name}" pattern as the journey structure.` : undefined,
+        references.recipe ? `Use the "${references.recipe.name}" recipe as the component structure.` : undefined,
+      ].filter(Boolean).join(" "),
+      pattern: references.pattern
+        ? { name: references.pattern.name, steps: references.pattern.steps }
+        : undefined,
+      recipe: references.recipe
+        ? { name: references.recipe.name, components: references.recipe.components }
+        : undefined,
+      documents: architectDocuments,
+    });
+  } catch (error) {
+    req.log.warn({ err: error }, "PST architect analysis failed");
+    res.status(502).json({ error: "Perancang AI tidak tersedia. Coba lagi sebentar.", retryable: true });
+    return;
+  }
   const workflowSource = references.pattern
     ? { type: "pattern" as const, id: references.pattern.id, name: references.pattern.name }
     : references.recipe
@@ -1499,7 +1548,7 @@ router.post("/pst/projects/:projectId/architect", async (req, res): Promise<void
   };
   const [updated] = await db.update(pstBlueprintsTable).set({ ...blueprintProposal, updatedAt: new Date() }).where(eq(pstBlueprintsTable.projectId, project.id)).returning();
   await db.update(pstProjectsTable).set({ status: "ARCHITECTED", updatedAt: new Date() }).where(eq(pstProjectsTable.id, project.id));
-  await addEvent("BLUEPRINT_GENERATED", `${project.name} received a blueprint proposal from MOCK AI.`, project.id);
+  await addEvent("BLUEPRINT_GENERATED", `${project.name} received an AI blueprint proposal.`, project.id);
   res.json(RunPstArchitectResponse.parse(updated));
 });
 

@@ -10,4 +10,9 @@ export interface ArchitectInput {
   additionalContext?: string;
   patternId?: string | null;
   recipeId?: string | null;
+  /**
+     * @maxItems 5
+     * @items.minLength 1
+     */
+  documentIds?: string[];
 }

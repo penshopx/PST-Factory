@@ -930,6 +930,11 @@ components:
         additionalContext: { type: string }
         patternId: { type: string, nullable: true }
         recipeId: { type: string, nullable: true }
+        documentIds:
+          type: array
+          maxItems: 5
+          uniqueItems: true
+          items: { type: string, minLength: 1 }
     FrameworkAnalysisInput:
       type: object
       required: [problemStatement]

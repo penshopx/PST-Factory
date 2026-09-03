@@ -868,10 +868,16 @@ export const RunPstArchitectParams = zod.object({
   "projectId": zod.coerce.string()
 })
 
+
+export const runPstArchitectBodyDocumentIdsMax = 5;
+
+
+
 export const RunPstArchitectBody = zod.object({
   "additionalContext": zod.string().optional(),
   "patternId": zod.string().nullish(),
-  "recipeId": zod.string().nullish()
+  "recipeId": zod.string().nullish(),
+  "documentIds": zod.array(zod.string().min(1)).max(runPstArchitectBodyDocumentIdsMax).optional()
 })
 
 export const RunPstArchitectResponse = zod.object({
