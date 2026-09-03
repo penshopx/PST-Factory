@@ -356,6 +356,15 @@ export function canonicalSourceFromRelease(
       });
     }
   });
+  snapshot.providers.forEach((provider, index) => {
+    if (!isRecord(provider.configuration)) {
+      errors.push({
+        code: "INVALID_SOURCE",
+        path: `providers[${index}].configuration`,
+        message: "Resolved provider configuration is required and must be a data object.",
+      });
+    }
+  });
   const workflow = canonicalWorkflow(snapshot.workflow, errors);
   if (errors.length) return { ok: false, errors };
 
@@ -411,7 +420,7 @@ export function canonicalSourceFromRelease(
       rules: snapshot.rules,
       providers: snapshot.providers.map((provider) => ({
         ...provider,
-        configuration: provider.configuration ?? {},
+        configuration: provider.configuration!,
       })),
     },
   };

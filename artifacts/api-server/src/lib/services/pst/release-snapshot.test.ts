@@ -181,6 +181,46 @@ test("release snapshot rejects incomplete declarations and credential-like confi
   assert.equal(declarations.errors.some((error) => error.includes("tokenLimit")), false);
 });
 
+test("release snapshot rejects provider and rule declarations without executable essentials", () => {
+  const workflow = [{
+    id: "rules",
+    type: "RULES",
+    title: "Rules",
+    description: "Apply configured rules.",
+    inputs: [],
+    outputs: [],
+    dependencies: [],
+    nextStep: "",
+    configuration: {
+      rules: [{
+        id: "rule-without-condition-or-action",
+        version: "v1.0",
+        name: "Incomplete rule",
+        kind: "RULE",
+        when: {},
+        then: [],
+      }],
+      provider: {
+        id: "provider-without-configuration",
+        capability: "analysis",
+        mode: "assistive",
+      },
+    },
+  }] satisfies WorkflowStep[];
+
+  const declarations = resolveReleaseDeclarations(workflow);
+  assert.equal(declarations.rules.length, 0);
+  assert.equal(declarations.providers.length, 0);
+  assert.equal(
+    declarations.errors.some((error) => error.includes("not a complete release rule")),
+    true,
+  );
+  assert.equal(
+    declarations.errors.some((error) => error.includes("not a complete release provider")),
+    true,
+  );
+});
+
 test("modern release materialization is deterministic and compiler-complete", () => {
   const workflow = workflowFromStructure(
     ["Questions", "Scoring", "Analysis", "Recommendation"],

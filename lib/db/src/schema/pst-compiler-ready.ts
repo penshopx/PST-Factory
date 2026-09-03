@@ -726,12 +726,14 @@ function executableRule(
     || !rule.name.trim()
     || (rule.kind !== "RULE" && rule.kind !== "SCORING")
     || !isRecord(rule.when)
-    || !hasOnlyKeys(rule.when, ["all", "any"])) {
+    || !hasOnlyKeys(rule.when, ["all", "any"])
+    || (!Array.isArray(rule.when.all) && !Array.isArray(rule.when.any))
+    || !rule.then.length) {
     return {
       errors: [{
         code: "INVALID_OPERATION",
         path,
-        message: "Rule identity, kind, and predicate groups must match the runtime allowlist.",
+        message: "Rule identity, kind, predicate group, and at least one action must match the runtime allowlist.",
       }],
     };
   }

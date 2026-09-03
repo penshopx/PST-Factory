@@ -343,8 +343,8 @@ test("Compiler-Ready IR rejects complete transition outside OUTCOME", () => {
     version: "1.0.0",
     name: "Action route",
     kind: "RULE",
-    when: {},
-    then: [],
+    when: { all: [] },
+    then: [{ type: "set", field: "derived.route", value: true }],
   }];
   const fixture = validatedSource(source);
 
@@ -473,8 +473,8 @@ test("Compiler-Ready IR rejects unknown nested transition fields", () => {
     version: "1.0.0",
     name: "Outcome route",
     kind: "RULE",
-    when: {},
-    then: [],
+    when: { all: [] },
+    then: [{ type: "set", field: "derived.route", value: true }],
   }];
   const fixture = validatedSource(source);
 

@@ -253,13 +253,27 @@ function declarationReadinessDiagnostics(declarations: ResolvedDeclarations) {
         "Resolved rule ID, version, name, and kind are required.",
       ));
     }
+    if (!Array.isArray(rule.when.all) && !Array.isArray(rule.when.any)) {
+      diagnostics.push(diagnostic(
+        "MISSING_DEPENDENCY",
+        `rules[${index}].when`,
+        "Resolved rule requires an explicit all or any predicate group.",
+      ));
+    }
+    if (!rule.then.length) {
+      diagnostics.push(diagnostic(
+        "MISSING_DEPENDENCY",
+        `rules[${index}].then`,
+        "Resolved rule requires at least one action.",
+      ));
+    }
   });
   declarations.providers.forEach((provider, index) => {
-    if (!provider.capability.trim() || !provider.mode.trim()) {
+    if (!provider.capability.trim() || !provider.mode.trim() || !provider.configuration) {
       diagnostics.push(diagnostic(
         "MISSING_DEPENDENCY",
         `providers[${index}]`,
-        "Resolved provider ID, capability, and mode are required.",
+        "Resolved provider ID, capability, mode, and configuration are required.",
       ));
     }
   });

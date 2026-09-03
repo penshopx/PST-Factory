@@ -34,20 +34,29 @@ export function releaseSnapshotHashMatches(snapshot: PstReleaseSnapshot) {
 function isReleaseRule(value: unknown): value is PstReleaseRuleSnapshot {
   if (!isRecord(value)) return false;
   return typeof value.id === "string"
+    && Boolean(value.id.trim())
     && typeof value.version === "string"
+    && Boolean(value.version.trim())
     && typeof value.name === "string"
+    && Boolean(value.name.trim())
     && typeof value.kind === "string"
+    && Boolean(value.kind.trim())
     && isRecord(value.when)
+    && (Array.isArray(value.when.all) || Array.isArray(value.when.any))
     && Array.isArray(value.then)
+    && value.then.length > 0
     && value.then.every(isRecord);
 }
 
 function isReleaseProvider(value: unknown): value is PstReleaseProviderSnapshot {
   if (!isRecord(value)) return false;
   return typeof value.id === "string"
+    && Boolean(value.id.trim())
     && typeof value.capability === "string"
+    && Boolean(value.capability.trim())
     && typeof value.mode === "string"
-    && (value.configuration === undefined || isRecord(value.configuration));
+    && Boolean(value.mode.trim())
+    && isRecord(value.configuration);
 }
 
 type ConfiguredValue = {
