@@ -11,3 +11,4 @@
 - [Legacy PST release compatibility](pst-legacy-release-compatibility.md) — Only marker-free historical snapshots may use the bounded read adapter; modern snapshots never fall back.
 - [App Storage signed uploads](app-storage-signed-uploads.md) — Private browser uploads use the local signing sidecar when Google Cloud client packages are unavailable.
 - [OpenAI Responses JSON mode](openai-responses-json-mode.md) — JSON mode validates user input separately; name JSON explicitly in the input message.
+- [PST assembly concurrency](pst-assembly-concurrency.md) — Project mutations share one lock; blueprint changes invalidate mutable assembly state from the prior revision.

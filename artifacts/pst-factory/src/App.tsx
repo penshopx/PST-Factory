@@ -16,18 +16,20 @@ import {
   getGetPstBlueprintQueryKey, getGetPstProjectQueryKey, getGetPublicPstWorkspaceQueryKey,
   getPstProjectDocumentOpenUrl,
   getGetPstReleasesQueryKey,
+  getGetPstAssemblyQueryKey,
   getListPstProjectMembersQueryKey,
   getListPstAssetsQueryKey, getListPstPatternsQueryKey, getListPstProjectsQueryKey,
   getListPstRecipesQueryKey, useApprovePstProject, useArchivePstProject,
   useBuildPstProject, useCreatePstProject, useCreatePstProjectComponent, useCreatePstProjectDocument, useDeletePstProjectDocument, useDuplicatePstProject,
   useGetDashboardActivity, useGetDashboardSummary, useGetPstBlueprint,
-  useGetPstProject, useGetPstReleases, useGetPublicPstWorkspace, useListPstAssets, useListPstPatterns,
+  useGetPstProject, useGetPstReleases, useGetPstAssembly, useGetPublicPstWorkspace, useListPstAssets, useListPstPatterns,
+  useUpdatePstAssemblyChecklistItem, useUpdatePstAssemblyRisk,
   useListPstProjectMembers, useListPstProjects, useListPstRecipes, usePublishPstProject, useRemovePstProjectMember, useRunPstArchitect,
   useRequestUploadUrl, useUpsertPstProjectMember,
   useRestorePstRelease, useRunPstQa, useSimulatePstProject, useUpdatePstBlueprint, useUpdatePstProject,
 } from '@workspace/api-client-react';
 import type {
-  BuildResult, FactoryEvent, PstAsset, PstBlueprint, PstDocument, PstPattern, PstProject,
+  BuildResult, FactoryEvent, PstAssembly, AssemblyChecklistItem, AssemblyRisk, PstAsset, PstBlueprint, PstDocument, PstPattern, PstProject,
   PstProjectMember, PstRecipe, PstRelease, QaRun, SimulationReport, WorkflowStep,
 } from '@workspace/api-client-react';
 import { createPstRuntime, advancePstRuntime } from '@workspace/db/schema/pst-runtime';
@@ -37,6 +39,7 @@ import type {
   PstRuntimeStepViewV1,
 } from '@workspace/db/schema/pst-runtime';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -461,6 +464,15 @@ function ProjectWorkspace() {
   const projectQuery = useGetPstProject(projectId, { query: { queryKey: getGetPstProjectQueryKey(projectId) } });
   const blueprintQuery = useGetPstBlueprint(projectId, { query: { queryKey: getGetPstBlueprintQueryKey(projectId) } });
   const releasesQuery = useGetPstReleases(projectId, { query: { queryKey: getGetPstReleasesQueryKey(projectId) } });
+  const assemblyQuery = useGetPstAssembly(projectId, {
+    query: {
+      queryKey: getGetPstAssemblyQueryKey(projectId),
+      retry: (count, error) => {
+        if (apiErrorStatus(error) === 404) return false;
+        return count < 3;
+      }
+    }
+  });
   const patternsQuery = useListPstPatterns({ query: { queryKey: getListPstPatternsQueryKey() } });
   const recipesQuery = useListPstRecipes({ query: { queryKey: getListPstRecipesQueryKey() } });
   const project = projectQuery.data;
@@ -501,6 +513,7 @@ function ProjectWorkspace() {
     void qc.invalidateQueries({ queryKey: getGetPstProjectQueryKey(projectId) });
     void qc.invalidateQueries({ queryKey: getGetPstBlueprintQueryKey(projectId) });
     void qc.invalidateQueries({ queryKey: getGetPstReleasesQueryKey(projectId) });
+    void qc.invalidateQueries({ queryKey: getGetPstAssemblyQueryKey(projectId) });
   };
   const refreshProject = () => {
     void refreshProjectData(
@@ -546,7 +559,7 @@ function ProjectWorkspace() {
      {tab === 'overview' && <><OverviewTab project={project} blueprint={blueprint} onArchitect={() => run('architect')} onBuild={() => run('build')} /><GustaftaProjectBridge project={project} /></>}
     {tab === 'problem' && <ProblemTab project={project} onSave={(data) => updateProject.mutate({ projectId, data }, { onSuccess: invalidate })} />}
      {tab === 'architect' && <ArchitectTab project={project} context={architectContext} setContext={setArchitectContext} patterns={patternsQuery.data ?? []} recipes={recipesQuery.data ?? []} selectedPatternId={selectedPatternId} selectedRecipeId={selectedRecipeId} setSelectedPatternId={setSelectedPatternId} setSelectedRecipeId={setSelectedRecipeId} selectedDocumentIds={selectedArchitectDocumentIds} setSelectedDocumentIds={setSelectedArchitectDocumentIds} onRun={() => run('architect')} pending={architect.isPending} />}
-    {tab === 'blueprint' && <BlueprintTab projectId={projectId} blueprint={blueprint} onSave={(data) => updateBlueprint.mutate({ projectId, data }, { onSuccess: invalidate })} />}
+    {tab === 'blueprint' && <BlueprintTab projectId={projectId} blueprint={blueprint} onSave={(data) => updateBlueprint.mutate({ projectId, data }, { onSuccess: invalidate })} onBuild={() => run('build')} buildPending={buildMutation.isPending} />}
     {tab === 'assets' && <ProjectAssetsEditor project={project} />}
     {tab === 'workflow' && <WorkflowTab workflow={blueprint?.workflow ?? []} />}
     {tab === 'ai' && <FrameworkAnalyzer project={project} blueprint={blueprint} />}
@@ -555,7 +568,7 @@ function ProjectWorkspace() {
     {tab === 'publish' && <PublishTab project={project} onApprove={() => run('approve')} onPublish={() => run('publish')} onRefreshProject={refreshProject} publishNotice={publishNotice} approvePending={approve.isPending} publishPending={publish.isPending} />}
      {tab === 'versions' && <VersionsTab project={project} releases={releasesQuery.data ?? []} onRestore={restore} restorePending={restoreRelease.isPending} />}
      {tab === 'access' && <MembersTab projectId={projectId} />}
-      {tab === 'build' && (build ? <BuildTab build={build} /> : <EmptyState icon={Hammer} title="Perakitan belum dijalankan" detail="Pilih Perakitan dari Ringkasan untuk mengubah rancangan menjadi komponen." />)}
+      {tab === 'build' && <BuildTab projectId={projectId} assembly={assemblyQuery.data} buildReport={build} onBuild={() => run('build')} buildPending={buildMutation.isPending} />}
      {tab !== 'build' && buildMutation.isPending && <div className="fixed bottom-5 right-5 flex items-center gap-3 rounded-lg border border-accent/30 bg-card px-4 py-3 text-sm shadow-lg"><span className="h-2 w-2 animate-pulse rounded-full bg-accent" /> Merakit komponen...</div>}
   </div>;
 }
@@ -602,10 +615,10 @@ function ReferenceSelect({ label, value, onChange, options, emptyLabel, test }: 
   return <label className="block"><span className="mb-2 block font-mono text-[10px] uppercase tracking-[.16em] text-muted-foreground">{label}</span><select value={value} onChange={(event) => onChange(event.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring" data-testid={test}><option value="">{emptyLabel}</option>{options.map((option) => <option value={option.id} key={option.id}>{option.name}</option>)}</select></label>;
 }
 
-function BlueprintTab({ projectId, blueprint, onSave }: { projectId: string; blueprint?: PstBlueprint; onSave: (data: Partial<PstBlueprint>) => void }) {
+function BlueprintTab({ projectId, blueprint, onSave, onBuild, buildPending }: { projectId: string; blueprint?: PstBlueprint; onSave: (data: Partial<PstBlueprint>) => void; onBuild: () => void; buildPending: boolean }) {
   const [nextStep, setNextStep] = useState(blueprint?.nextStep ?? '');
   if (!blueprint) return <EmptyState icon={FileCode2} title="Rancangan belum dibuat" detail="Jalankan Perancang untuk membuat usulan pertama." />;
-  return <div className="grid gap-6 lg:grid-cols-2"><Card><CardHeader><CardTitle className="text-base">Isi rancangan</CardTitle><CardDescription>v{blueprint.version} · diperbarui {new Date(blueprint.updatedAt).toLocaleDateString('id-ID')}</CardDescription></CardHeader><CardContent className="space-y-4"><InfoBlock label="Jenis masalah" text={blueprint.problemType} accent="primary" /><InfoBlock label="Hasil yang diharapkan" text={blueprint.expectedOutput?.join(' · ')} accent="accent" /><Field label="Langkah berikutnya" value={nextStep} onChange={setNextStep} placeholder="Apa yang perlu dilakukan pengguna berikutnya?" test="input-blueprint-next-step" /><Button onClick={() => onSave({ nextStep })} data-testid={`button-save-blueprint-${projectId}`}><Check size={15} /> Simpan rancangan</Button></CardContent></Card><Card><CardHeader><CardTitle className="text-base">Yang dibutuhkan</CardTitle></CardHeader><CardContent className="space-y-5"><ListBlock label="Pengetahuan" items={blueprint.knowledgeRequirements} /><ListBlock label="Komponen" items={blueprint.componentRequirements} /><ListBlock label="Bantuan AI" items={blueprint.aiRequirements} /></CardContent></Card></div>;
+  return <div className="grid gap-6 lg:grid-cols-2"><Card><CardHeader><CardTitle className="text-base">Isi rancangan</CardTitle><CardDescription>v{blueprint.version} · diperbarui {new Date(blueprint.updatedAt).toLocaleDateString('id-ID')}</CardDescription></CardHeader><CardContent className="space-y-4"><InfoBlock label="Jenis masalah" text={blueprint.problemType} accent="primary" /><InfoBlock label="Hasil yang diharapkan" text={blueprint.expectedOutput?.join(' · ')} accent="accent" /><Field label="Langkah berikutnya" value={nextStep} onChange={setNextStep} placeholder="Apa yang perlu dilakukan pengguna berikutnya?" test="input-blueprint-next-step" /><div className="flex gap-2"><Button onClick={() => onSave({ nextStep })} data-testid={`button-save-blueprint-${projectId}`}><Check size={15} /> Simpan rancangan</Button><Button variant="outline" onClick={onBuild} disabled={buildPending} data-testid="button-build-from-blueprint"><Hammer size={15} /> Lanjut ke Perakitan</Button></div></CardContent></Card><Card><CardHeader><CardTitle className="text-base">Yang dibutuhkan</CardTitle></CardHeader><CardContent className="space-y-5"><ListBlock label="Pengetahuan" items={blueprint.knowledgeRequirements} /><ListBlock label="Komponen" items={blueprint.componentRequirements} /><ListBlock label="Bantuan AI" items={blueprint.aiRequirements} /></CardContent></Card></div>;
 }
 
 function ListBlock({ label, items = [] }: { label: string; items?: string[] }) { return <div><p className="mb-2 font-mono text-[10px] uppercase tracking-[.16em] text-muted-foreground">{label}</p>{items.length ? <div className="space-y-1.5">{items.map((item) => <div className="flex gap-2 rounded-md bg-muted/50 p-2 text-xs" key={item}><span className="text-accent">+</span>{item}</div>)}</div> : <p className="text-xs text-muted-foreground">Belum ada persyaratan.</p>}</div>; }
@@ -771,7 +784,152 @@ function ProjectAssetsEditor({ project }: { project: PstProject }) {
   </div>;
 }
 function WorkflowTab({ workflow }: { workflow: WorkflowStep[] }) { return <Card><CardHeader><CardTitle className="text-base">Langkah kerja</CardTitle><CardDescription>Setiap langkah menjelaskan masukan, hasil, dan tindakan berikutnya.</CardDescription></CardHeader><CardContent>{workflow.length ? <div className="space-y-3">{workflow.map((step, i) => <div className="flex gap-4 rounded-xl border border-border p-4" key={step.id}><div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/10 font-mono text-xs text-primary">{String(i + 1).padStart(2, '0')}</div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="font-semibold">{step.title}</p><Badge variant="outline" className="font-mono text-[9px]">{step.type}</Badge></div><p className="mt-1 text-sm text-muted-foreground">{step.description}</p><div className="mt-3 flex flex-wrap gap-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground"><span>masukan: {step.inputs?.join(', ') || 'tidak ada'}</span><span>hasil: {step.outputs?.join(', ') || 'tidak ada'}</span></div></div><ChevronRight size={16} className="mt-1 text-muted-foreground" /></div>)}</div> : <EmptyState icon={Workflow} title="Langkah kerja belum ada" detail="Buat rancangan untuk menyusun langkah-langkah kerja." />}</CardContent></Card>; }
-function BuildTab({ build }: { build: BuildResult }) { return <Card><CardHeader><CardTitle className="flex items-center gap-2"><Hammer className="text-accent" size={19} /> Laporan perakitan <StatusBadge value={build.status} /></CardTitle><CardDescription>Pemilihan komponen setelah perakitan terakhir.</CardDescription></CardHeader><CardContent className="grid gap-6 md:grid-cols-2"><ListBlock label="Siap" items={build.ready} /><ListBlock label="Kurang" items={build.missing} /><ListBlock label="Peringatan" items={build.warnings} /><ListBlock label="Kesalahan" items={build.errors} /></CardContent></Card>; }
+function BuildTab({ projectId, assembly, buildReport, onBuild, buildPending }: { projectId: string; assembly?: PstAssembly; buildReport?: BuildResult | null; onBuild: () => void; buildPending: boolean }) {
+  const qc = useQueryClient();
+  const updateChecklist = useUpdatePstAssemblyChecklistItem();
+  const updateRisk = useUpdatePstAssemblyRisk();
+
+  const handleChecklist = (itemId: string, completed: boolean) => {
+    updateChecklist.mutate(
+      { projectId, itemId, data: { completed } },
+      { onSuccess: () => qc.invalidateQueries({ queryKey: getGetPstAssemblyQueryKey(projectId) }) }
+    );
+  };
+
+  const handleMitigation = (riskId: string, mitigation: string) => {
+    updateRisk.mutate(
+      { projectId, riskId, data: { mitigation } },
+      { onSuccess: () => qc.invalidateQueries({ queryKey: getGetPstAssemblyQueryKey(projectId) }) }
+    );
+  };
+
+  if (!assembly && !buildReport) {
+    return (
+      <EmptyState
+        icon={Hammer}
+        title="Perakitan belum dijalankan"
+        detail="Pilih Perakitan dari Ringkasan atau Rancangan untuk mengubah rancangan menjadi komponen."
+        action={
+          <Button onClick={onBuild} disabled={buildPending} data-testid="button-build-from-empty" className="mt-4">
+            <Hammer size={15} /> Mulai perakitan
+          </Button>
+        }
+      />
+    );
+  }
+
+  const currentAssembly = assembly || buildReport?.assembly;
+
+  return (
+    <div className="space-y-6">
+      {buildReport && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Hammer className="text-accent" size={19} /> Laporan perakitan terbaru
+              <StatusBadge value={buildReport.status} />
+            </CardTitle>
+            <CardDescription>Status komponen saat perakitan dijalankan.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-6 md:grid-cols-2">
+            <ListBlock label="Siap" items={buildReport.ready} />
+            <ListBlock label="Kurang" items={buildReport.missing} />
+            <ListBlock label="Peringatan" items={buildReport.warnings} />
+            <ListBlock label="Kesalahan" items={buildReport.errors} />
+          </CardContent>
+        </Card>
+      )}
+
+      {currentAssembly && (
+        <div className="grid gap-6 xl:grid-cols-[1.1fr_.9fr]">
+          <Card>
+            <CardHeader className="flex-row items-start justify-between">
+              <div>
+                <CardTitle className="text-base">Daftar periksa perakitan</CardTitle>
+                <CardDescription>Langkah-langkah harian untuk merakit PST.</CardDescription>
+              </div>
+              <div className="text-right" data-testid="assembly-progress">
+                <span className="text-2xl font-extrabold tracking-[-.04em] text-accent" data-testid="text-assembly-progress">{Math.round((currentAssembly.checklist.filter(i => i.completed).length / Math.max(1, currentAssembly.checklist.length)) * 100)}%</span>
+                <p className="font-mono text-[10px] uppercase text-muted-foreground">Selesai</p>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {currentAssembly.checklist.map((item) => (
+                  <div key={item.id} className="flex items-start gap-3 rounded-lg border border-border bg-card p-3 transition-colors hover:border-primary/40">
+                    <Checkbox
+                      checked={item.completed}
+                      onCheckedChange={(checked) => handleChecklist(item.id, !!checked)}
+                      data-testid={`checkbox-checklist-${item.id}`}
+                      className="mt-1"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className={cn("text-sm font-semibold transition-colors", item.completed && "text-muted-foreground line-through")}>
+                        Hari {item.day}: {item.title}
+                      </p>
+                      <p className={cn("mt-1 text-xs text-muted-foreground", item.completed && "opacity-60")}>
+                        {item.description}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Mitigasi risiko</CardTitle>
+              <CardDescription>Risiko yang mungkin muncul saat merakit komponen.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {currentAssembly.risks.map((risk) => (
+                  <RiskBlock key={risk.id} risk={risk} onSave={(mitigation) => handleMitigation(risk.id, mitigation)} />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RiskBlock({ risk, onSave }: { risk: AssemblyRisk; onSave: (mitigation: string) => void }) {
+  const [mitigation, setMitigation] = useState(risk.mitigation);
+  const isDirty = mitigation !== risk.mitigation;
+
+  return (
+    <div className="rounded-lg border border-border bg-card p-4">
+      <div className="mb-2 flex items-center justify-between">
+        <p className="text-sm font-bold text-foreground">{risk.title}</p>
+        <Badge variant="outline" className={cn("font-mono text-[10px]", risk.priority === 'HIGH' ? "border-destructive text-destructive" : risk.priority === 'MEDIUM' ? "border-amber-500 text-amber-500" : "border-primary text-primary")}>
+          {risk.priority}
+        </Badge>
+      </div>
+      <p className="mb-4 text-xs text-muted-foreground">{risk.description}</p>
+
+      <div className="space-y-2">
+        <label className="block font-mono text-[10px] uppercase tracking-[.16em] text-muted-foreground">Mitigasi</label>
+        <Textarea
+          value={mitigation}
+          onChange={(e) => setMitigation(e.target.value)}
+          placeholder="Jelaskan cara mengatasi risiko ini..."
+          className="min-h-[80px] bg-background text-sm"
+          data-testid={`input-mitigation-${risk.id}`}
+        />
+        {isDirty && (
+          <div className="flex justify-end pt-1">
+            <Button size="sm" onClick={() => onSave(mitigation)} data-testid={`button-save-mitigation-${risk.id}`}>
+              <Check size={14} /> Simpan
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 function PreviewTab({ project, simulation, onSimulate, pending }: { project: PstProject; simulation: SimulationReport | null; onSimulate: () => void; pending: boolean }) { return <div className="grid gap-6 lg:grid-cols-[1.2fr_.8fr]"><Card className="min-h-[360px] overflow-hidden"><div className="flex items-center justify-between border-b border-border bg-muted/35 px-5 py-3"><div className="flex gap-1.5"><span className="h-2 w-2 rounded-full bg-destructive/60" /><span className="h-2 w-2 rounded-full bg-amber-400/70" /><span className="h-2 w-2 rounded-full bg-emerald-500/70" /></div><span className="font-mono text-[10px] uppercase tracking-[.15em] text-muted-foreground">pratinjau pengguna / {project.slug}</span><ExternalLink size={14} className="text-muted-foreground" /></div><div className="factory-grid flex min-h-[300px] items-center justify-center p-8 text-center"><div className="max-w-md"><div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-accent text-accent-foreground"><Target size={22} /></div><h2 className="text-2xl font-extrabold">{project.name}</h2><p className="mt-3 text-sm text-muted-foreground">{project.desiredOutcome}</p><Button className="mt-5" onClick={onSimulate} disabled={pending} data-testid="button-simulate-preview"><FlaskConical size={15} /> {pending ? 'Menjalankan uji coba...' : 'Jalankan uji coba'}</Button></div></div></Card><Card><CardHeader><CardTitle className="text-base">Hasil uji coba</CardTitle><CardDescription>Periksa alurnya sebelum dibuka untuk pengguna.</CardDescription></CardHeader><CardContent>{simulation ? <div><div className="flex items-center gap-3"><StatusBadge value={simulation.status} /><span className="font-mono text-[10px] text-muted-foreground">{new Date(simulation.createdAt).toLocaleString('id-ID')}</span></div><div className="mt-4 space-y-2">{simulation.checks?.map((check) => <div className="flex gap-2 text-sm" key={check}><CheckCircle2 className="shrink-0 text-emerald-500" size={16} />{check}</div>)}</div></div> : <EmptyState icon={FlaskConical} title="Belum ada uji coba" detail="Jalankan uji coba untuk menemukan bagian yang masih perlu diperbaiki." />}</CardContent></Card></div>; }
 function QaTab({ project, qa, onRun, pending }: { project: PstProject; qa: QaRun | null; onRun: () => void; pending: boolean }) { return <Card><CardHeader className="flex-row items-start justify-between"><div><CardTitle className="text-base">Pemeriksaan kualitas</CardTitle><CardDescription>Periksa kejelasan, kelengkapan, dan kesesuaian hasil.</CardDescription></div><Button onClick={onRun} disabled={pending} data-testid="button-run-qa"><ClipboardCheck size={15} /> {pending ? 'Memeriksa...' : 'Periksa sekarang'}</Button></CardHeader><CardContent>{qa ? <div className="space-y-2">{qa.results?.map((result) => <div className="flex items-start gap-3 rounded-lg border border-border p-3" key={`${result.category}-${result.label}`}><StatusBadge value={result.status} /><div><p className="text-sm font-semibold">{result.label}</p><p className="mt-1 text-xs text-muted-foreground">{result.detail}</p></div></div>)}</div> : <div className="flex items-center gap-3 rounded-lg border border-dashed border-border p-5"><div className="rounded-lg bg-muted p-2"><ClipboardCheck size={17} /></div><div><p className="text-sm font-semibold">Belum diperiksa pada v{project.version}</p><p className="mt-1 text-xs text-muted-foreground">Hasil ini menjadi dasar sebelum PST disetujui.</p></div></div>}</CardContent></Card>; }
 function PublishTab({ project, onApprove, onPublish, onRefreshProject, publishNotice, approvePending, publishPending }: { project: PstProject; onApprove: () => void; onPublish: () => void; onRefreshProject: () => void; publishNotice: PublishNotice | null; approvePending: boolean; publishPending: boolean }) {

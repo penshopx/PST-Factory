@@ -10,6 +10,7 @@ import {
   pstProjectPatternsTable,
   pstProjectMembersTable,
   pstProjectComponentsTable,
+  pstProjectAssembliesTable,
   pstProjectDocumentsTable,
   pstProjectsTable,
   pstProjectRecipesTable,
@@ -20,6 +21,9 @@ import {
   type WorkflowStep,
   type QaResult,
   type PstProjectRole,
+  type PstBlueprint,
+  type PstAssemblyChecklistItem,
+  type PstAssemblyRisk,
   type PstReleaseSnapshot,
 } from "@workspace/db";
 import {
@@ -30,6 +34,8 @@ import {
   BuildPstProjectBody,
   BuildPstProjectParams,
   BuildPstProjectResponse,
+  GetPstAssemblyParams,
+  GetPstAssemblyResponse,
   CreatePstProjectBody,
   CreatePstProjectResponse,
   CreatePstProjectComponentBody,
@@ -77,6 +83,12 @@ import {
   UpdatePstBlueprintBody,
   UpdatePstBlueprintParams,
   UpdatePstBlueprintResponse,
+  UpdatePstAssemblyChecklistItemBody,
+  UpdatePstAssemblyChecklistItemParams,
+  UpdatePstAssemblyChecklistItemResponse,
+  UpdatePstAssemblyRiskBody,
+  UpdatePstAssemblyRiskParams,
+  UpdatePstAssemblyRiskResponse,
   UpdatePstProjectBody,
   UpdatePstProjectParams,
   UpdatePstProjectResponse,
@@ -107,6 +119,33 @@ import { randomUUID } from "node:crypto";
 import { deleteObject, signObjectUrl } from "./storage";
 
 const router: IRouter = Router();
+
+function assemblyContentFromBlueprint(blueprint: PstBlueprint) {
+  const actions = blueprint.actionPlan.length
+    ? blueprint.actionPlan
+    : blueprint.journey.map((step) => `Selesaikan tahap ${step}`);
+  const lastIndex = Math.max(actions.length - 1, 1);
+  const checklist: PstAssemblyChecklistItem[] = actions.map((action, index) => ({
+    id: randomUUID(),
+    day: Math.min(30, 1 + Math.round((index * 29) / lastIndex)),
+    title: action,
+    description: blueprint.expectedOutput[index % Math.max(blueprint.expectedOutput.length, 1)]
+      ?? "Catat hasil dan bukti penyelesaian langkah ini.",
+    completed: false,
+  }));
+  const riskSources = [...blueprint.knowledgeRequirements, ...blueprint.aiRequirements].slice(0, 3);
+  const risks: PstAssemblyRisk[] = (riskSources.length
+    ? riskSources
+    : ["Kebutuhan pengguna belum tervalidasi"]).map((source, index) => ({
+    id: randomUUID(),
+    title: source,
+    description: `Risiko hasil perakitan tidak akurat bila "${source}" belum dipenuhi atau divalidasi.`,
+    priority: index === 0 ? "HIGH" : index === 1 ? "MEDIUM" : "LOW",
+    mitigation: "",
+    status: "OPEN",
+  }));
+  return { checklist, risks };
+}
 
 const defaultWorkflow: WorkflowStep[] = [
   {
@@ -998,32 +1037,35 @@ type ReferenceSelectionInput = {
 };
 
 async function applyProjectReferences(projectId: string, input: ReferenceSelectionInput) {
-  const pattern = input.patternId ? (await db.select().from(pstPatternsTable).where(eq(pstPatternsTable.id, input.patternId)))[0] : undefined;
-  const recipe = input.recipeId ? (await db.select().from(pstRecipesTable).where(eq(pstRecipesTable.id, input.recipeId)))[0] : undefined;
-  if (input.patternId && !pattern) return { error: "Selected PST pattern was not found." };
-  if (input.recipeId && !recipe) return { error: "Selected PST recipe was not found." };
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select ${pstProjectsTable.id} from ${pstProjectsTable} where ${pstProjectsTable.id} = ${projectId} for update`);
+    const pattern = input.patternId ? (await tx.select().from(pstPatternsTable).where(eq(pstPatternsTable.id, input.patternId)))[0] : undefined;
+    const recipe = input.recipeId ? (await tx.select().from(pstRecipesTable).where(eq(pstRecipesTable.id, input.recipeId)))[0] : undefined;
+    if (input.patternId && !pattern) return { error: "Selected PST pattern was not found." };
+    if (input.recipeId && !recipe) return { error: "Selected PST recipe was not found." };
 
-  if (input.patternId !== undefined) {
-    await db.delete(pstProjectPatternsTable).where(eq(pstProjectPatternsTable.projectId, projectId));
-    if (pattern) {
-      await db.insert(pstProjectPatternsTable).values({
-        id: randomUUID(),
-        projectId,
-        patternId: pattern.id,
-      });
+    if (input.patternId !== undefined) {
+      await tx.delete(pstProjectPatternsTable).where(eq(pstProjectPatternsTable.projectId, projectId));
+      if (pattern) {
+        await tx.insert(pstProjectPatternsTable).values({
+          id: randomUUID(),
+          projectId,
+          patternId: pattern.id,
+        });
+      }
     }
-  }
-  if (input.recipeId !== undefined) {
-    await db.delete(pstProjectRecipesTable).where(eq(pstProjectRecipesTable.projectId, projectId));
-    if (recipe) {
-      await db.insert(pstProjectRecipesTable).values({
-        id: randomUUID(),
-        projectId,
-        recipeId: recipe.id,
-      });
+    if (input.recipeId !== undefined) {
+      await tx.delete(pstProjectRecipesTable).where(eq(pstProjectRecipesTable.projectId, projectId));
+      if (recipe) {
+        await tx.insert(pstProjectRecipesTable).values({
+          id: randomUUID(),
+          projectId,
+          recipeId: recipe.id,
+        });
+      }
     }
-  }
-  return { pattern, recipe };
+    return { pattern, recipe };
+  });
 }
 
 async function currentProjectReferences(projectId: string, userId: string) {
@@ -1546,8 +1588,14 @@ router.post("/pst/projects/:projectId/architect", async (req, res): Promise<void
       ? workflowFromStructure(references.pattern?.steps ?? references.recipe?.components ?? [], workflowSource)
       : defaultWorkflow,
   };
-  const [updated] = await db.update(pstBlueprintsTable).set({ ...blueprintProposal, updatedAt: new Date() }).where(eq(pstBlueprintsTable.projectId, project.id)).returning();
-  await db.update(pstProjectsTable).set({ status: "ARCHITECTED", updatedAt: new Date() }).where(eq(pstProjectsTable.id, project.id));
+  const updated = await db.transaction(async (tx) => {
+    await tx.execute(sql`select ${pstProjectsTable.id} from ${pstProjectsTable} where ${pstProjectsTable.id} = ${project.id} for update`);
+    await tx.execute(sql`select ${pstBlueprintsTable.id} from ${pstBlueprintsTable} where ${pstBlueprintsTable.projectId} = ${project.id} for update`);
+    const [result] = await tx.update(pstBlueprintsTable).set({ ...blueprintProposal, updatedAt: new Date() }).where(eq(pstBlueprintsTable.projectId, project.id)).returning();
+    await tx.delete(pstProjectAssembliesTable).where(eq(pstProjectAssembliesTable.projectId, project.id));
+    await tx.update(pstProjectsTable).set({ status: "ARCHITECTED", updatedAt: new Date() }).where(eq(pstProjectsTable.id, project.id));
+    return result;
+  });
   await addEvent("BLUEPRINT_GENERATED", `${project.name} received an AI blueprint proposal.`, project.id);
   res.json(RunPstArchitectResponse.parse(updated));
 });
@@ -1581,12 +1629,20 @@ router.patch("/pst/projects/:projectId/blueprint", async (req, res): Promise<voi
   if (!access) {
     return;
   }
-  const [updated] = await db.update(pstBlueprintsTable).set({ ...body.data, updatedAt: new Date() }).where(eq(pstBlueprintsTable.projectId, access.project.id)).returning();
+  const updated = await db.transaction(async (tx) => {
+    await tx.execute(sql`select ${pstProjectsTable.id} from ${pstProjectsTable} where ${pstProjectsTable.id} = ${access.project.id} for update`);
+    await tx.execute(sql`select ${pstBlueprintsTable.id} from ${pstBlueprintsTable} where ${pstBlueprintsTable.projectId} = ${access.project.id} for update`);
+    const [result] = await tx.update(pstBlueprintsTable).set({ ...body.data, updatedAt: new Date() }).where(eq(pstBlueprintsTable.projectId, access.project.id)).returning();
+    if (result) {
+      await tx.delete(pstProjectAssembliesTable).where(eq(pstProjectAssembliesTable.projectId, access.project.id));
+      await tx.update(pstProjectsTable).set({ status: "BLUEPRINT_READY", updatedAt: new Date() }).where(eq(pstProjectsTable.id, access.project.id));
+    }
+    return result;
+  });
   if (!updated) {
     res.status(404).json({ error: "PST blueprint not found" });
     return;
   }
-  await db.update(pstProjectsTable).set({ status: "BLUEPRINT_READY", updatedAt: new Date() }).where(eq(pstProjectsTable.id, access.project.id));
   await addEvent("BLUEPRINT_EDITED", "Blueprint changes were saved for human review.", access.project.id);
   res.json(UpdatePstBlueprintResponse.parse(updated));
 });
@@ -1797,51 +1853,136 @@ router.post("/pst/projects/:projectId/builder", async (req, res): Promise<void> 
     return;
   }
   await ensureSeed();
-  const appliedReferences = await applyProjectReferences(access.project.id, {
-    patternId: body.data.patternId,
-    recipeId: body.data.recipeId,
+  const result = await db.transaction(async (tx) => {
+    await tx.execute(sql`select ${pstProjectsTable.id} from ${pstProjectsTable} where ${pstProjectsTable.id} = ${access.project.id} for update`);
+    let pattern: typeof pstPatternsTable.$inferSelect | undefined;
+    let recipe: typeof pstRecipesTable.$inferSelect | undefined;
+    if (body.data.patternId !== undefined) {
+      pattern = body.data.patternId
+        ? (await tx.select().from(pstPatternsTable).where(eq(pstPatternsTable.id, body.data.patternId)))[0]
+        : undefined;
+      if (body.data.patternId && !pattern) return { error: "Selected PST pattern was not found." as const };
+      await tx.delete(pstProjectPatternsTable).where(eq(pstProjectPatternsTable.projectId, access.project.id));
+      if (pattern) {
+        await tx.insert(pstProjectPatternsTable).values({ id: randomUUID(), projectId: access.project.id, patternId: pattern.id });
+      }
+    } else {
+      const [reference] = await tx.select({ patternId: pstProjectPatternsTable.patternId }).from(pstProjectPatternsTable)
+        .where(eq(pstProjectPatternsTable.projectId, access.project.id));
+      pattern = reference
+        ? (await tx.select().from(pstPatternsTable).where(eq(pstPatternsTable.id, reference.patternId)))[0]
+        : undefined;
+    }
+    if (body.data.recipeId !== undefined) {
+      recipe = body.data.recipeId
+        ? (await tx.select().from(pstRecipesTable).where(eq(pstRecipesTable.id, body.data.recipeId)))[0]
+        : undefined;
+      if (body.data.recipeId && !recipe) return { error: "Selected PST recipe was not found." as const };
+      await tx.delete(pstProjectRecipesTable).where(eq(pstProjectRecipesTable.projectId, access.project.id));
+      if (recipe) {
+        await tx.insert(pstProjectRecipesTable).values({ id: randomUUID(), projectId: access.project.id, recipeId: recipe.id });
+      }
+    } else {
+      const [reference] = await tx.select({ recipeId: pstProjectRecipesTable.recipeId }).from(pstProjectRecipesTable)
+        .where(eq(pstProjectRecipesTable.projectId, access.project.id));
+      recipe = reference
+        ? (await tx.select().from(pstRecipesTable).where(eq(pstRecipesTable.id, reference.recipeId)))[0]
+        : undefined;
+    }
+    const selectedAssets = body.data.assetIds?.length
+      ? await tx.select().from(pstAssetsTable).where(inArray(pstAssetsTable.id, body.data.assetIds))
+      : await tx.select().from(pstAssetsTable).where(eq(pstAssetsTable.status, "ACTIVE")).limit(5);
+    await tx.execute(sql`select ${pstBlueprintsTable.id} from ${pstBlueprintsTable} where ${pstBlueprintsTable.projectId} = ${access.project.id} for update`);
+    const [lockedBlueprint] = await tx
+      .select()
+      .from(pstBlueprintsTable)
+      .where(eq(pstBlueprintsTable.projectId, access.project.id));
+    if (!lockedBlueprint) {
+      throw new Error("PST blueprint disappeared during assembly");
+    }
+    const lockedBuildPlan = buildFromConfiguration({
+      blueprint: lockedBlueprint,
+      assets: selectedAssets,
+      pattern: pattern
+        ? { type: "pattern", id: pattern.id, name: pattern.name, steps: pattern.steps }
+        : undefined,
+      recipe: recipe
+        ? { type: "recipe", id: recipe.id, name: recipe.name, components: recipe.components }
+        : undefined,
+      idFactory: randomUUID,
+    });
+    const blueprintChanged = Boolean(lockedBuildPlan.source) && (
+      JSON.stringify(lockedBlueprint.journey) !== JSON.stringify(lockedBuildPlan.journey)
+      || JSON.stringify(lockedBlueprint.componentRequirements) !== JSON.stringify(lockedBuildPlan.componentRequirements)
+      || JSON.stringify(lockedBlueprint.workflow) !== JSON.stringify(lockedBuildPlan.workflow)
+    );
+    const blueprintUpdatedAt = blueprintChanged ? new Date() : lockedBlueprint.updatedAt;
+    if (blueprintChanged) {
+      await tx.update(pstBlueprintsTable).set({
+        journey: lockedBuildPlan.journey,
+        componentRequirements: lockedBuildPlan.componentRequirements,
+        workflow: lockedBuildPlan.workflow,
+        updatedAt: blueprintUpdatedAt,
+      }).where(eq(pstBlueprintsTable.id, lockedBlueprint.id));
+    }
+    await tx.delete(pstProjectComponentsTable).where(eq(pstProjectComponentsTable.projectId, access.project.id));
+    if (lockedBuildPlan.readyAssets.length) {
+      await tx.insert(pstProjectComponentsTable).values(lockedBuildPlan.readyAssets.map((asset) => ({
+        id: randomUUID(),
+        projectId: access.project.id,
+        assetId: asset.id,
+        name: asset.name,
+        type: asset.type,
+        source: "Asset Library",
+        status: "READY",
+        required: true,
+      })));
+    }
+    await tx.execute(sql`select ${pstProjectAssembliesTable.id} from ${pstProjectAssembliesTable} where ${pstProjectAssembliesTable.projectId} = ${access.project.id} for update`);
+    const [existingAssembly] = await tx
+      .select()
+      .from(pstProjectAssembliesTable)
+      .where(eq(pstProjectAssembliesTable.projectId, access.project.id));
+    const sourceMatches = existingAssembly
+      && existingAssembly.sourceBlueprintVersion === lockedBlueprint.version
+      && existingAssembly.sourceBlueprintUpdatedAt.getTime() === blueprintUpdatedAt.getTime();
+    const assemblyContent = assemblyContentFromBlueprint({
+      ...lockedBlueprint,
+      journey: lockedBuildPlan.journey,
+      componentRequirements: lockedBuildPlan.componentRequirements,
+      workflow: lockedBuildPlan.workflow,
+      updatedAt: blueprintUpdatedAt,
+    });
+    const lockedAssembly = sourceMatches
+      ? existingAssembly
+      : (await tx.insert(pstProjectAssembliesTable).values({
+        id: existingAssembly?.id ?? randomUUID(),
+        projectId: access.project.id,
+        sourceBlueprintVersion: lockedBlueprint.version,
+        sourceBlueprintUpdatedAt: blueprintUpdatedAt,
+        status: lockedBuildPlan.status,
+        ...assemblyContent,
+      }).onConflictDoUpdate({
+        target: pstProjectAssembliesTable.projectId,
+        set: {
+          sourceBlueprintVersion: lockedBlueprint.version,
+          sourceBlueprintUpdatedAt: blueprintUpdatedAt,
+          status: lockedBuildPlan.status,
+          ...assemblyContent,
+          updatedAt: new Date(),
+        },
+      }).returning())[0];
+    await tx.update(pstProjectsTable).set({
+      status: lockedBuildPlan.status === "BLOCKED" ? "BUILDING" : "PREVIEW",
+      updatedAt: new Date(),
+    }).where(eq(pstProjectsTable.id, access.project.id));
+    return { buildPlan: lockedBuildPlan, assembly: lockedAssembly, error: undefined };
   });
-  if (appliedReferences.error) {
-    res.status(400).json({ error: appliedReferences.error });
+  if (result.error) {
+    res.status(400).json({ error: result.error });
     return;
   }
-  const references = await currentProjectReferences(access.project.id, access.userId);
-  const selectedAssets = body.data.assetIds?.length
-    ? await db.select().from(pstAssetsTable).where(inArray(pstAssetsTable.id, body.data.assetIds))
-    : await db.select().from(pstAssetsTable).where(eq(pstAssetsTable.status, "ACTIVE")).limit(5);
-  const buildPlan = buildFromConfiguration({
-    blueprint,
-    assets: selectedAssets,
-    pattern: references.pattern
-      ? { type: "pattern", id: references.pattern.id, name: references.pattern.name, steps: references.pattern.steps }
-      : undefined,
-    recipe: references.recipe
-      ? { type: "recipe", id: references.recipe.id, name: references.recipe.name, components: references.recipe.components }
-      : undefined,
-    idFactory: randomUUID,
-  });
-  if (buildPlan.source) {
-    await db.update(pstBlueprintsTable).set({
-      journey: buildPlan.journey,
-      componentRequirements: buildPlan.componentRequirements,
-      workflow: buildPlan.workflow,
-      updatedAt: new Date(),
-    }).where(eq(pstBlueprintsTable.projectId, access.project.id));
-  }
-  await db.delete(pstProjectComponentsTable).where(eq(pstProjectComponentsTable.projectId, access.project.id));
-  for (const asset of buildPlan.readyAssets) {
-    await db.insert(pstProjectComponentsTable).values({
-      id: randomUUID(),
-      projectId: access.project.id,
-      assetId: asset.id,
-      name: asset.name,
-      type: asset.type,
-      source: "Asset Library",
-      status: "READY",
-      required: true,
-    });
-  }
-  await db.update(pstProjectsTable).set({ status: buildPlan.status === "BLOCKED" ? "BUILDING" : "PREVIEW", updatedAt: new Date() }).where(eq(pstProjectsTable.id, access.project.id));
+  const { buildPlan, assembly } = result;
   await addEvent("BUILD_COMPLETED", `Builder finished with ${buildPlan.status.toLowerCase()} status.`, access.project.id);
   res.json(BuildPstProjectResponse.parse({
     status: buildPlan.status,
@@ -1850,7 +1991,88 @@ router.post("/pst/projects/:projectId/builder", async (req, res): Promise<void> 
     warnings: buildPlan.warnings,
     errors: buildPlan.errors,
     components: buildPlan.components,
+    assembly,
   }));
+});
+
+router.get("/pst/projects/:projectId/assembly", async (req, res): Promise<void> => {
+  const params = GetPstAssemblyParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const access = await authorizeProject(req, res, params.data.projectId);
+  if (!access) return;
+  const [assembly] = await db
+    .select()
+    .from(pstProjectAssembliesTable)
+    .where(eq(pstProjectAssembliesTable.projectId, access.project.id));
+  if (!assembly) {
+    res.status(404).json({ error: "PST assembly not found" });
+    return;
+  }
+  res.json(GetPstAssemblyResponse.parse(assembly));
+});
+
+router.patch("/pst/projects/:projectId/assembly/checklist/:itemId", async (req, res): Promise<void> => {
+  const params = UpdatePstAssemblyChecklistItemParams.safeParse(req.params);
+  const body = UpdatePstAssemblyChecklistItemBody.safeParse(req.body ?? {});
+  if (!params.success || !body.success) {
+    res.status(400).json({ error: !params.success ? params.error.message : body.error?.message ?? "Invalid request body" });
+    return;
+  }
+  const access = await authorizeProject(req, res, params.data.projectId, editorRoles);
+  if (!access) return;
+  const updated = await db.transaction(async (tx) => {
+    await tx.execute(sql`select ${pstProjectsTable.id} from ${pstProjectsTable} where ${pstProjectsTable.id} = ${access.project.id} for update`);
+    await tx.execute(sql`select ${pstProjectAssembliesTable.id} from ${pstProjectAssembliesTable} where ${pstProjectAssembliesTable.projectId} = ${access.project.id} for update`);
+    const [assembly] = await tx.select().from(pstProjectAssembliesTable)
+      .where(eq(pstProjectAssembliesTable.projectId, access.project.id));
+    if (!assembly || !assembly.checklist.some((item) => item.id === params.data.itemId)) return null;
+    const [result] = await tx.update(pstProjectAssembliesTable).set({
+      checklist: assembly.checklist.map((item) =>
+        item.id === params.data.itemId ? { ...item, completed: body.data.completed } : item),
+      updatedAt: new Date(),
+    }).where(eq(pstProjectAssembliesTable.id, assembly.id)).returning();
+    return result;
+  });
+  if (!updated) {
+    res.status(404).json({ error: "Assembly checklist item not found" });
+    return;
+  }
+  res.json(UpdatePstAssemblyChecklistItemResponse.parse(updated));
+});
+
+router.patch("/pst/projects/:projectId/assembly/risks/:riskId", async (req, res): Promise<void> => {
+  const params = UpdatePstAssemblyRiskParams.safeParse(req.params);
+  const body = UpdatePstAssemblyRiskBody.safeParse(req.body ?? {});
+  if (!params.success || !body.success) {
+    res.status(400).json({ error: !params.success ? params.error.message : body.error?.message ?? "Invalid request body" });
+    return;
+  }
+  const access = await authorizeProject(req, res, params.data.projectId, editorRoles);
+  if (!access) return;
+  const mitigation = body.data.mitigation.trim();
+  const updated = await db.transaction(async (tx) => {
+    await tx.execute(sql`select ${pstProjectsTable.id} from ${pstProjectsTable} where ${pstProjectsTable.id} = ${access.project.id} for update`);
+    await tx.execute(sql`select ${pstProjectAssembliesTable.id} from ${pstProjectAssembliesTable} where ${pstProjectAssembliesTable.projectId} = ${access.project.id} for update`);
+    const [assembly] = await tx.select().from(pstProjectAssembliesTable)
+      .where(eq(pstProjectAssembliesTable.projectId, access.project.id));
+    if (!assembly || !assembly.risks.some((risk) => risk.id === params.data.riskId)) return null;
+    const [result] = await tx.update(pstProjectAssembliesTable).set({
+      risks: assembly.risks.map((risk) =>
+        risk.id === params.data.riskId
+          ? { ...risk, mitigation, status: mitigation ? "MITIGATED" as const : "OPEN" as const }
+          : risk),
+      updatedAt: new Date(),
+    }).where(eq(pstProjectAssembliesTable.id, assembly.id)).returning();
+    return result;
+  });
+  if (!updated) {
+    res.status(404).json({ error: "Assembly risk not found" });
+    return;
+  }
+  res.json(UpdatePstAssemblyRiskResponse.parse(updated));
 });
 
 router.post("/pst/projects/:projectId/simulate", async (req, res): Promise<void> => {

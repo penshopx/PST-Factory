@@ -1196,6 +1196,10 @@ export const BuildPstProjectBody = zod.object({
   "recipeId": zod.string().nullish()
 })
 
+export const buildPstProjectResponseAssemblyChecklistItemDayMax = 30;
+
+
+
 export const BuildPstProjectResponse = zod.object({
   "status": zod.enum(['READY', 'BLOCKED']),
   "ready": zod.array(zod.string()),
@@ -1208,7 +1212,156 @@ export const BuildPstProjectResponse = zod.object({
   "type": zod.string(),
   "source": zod.string(),
   "status": zod.enum(['READY', 'MISSING', 'WARNING'])
-}))
+})),
+  "assembly": zod.object({
+  "id": zod.string(),
+  "projectId": zod.string(),
+  "sourceBlueprintVersion": zod.string(),
+  "sourceBlueprintUpdatedAt": zod.coerce.date(),
+  "status": zod.enum(['READY', 'BLOCKED']),
+  "checklist": zod.array(zod.object({
+  "id": zod.string(),
+  "day": zod.number().min(1).max(buildPstProjectResponseAssemblyChecklistItemDayMax),
+  "title": zod.string(),
+  "description": zod.string(),
+  "completed": zod.boolean()
+})),
+  "risks": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "priority": zod.enum(['HIGH', 'MEDIUM', 'LOW']),
+  "mitigation": zod.string(),
+  "status": zod.enum(['OPEN', 'MITIGATED'])
+})),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+})
+
+
+/**
+ * @summary Get the persisted assembly workspace
+ */
+export const GetPstAssemblyParams = zod.object({
+  "projectId": zod.coerce.string()
+})
+
+export const getPstAssemblyResponseChecklistItemDayMax = 30;
+
+
+
+export const GetPstAssemblyResponse = zod.object({
+  "id": zod.string(),
+  "projectId": zod.string(),
+  "sourceBlueprintVersion": zod.string(),
+  "sourceBlueprintUpdatedAt": zod.coerce.date(),
+  "status": zod.enum(['READY', 'BLOCKED']),
+  "checklist": zod.array(zod.object({
+  "id": zod.string(),
+  "day": zod.number().min(1).max(getPstAssemblyResponseChecklistItemDayMax),
+  "title": zod.string(),
+  "description": zod.string(),
+  "completed": zod.boolean()
+})),
+  "risks": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "priority": zod.enum(['HIGH', 'MEDIUM', 'LOW']),
+  "mitigation": zod.string(),
+  "status": zod.enum(['OPEN', 'MITIGATED'])
+})),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update an assembly checklist item
+ */
+export const UpdatePstAssemblyChecklistItemParams = zod.object({
+  "projectId": zod.coerce.string(),
+  "itemId": zod.coerce.string()
+})
+
+export const UpdatePstAssemblyChecklistItemBody = zod.object({
+  "completed": zod.boolean()
+})
+
+export const updatePstAssemblyChecklistItemResponseChecklistItemDayMax = 30;
+
+
+
+export const UpdatePstAssemblyChecklistItemResponse = zod.object({
+  "id": zod.string(),
+  "projectId": zod.string(),
+  "sourceBlueprintVersion": zod.string(),
+  "sourceBlueprintUpdatedAt": zod.coerce.date(),
+  "status": zod.enum(['READY', 'BLOCKED']),
+  "checklist": zod.array(zod.object({
+  "id": zod.string(),
+  "day": zod.number().min(1).max(updatePstAssemblyChecklistItemResponseChecklistItemDayMax),
+  "title": zod.string(),
+  "description": zod.string(),
+  "completed": zod.boolean()
+})),
+  "risks": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "priority": zod.enum(['HIGH', 'MEDIUM', 'LOW']),
+  "mitigation": zod.string(),
+  "status": zod.enum(['OPEN', 'MITIGATED'])
+})),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update an assembly risk mitigation
+ */
+export const UpdatePstAssemblyRiskParams = zod.object({
+  "projectId": zod.coerce.string(),
+  "riskId": zod.coerce.string()
+})
+
+export const updatePstAssemblyRiskBodyMitigationMax = 2000;
+
+
+
+export const UpdatePstAssemblyRiskBody = zod.object({
+  "mitigation": zod.string().max(updatePstAssemblyRiskBodyMitigationMax)
+})
+
+export const updatePstAssemblyRiskResponseChecklistItemDayMax = 30;
+
+
+
+export const UpdatePstAssemblyRiskResponse = zod.object({
+  "id": zod.string(),
+  "projectId": zod.string(),
+  "sourceBlueprintVersion": zod.string(),
+  "sourceBlueprintUpdatedAt": zod.coerce.date(),
+  "status": zod.enum(['READY', 'BLOCKED']),
+  "checklist": zod.array(zod.object({
+  "id": zod.string(),
+  "day": zod.number().min(1).max(updatePstAssemblyRiskResponseChecklistItemDayMax),
+  "title": zod.string(),
+  "description": zod.string(),
+  "completed": zod.boolean()
+})),
+  "risks": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "priority": zod.enum(['HIGH', 'MEDIUM', 'LOW']),
+  "mitigation": zod.string(),
+  "status": zod.enum(['OPEN', 'MITIGATED'])
+})),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
 })
 
 

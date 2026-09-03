@@ -687,6 +687,64 @@ export const BuildResultStatus = {
   BLOCKED: 'BLOCKED',
 } as const;
 
+export type PstAssemblyStatus = typeof PstAssemblyStatus[keyof typeof PstAssemblyStatus];
+
+
+export const PstAssemblyStatus = {
+  READY: 'READY',
+  BLOCKED: 'BLOCKED',
+} as const;
+
+export interface AssemblyChecklistItem {
+  id: string;
+  /**
+     * @minimum 1
+     * @maximum 30
+     */
+  day: number;
+  title: string;
+  description: string;
+  completed: boolean;
+}
+
+export type AssemblyRiskPriority = typeof AssemblyRiskPriority[keyof typeof AssemblyRiskPriority];
+
+
+export const AssemblyRiskPriority = {
+  HIGH: 'HIGH',
+  MEDIUM: 'MEDIUM',
+  LOW: 'LOW',
+} as const;
+
+export type AssemblyRiskStatus = typeof AssemblyRiskStatus[keyof typeof AssemblyRiskStatus];
+
+
+export const AssemblyRiskStatus = {
+  OPEN: 'OPEN',
+  MITIGATED: 'MITIGATED',
+} as const;
+
+export interface AssemblyRisk {
+  id: string;
+  title: string;
+  description: string;
+  priority: AssemblyRiskPriority;
+  mitigation: string;
+  status: AssemblyRiskStatus;
+}
+
+export interface PstAssembly {
+  id: string;
+  projectId: string;
+  sourceBlueprintVersion: string;
+  sourceBlueprintUpdatedAt: string;
+  status: PstAssemblyStatus;
+  checklist: AssemblyChecklistItem[];
+  risks: AssemblyRisk[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface BuildResult {
   status: BuildResultStatus;
   ready: string[];
@@ -694,6 +752,16 @@ export interface BuildResult {
   warnings: string[];
   errors: string[];
   components: ComponentSelection[];
+  assembly: PstAssembly;
+}
+
+export interface AssemblyChecklistUpdate {
+  completed: boolean;
+}
+
+export interface AssemblyRiskUpdate {
+  /** @maxLength 2000 */
+  mitigation: string;
 }
 
 export type SimulationInputMode = typeof SimulationInputMode[keyof typeof SimulationInputMode];

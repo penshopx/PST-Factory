@@ -18,6 +18,7 @@
 //   export type Post = typeof postsTable.$inferSelect;
 
 export * from "./pst";
+export * from "./pst-assembly";
 export * from "./pst-compiler";
 export * from "./pst-compiler-ready";
 export * from "./pst-contract";

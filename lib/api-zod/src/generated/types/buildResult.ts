@@ -7,6 +7,7 @@
  */
 import type { BuildResultStatus } from './buildResultStatus';
 import type { ComponentSelection } from './componentSelection';
+import type { PstAssembly } from './pstAssembly';
 
 export interface BuildResult {
   status: BuildResultStatus;
@@ -15,4 +16,5 @@ export interface BuildResult {
   warnings: string[];
   errors: string[];
   components: ComponentSelection[];
+  assembly: PstAssembly;
 }

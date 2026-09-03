@@ -1,0 +1,33 @@
+Berdasarkan prioritas pengembangan produk yang solid dan alur kerja yang sudah Anda tetapkan (**Masalah → Rancangan → Perakitan → Periksa → Terbitkan**), prioritas utama saya selanjutnya adalah:
+
+### 🥇 Prioritas 1: Membangun Tahap "Perakitan" (Assembly)
+Ini adalah inti nilai jual PST Factory: *"Bukan sekadar dokumen. Sebuah ruang kerja."* Analisis AI di tahap "Rancangan" tidak akan berguna jika tidak diubah menjadi komponen interaktif yang bisa langsung dipakai.
+
+**Rencana Aksi Langsung (3 Langkah):**
+
+1. **Skema Data & Penyimpanan Blueprint (Backend)**  
+   Memastikan output JSON dari OpenAI (kebutuhan, prioritas risiko, rencana 30 hari) dipetakan dan disimpan dengan rapi ke dalam tabel/collection `Workspace` atau `ProjectAssembly`, bukan hanya sebagai teks mentah. Ini menjamin data tidak hilang saat berpindah halaman.
+
+2. **Scaffold UI Halaman "Perakitan" (Frontend)**  
+   Membuat antarmuka dasar yang membaca data blueprint tersebut dan menampilkannya sebagai komponen interaktif, misalnya:
+   - *Checklist* rencana aksi 30 hari yang bisa dicentang.
+   - *Card* prioritas risiko dengan kolom input untuk "Tindakan Mitigasi" yang bisa diisi pengguna.
+
+3. **Jalur Transisi (Rancangan → Perakitan)**  
+   Memastikan tombol "Lanjut ke Perakitan" di halaman Rancangan memicu penyimpanan state yang benar dan mengarahkan pengguna ke halaman Perakitan dengan data yang sudah ter-load.
+
+---
+
+### 🥈 Prioritas 2: Tahap "Periksa" (Review/Preview)
+Setelah Perakitan berjalan, kita butuh mekanisme validasi sederhana sebelum "Terbitkan". Ini bisa berupa *preview mode* yang menonaktifkan edit untuk mensimulasikan pengalaman pengguna akhir.
+
+---
+
+### 🥉 Prioritas 3: Pemolesan & Edge Cases
+Menambahkan *loading state* yang lebih baik saat AI menganalisis, serta pesan error yang sangat spesifik jika pengguna mengunggah file yang rusak atau melebihi batas 20 MB.
+
+---
+
+**Apakah Anda setuju untuk saya mulai mengeksekusi Prioritas 1 (Langkah 1: Menyiapkan skema data & endpoint untuk menyimpan blueprint ke tahap Perakitan)?** 
+
+Jika ya, saya akan langsung merancang perubahan kode backend/frontend yang diperlukan dan menjalankannya.

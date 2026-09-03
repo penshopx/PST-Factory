@@ -23,6 +23,8 @@ import type {
   ActionPlanInput,
   ActionPlanOutput,
   ArchitectInput,
+  AssemblyChecklistUpdate,
+  AssemblyRiskUpdate,
   BlueprintUpdate,
   BuildInput,
   BuildResult,
@@ -37,6 +39,7 @@ import type {
   ListPstAssetsParams,
   ListPstProjectsParams,
   NotFoundResponse,
+  PstAssembly,
   PstAsset,
   PstBlueprint,
   PstComponentInput,
@@ -1805,6 +1808,231 @@ export const useBuildPstProject = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getBuildPstProjectMutationOptions(options));
+    }
+
+export const getGetPstAssemblyUrl = (projectId: string,) => {
+
+
+
+
+  return `/api/pst/projects/${projectId}/assembly`
+}
+
+/**
+ * @summary Get the persisted assembly workspace
+ */
+export const getPstAssembly = async (projectId: string, options?: Parameters<typeof customFetch>[1]): Promise<PstAssembly> => {
+
+  return customFetch<PstAssembly>(getGetPstAssemblyUrl(projectId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPstAssemblyQueryKey = (projectId: string,) => {
+    return [
+    `/api/pst/projects/${projectId}/assembly`
+    ] as const;
+    }
+
+
+export const getGetPstAssemblyQueryOptions = <TData = Awaited<ReturnType<typeof getPstAssembly>>, TError = ErrorType<unknown>>(projectId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPstAssembly>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPstAssemblyQueryKey(projectId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPstAssembly>>> = ({ signal }) => getPstAssembly(projectId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: projectId !== null && projectId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPstAssembly>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPstAssemblyQueryResult = NonNullable<Awaited<ReturnType<typeof getPstAssembly>>>
+export type GetPstAssemblyQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get the persisted assembly workspace
+ */
+
+export function useGetPstAssembly<TData = Awaited<ReturnType<typeof getPstAssembly>>, TError = ErrorType<unknown>>(
+ projectId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPstAssembly>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPstAssemblyQueryOptions(projectId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdatePstAssemblyChecklistItemUrl = (projectId: string,
+    itemId: string,) => {
+
+
+
+
+  return `/api/pst/projects/${projectId}/assembly/checklist/${itemId}`
+}
+
+/**
+ * @summary Update an assembly checklist item
+ */
+export const updatePstAssemblyChecklistItem = async (projectId: string,
+    itemId: string,
+    assemblyChecklistUpdate: AssemblyChecklistUpdate, options?: Parameters<typeof customFetch>[1]): Promise<PstAssembly> => {
+
+  return customFetch<PstAssembly>(getUpdatePstAssemblyChecklistItemUrl(projectId,itemId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(assemblyChecklistUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdatePstAssemblyChecklistItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePstAssemblyChecklistItem>>, TError,{projectId: string;itemId: string;data: BodyType<AssemblyChecklistUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updatePstAssemblyChecklistItem>>, TError,{projectId: string;itemId: string;data: BodyType<AssemblyChecklistUpdate>}, TContext> => {
+
+const mutationKey = ['updatePstAssemblyChecklistItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePstAssemblyChecklistItem>>, {projectId: string;itemId: string;data: BodyType<AssemblyChecklistUpdate>}> = (props) => {
+          const {projectId,itemId,data} = props ?? {};
+
+          return  updatePstAssemblyChecklistItem(projectId,itemId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdatePstAssemblyChecklistItemMutationResult = NonNullable<Awaited<ReturnType<typeof updatePstAssemblyChecklistItem>>>
+    export type UpdatePstAssemblyChecklistItemMutationBody = BodyType<AssemblyChecklistUpdate>
+    export type UpdatePstAssemblyChecklistItemMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update an assembly checklist item
+ */
+export const useUpdatePstAssemblyChecklistItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePstAssemblyChecklistItem>>, TError,{projectId: string;itemId: string;data: BodyType<AssemblyChecklistUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updatePstAssemblyChecklistItem>>,
+        TError,
+        {projectId: string;itemId: string;data: BodyType<AssemblyChecklistUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdatePstAssemblyChecklistItemMutationOptions(options));
+    }
+
+export const getUpdatePstAssemblyRiskUrl = (projectId: string,
+    riskId: string,) => {
+
+
+
+
+  return `/api/pst/projects/${projectId}/assembly/risks/${riskId}`
+}
+
+/**
+ * @summary Update an assembly risk mitigation
+ */
+export const updatePstAssemblyRisk = async (projectId: string,
+    riskId: string,
+    assemblyRiskUpdate: AssemblyRiskUpdate, options?: Parameters<typeof customFetch>[1]): Promise<PstAssembly> => {
+
+  return customFetch<PstAssembly>(getUpdatePstAssemblyRiskUrl(projectId,riskId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(assemblyRiskUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdatePstAssemblyRiskMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePstAssemblyRisk>>, TError,{projectId: string;riskId: string;data: BodyType<AssemblyRiskUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updatePstAssemblyRisk>>, TError,{projectId: string;riskId: string;data: BodyType<AssemblyRiskUpdate>}, TContext> => {
+
+const mutationKey = ['updatePstAssemblyRisk'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePstAssemblyRisk>>, {projectId: string;riskId: string;data: BodyType<AssemblyRiskUpdate>}> = (props) => {
+          const {projectId,riskId,data} = props ?? {};
+
+          return  updatePstAssemblyRisk(projectId,riskId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdatePstAssemblyRiskMutationResult = NonNullable<Awaited<ReturnType<typeof updatePstAssemblyRisk>>>
+    export type UpdatePstAssemblyRiskMutationBody = BodyType<AssemblyRiskUpdate>
+    export type UpdatePstAssemblyRiskMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update an assembly risk mitigation
+ */
+export const useUpdatePstAssemblyRisk = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePstAssemblyRisk>>, TError,{projectId: string;riskId: string;data: BodyType<AssemblyRiskUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updatePstAssemblyRisk>>,
+        TError,
+        {projectId: string;riskId: string;data: BodyType<AssemblyRiskUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdatePstAssemblyRiskMutationOptions(options));
     }
 
 export const getSimulatePstProjectUrl = (projectId: string,) => {

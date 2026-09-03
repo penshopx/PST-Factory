@@ -423,6 +423,68 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BuildResult"
+  /pst/projects/{projectId}/assembly:
+    get:
+      operationId: getPstAssembly
+      tags: [manufacturing]
+      summary: Get the persisted assembly workspace
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Assembly workspace
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PstAssembly"
+  /pst/projects/{projectId}/assembly/checklist/{itemId}:
+    patch:
+      operationId: updatePstAssemblyChecklistItem
+      tags: [manufacturing]
+      summary: Update an assembly checklist item
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - name: itemId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssemblyChecklistUpdate"
+      responses:
+        "200":
+          description: Updated assembly
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PstAssembly"
+  /pst/projects/{projectId}/assembly/risks/{riskId}:
+    patch:
+      operationId: updatePstAssemblyRisk
+      tags: [manufacturing]
+      summary: Update an assembly risk mitigation
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - name: riskId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssemblyRiskUpdate"
+      responses:
+        "200":
+          description: Updated assembly
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PstAssembly"
   /pst/projects/{projectId}/simulate:
     post:
       operationId: simulatePstProject
@@ -1154,7 +1216,7 @@ components:
         recipeId: { type: string, nullable: true }
     BuildResult:
       type: object
-      required: [status, ready, missing, warnings, errors, components]
+      required: [status, ready, missing, warnings, errors, components, assembly]
       properties:
         status: { type: string, enum: [READY, BLOCKED] }
         ready: { type: array, items: { type: string } }
@@ -1162,6 +1224,49 @@ components:
         warnings: { type: array, items: { type: string } }
         errors: { type: array, items: { type: string } }
         components: { type: array, items: { $ref: "#/components/schemas/ComponentSelection" } }
+        assembly: { $ref: "#/components/schemas/PstAssembly" }
+    AssemblyChecklistItem:
+      type: object
+      required: [id, day, title, description, completed]
+      properties:
+        id: { type: string }
+        day: { type: number, minimum: 1, maximum: 30 }
+        title: { type: string }
+        description: { type: string }
+        completed: { type: boolean }
+    AssemblyRisk:
+      type: object
+      required: [id, title, description, priority, mitigation, status]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        description: { type: string }
+        priority: { type: string, enum: [HIGH, MEDIUM, LOW] }
+        mitigation: { type: string }
+        status: { type: string, enum: [OPEN, MITIGATED] }
+    PstAssembly:
+      type: object
+      required: [id, projectId, sourceBlueprintVersion, sourceBlueprintUpdatedAt, status, checklist, risks, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        projectId: { type: string }
+        sourceBlueprintVersion: { type: string }
+        sourceBlueprintUpdatedAt: { type: string, format: date-time }
+        status: { type: string, enum: [READY, BLOCKED] }
+        checklist: { type: array, items: { $ref: "#/components/schemas/AssemblyChecklistItem" } }
+        risks: { type: array, items: { $ref: "#/components/schemas/AssemblyRisk" } }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    AssemblyChecklistUpdate:
+      type: object
+      required: [completed]
+      properties:
+        completed: { type: boolean }
+    AssemblyRiskUpdate:
+      type: object
+      required: [mitigation]
+      properties:
+        mitigation: { type: string, maxLength: 2000 }
     SimulationInput:
       type: object
       properties:
