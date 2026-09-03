@@ -429,6 +429,36 @@ export function canPublish(state: ReleaseState) {
     && state.qaStatus !== "NOT_RUN";
 }
 
+/**
+ * Decides whether the QA record and the human approval authorize one exact
+ * immutable release candidate. Warning QA remains eligible to preserve the
+ * existing approval policy in canApprove().
+ */
+export function validatePublishCandidate({
+  candidateHash,
+  qaStatus,
+  qaCandidateHash,
+  approvedCandidateHash,
+  requireApproval = true,
+}: {
+  candidateHash?: string | null;
+  qaStatus?: string | null;
+  qaCandidateHash?: string | null;
+  approvedCandidateHash?: string | null;
+  requireApproval?: boolean;
+}) {
+  const qaMatches = Boolean(candidateHash)
+    && canApprove({ qaStatus: qaStatus ?? "NOT_RUN" })
+    && qaCandidateHash === candidateHash;
+  const approvalMatches = !requireApproval
+    || (Boolean(candidateHash) && approvedCandidateHash === candidateHash);
+  return {
+    accepted: qaMatches && approvalMatches,
+    qaMatches,
+    approvalMatches,
+  };
+}
+
 export function isPublicCustomerWorkspace(project: {
   slug: string;
   status: string;

@@ -11,6 +11,11 @@ import type { QaStatus } from './qaStatus';
 export interface QaRun {
   id: string;
   status: QaStatus;
+  /**
+     * Canonical immutable publish-candidate hash evaluated by this QA run.
+     * @nullable
+     */
+  candidateHash?: string | null;
   results: QaResult[];
   createdAt: Date;
 }

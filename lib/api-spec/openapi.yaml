@@ -1409,6 +1409,9 @@ components:
       properties:
         id: { type: string }
         status: { $ref: "#/components/schemas/QaStatus" }
+        candidateHash:
+          type: [string, "null"]
+          description: Canonical immutable publish-candidate hash evaluated by this QA run.
         results: { type: array, items: { $ref: "#/components/schemas/QaResult" } }
         createdAt: { type: string, format: date-time }
     QaResult:

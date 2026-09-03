@@ -57,3 +57,15 @@ also are not Asset Library foreign keys and cannot safely restore draft rows.
 Compiler-Ready data, run the complete Compiler pipeline in the publication
 transaction, and restore Factory rows only from their separately snapshotted
 library references.
+
+QA and human approval must authorize the canonical hash of the exact next
+release candidate, not merely a mutable project status.
+
+**Why:** A Blueprint or configuration change after QA can produce a different
+executable while leaving old PASS/APPROVED labels visible. Status-only gates
+would let that unreviewed candidate publish.
+
+**How to apply:** Compute the candidate while holding project then Blueprint
+locks, persist its hash on QA and approval, clear approval when QA reruns, and
+rematerialize plus compare both hashes inside the publish transaction before
+any release or project write. Existing null bindings are non-authorizing.

@@ -10,6 +10,7 @@ export function PublishNoticePanel({
   onRefresh: () => void;
 }) {
   const isConflict = notice.kind === 'conflict';
+  const needsRevalidation = notice.kind === 'requirements';
 
   return (
     <div
@@ -23,7 +24,13 @@ export function PublishNoticePanel({
     >
       <TriangleAlert className="mt-0.5 shrink-0" size={18} />
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-bold">{isConflict ? 'Rilis sudah diterbitkan' : 'Penerbitan gagal'}</p>
+        <p className="text-sm font-bold">
+          {isConflict
+            ? 'Rilis sudah diterbitkan'
+            : needsRevalidation
+              ? 'QA dan persetujuan perlu diulang'
+              : 'Penerbitan gagal'}
+        </p>
         <p className="mt-1 text-xs leading-relaxed">{notice.message}</p>
         <button
           type="button"

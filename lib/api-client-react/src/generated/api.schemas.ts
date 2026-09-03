@@ -872,6 +872,11 @@ export interface QaResult {
 export interface QaRun {
   id: string;
   status: QaStatus;
+  /**
+     * Canonical immutable publish-candidate hash evaluated by this QA run.
+     * @nullable
+     */
+  candidateHash?: string | null;
   results: QaResult[];
   createdAt: string;
 }

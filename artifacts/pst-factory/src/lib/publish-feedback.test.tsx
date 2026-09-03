@@ -56,6 +56,20 @@ test('ordinary publish errors keep the general failure guidance', () => {
   );
 });
 
+test('candidate mismatches direct operators to rerun QA and approval', () => {
+  const notice = getPublishNoticeForError({
+    status: 409,
+    data: { error: 'Only an approved PST without blocking QA errors can be published.' },
+  });
+
+  assert.equal(notice.kind, 'requirements');
+  assert.match(notice.message, /Jalankan QA lagi, setujui ulang/);
+  assert.match(
+    renderToStaticMarkup(<PublishNoticePanel notice={notice} onRefresh={() => undefined} />),
+    /QA dan persetujuan perlu diulang/,
+  );
+});
+
 test('publish error state resets after all project data reloads successfully', async () => {
   let resetCount = 0;
   const refetched: string[] = [];

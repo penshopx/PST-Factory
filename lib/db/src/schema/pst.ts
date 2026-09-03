@@ -33,6 +33,10 @@ export const pstProjectsTable = pgTable("pst_projects", {
     outcome: string;
   }>().notNull(),
   qaStatus: text("qa_status").notNull().default("NOT_RUN"),
+  // The canonical hash of the exact publish candidate approved by a human.
+  // It intentionally lives alongside the existing approval status rather than
+  // introducing a second approval state machine.
+  approvedCandidateHash: text("approved_candidate_hash"),
   publicationStatus: text("publication_status").notNull().default("UNPUBLISHED"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
@@ -324,6 +328,9 @@ export const pstQaRunsTable = pgTable("pst_qa_runs", {
     .notNull()
     .references(() => pstProjectsTable.id, { onDelete: "cascade" }),
   status: text("status").notNull(),
+  // Hash of the compiler-ready candidate QA evaluated. A null value means this
+  // run cannot authorize publication (for example, it was not materializable).
+  candidateHash: text("candidate_hash"),
   results: jsonb("results").$type<QaResult[]>().notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

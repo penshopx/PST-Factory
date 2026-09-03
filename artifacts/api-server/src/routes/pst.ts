@@ -112,6 +112,7 @@ import {
   isPublicCustomerWorkspace,
   publicCustomerWorkspaceSteps,
   qaStatus,
+  validatePublishCandidate,
   workflowFromStructure,
 } from "../lib/services/pst/manufacturing";
 import {
@@ -2127,41 +2128,70 @@ router.post("/pst/projects/:projectId/qa", async (req, res): Promise<void> => {
   if (!access) {
     return;
   }
-  const project = await projectAggregate(access.project.id, access.userId);
-  if (!project) {
-    res.status(404).json({ error: "PST project not found" });
-    return;
-  }
-  const componentRows = await db
-    .select({
-      name: pstProjectComponentsTable.name,
-      status: pstProjectComponentsTable.status,
-      assetId: pstProjectComponentsTable.assetId,
-    })
-    .from(pstProjectComponentsTable)
-    .where(eq(pstProjectComponentsTable.projectId, project.id));
-  const assetIds = componentRows.map((component) => component.assetId);
-  const assets = assetIds.length
-    ? await db.select().from(pstAssetsTable).where(inArray(pstAssetsTable.id, assetIds))
-    : [];
-  const assetById = new Map(assets.map((asset) => [asset.id, asset]));
-  const results: QaResult[] = evaluateQa({
-    ...project,
-    components: componentRows.map((component) => {
-      const asset = assetById.get(component.assetId);
-      return {
-        name: component.name,
-        status: component.status,
-        description: asset?.description,
-        tags: asset?.tags,
-        compatibility: asset?.compatibility,
-      };
-    }),
-  }, project.blueprint);
-  const status = qaStatus(results);
-  const [run] = await db.insert(pstQaRunsTable).values({ id: randomUUID(), projectId: project.id, status, results }).returning();
-  await db.update(pstProjectsTable).set({ qaStatus: status, status: "QA", updatedAt: new Date() }).where(eq(pstProjectsTable.id, project.id));
-  await addEvent("QA_EXECUTED", `QA completed with ${status.toLowerCase()} status.`, project.id);
+  const run = await db.transaction(async (tx) => {
+    const [project] = await tx
+      .select()
+      .from(pstProjectsTable)
+      .where(eq(pstProjectsTable.id, access.project.id))
+      .for("update");
+    const [blueprint] = await tx
+      .select()
+      .from(pstBlueprintsTable)
+      .where(eq(pstBlueprintsTable.projectId, access.project.id))
+      .for("update");
+    if (!project || !blueprint) {
+      throw new PublishRequirementError("A blueprint is required before running QA.");
+    }
+    const componentRows = await tx
+      .select({
+        name: pstProjectComponentsTable.name,
+        status: pstProjectComponentsTable.status,
+        assetId: pstProjectComponentsTable.assetId,
+      })
+      .from(pstProjectComponentsTable)
+      .where(eq(pstProjectComponentsTable.projectId, project.id));
+    const assetIds = componentRows.map((component) => component.assetId);
+    const assets = assetIds.length
+      ? await tx.select().from(pstAssetsTable).where(inArray(pstAssetsTable.id, assetIds))
+      : [];
+    const assetById = new Map(assets.map((asset) => [asset.id, asset]));
+    const results: QaResult[] = evaluateQa({
+      ...project,
+      components: componentRows.map((component) => {
+        const asset = assetById.get(component.assetId);
+        return {
+          name: component.name,
+          status: component.status,
+          description: asset?.description,
+          tags: asset?.tags,
+          compatibility: asset?.compatibility,
+        };
+      }),
+    }, blueprint);
+    const status = qaStatus(results);
+    const candidateProject = { ...project, qaStatus: status };
+    let candidateHash: string | null = null;
+    try {
+      const candidate = materializeCompilerReadySnapshot(
+        await releaseSnapshot(candidateProject, blueprint, await nextReleaseVersion(project.id, tx), tx),
+      );
+      if (candidate.status === "READY") candidateHash = candidate.snapshot.snapshotHash ?? null;
+    } catch (error) {
+      if (!(error instanceof PublishRequirementError)) throw error;
+    }
+    const [created] = await tx.insert(pstQaRunsTable).values({
+      id: randomUUID(),
+      projectId: project.id,
+      status,
+      candidateHash,
+      results,
+    }).returning();
+    await tx.update(pstProjectsTable)
+      .set({ qaStatus: status, status: "QA", approvedCandidateHash: null, updatedAt: new Date() })
+      .where(eq(pstProjectsTable.id, project.id));
+    return created;
+  });
+  await addEvent("QA_EXECUTED", `QA completed with ${run.status.toLowerCase()} status.`, access.project.id);
   res.json(RunPstQaResponse.parse(run));
 });
 
@@ -2175,13 +2205,53 @@ router.post("/pst/projects/:projectId/approve", async (req, res): Promise<void> 
   if (!access) {
     return;
   }
-  const project = access.project;
-  if (!canApprove(project)) {
-    res.status(409).json({ error: "Run a passing QA before approval." });
-    return;
+  let updated: typeof pstProjectsTable.$inferSelect;
+  try {
+    [updated] = await db.transaction(async (tx) => {
+      const [project] = await tx.select().from(pstProjectsTable)
+        .where(eq(pstProjectsTable.id, access.project.id)).for("update");
+      const [blueprint] = await tx.select().from(pstBlueprintsTable)
+        .where(eq(pstBlueprintsTable.projectId, access.project.id)).for("update");
+      const [latestQa] = await tx.select().from(pstQaRunsTable)
+        .where(eq(pstQaRunsTable.projectId, access.project.id))
+        .orderBy(desc(pstQaRunsTable.createdAt), desc(pstQaRunsTable.id)).limit(1);
+      if (
+        !project
+        || !blueprint
+        || !latestQa
+        || !canApprove(project)
+        || !canApprove({ qaStatus: latestQa.status })
+      ) {
+        throw new PublishRequirementError("Run a passing QA before approval.");
+      }
+      const candidate = materializeCompilerReadySnapshot(
+        await releaseSnapshot(project, blueprint, await nextReleaseVersion(project.id, tx), tx),
+      );
+      const candidateValidation = validatePublishCandidate({
+        candidateHash: candidate.status === "READY" ? candidate.snapshot.snapshotHash : null,
+        qaStatus: latestQa.status,
+        qaCandidateHash: latestQa.candidateHash,
+        requireApproval: false,
+      });
+      if (!candidateValidation.accepted) {
+        throw new PublishRequirementError("Run QA again for the current candidate before approval.");
+      }
+      if (candidate.status === "BLOCKED" || !candidate.snapshot.snapshotHash) {
+        throw new PublishRequirementError("Run QA again for the current candidate before approval.");
+      }
+      return tx.update(pstProjectsTable)
+        .set({ status: "APPROVED", approvedCandidateHash: candidate.snapshot.snapshotHash, updatedAt: new Date() })
+        .where(eq(pstProjectsTable.id, project.id))
+        .returning();
+    });
+  } catch (error) {
+    if (error instanceof PublishRequirementError) {
+      res.status(409).json({ error: error.message });
+      return;
+    }
+    throw error;
   }
-  const [updated] = await db.update(pstProjectsTable).set({ status: "APPROVED", updatedAt: new Date() }).where(eq(pstProjectsTable.id, project.id)).returning();
-  await addEvent("PST_APPROVED", `${project.name} was explicitly approved by a human.`, project.id);
+  await addEvent("PST_APPROVED", `${updated.name} was explicitly approved by a human.`, updated.id);
   res.json(ApprovePstProjectResponse.parse(await projectAggregate(updated.id, access.userId)));
 });
 
@@ -2220,14 +2290,23 @@ router.post("/pst/projects/:projectId/publish", async (req, res): Promise<void> 
         .from(pstProjectsTable)
         .where(eq(pstProjectsTable.id, project.id))
         .for("update");
-      if (!lockedProject || !canPublish(lockedProject)) {
+      if (!lockedProject) {
         throw new PublishConflictError(publishConflictMessage);
+      }
+      if (!canPublish(lockedProject)) {
+        if (lockedProject.status === "PUBLISHED" && lockedProject.publicationStatus === "PUBLISHED") {
+          throw new PublishConflictError(publishConflictMessage);
+        }
+        throw new PublishRequirementError(
+          "Only an approved PST without blocking QA errors can be published.",
+        );
       }
 
       const [lockedBlueprint] = await tx
         .select()
         .from(pstBlueprintsTable)
-        .where(eq(pstBlueprintsTable.projectId, lockedProject.id));
+        .where(eq(pstBlueprintsTable.projectId, lockedProject.id))
+        .for("update");
       if (!lockedBlueprint) {
         throw new PublishRequirementError("A blueprint is required before publishing.");
       }
@@ -2241,6 +2320,24 @@ router.post("/pst/projects/:projectId/publish", async (req, res): Promise<void> 
       if (candidate.status === "BLOCKED") {
         throw new PublishRequirementError(
           `Release is not Compiler-ready: ${candidate.errors.join(" ")}`,
+        );
+      }
+      const [latestQa] = await tx
+        .select()
+        .from(pstQaRunsTable)
+        .where(eq(pstQaRunsTable.projectId, lockedProject.id))
+        .orderBy(desc(pstQaRunsTable.createdAt), desc(pstQaRunsTable.id))
+        .limit(1);
+      const candidateValidation = validatePublishCandidate({
+        candidateHash: candidate.snapshot.snapshotHash,
+        qaStatus: latestQa?.status,
+        qaCandidateHash: latestQa?.candidateHash,
+        approvedCandidateHash: lockedProject.approvedCandidateHash,
+      });
+      // This check runs before compiler work and every publication mutation.
+      if (!candidateValidation.accepted) {
+        throw new PublishRequirementError(
+          "Only an approved PST without blocking QA errors can be published.",
         );
       }
       const executable = compileExecutableRelease({

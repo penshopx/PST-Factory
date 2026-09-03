@@ -1394,6 +1394,7 @@ export const RunPstQaParams = zod.object({
 export const RunPstQaResponse = zod.object({
   "id": zod.string(),
   "status": zod.enum(['NOT_RUN', 'PASS', 'WARNING', 'ERROR']),
+  "candidateHash": zod.string().nullish().describe('Canonical immutable publish-candidate hash evaluated by this QA run.'),
   "results": zod.array(zod.object({
   "category": zod.string(),
   "label": zod.string(),
