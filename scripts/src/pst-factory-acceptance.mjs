@@ -202,8 +202,13 @@ function publishedWorkspaceProbe(slug, expectedVersion) {
 function assertPublishedPublicWorkspacePayload(body, probeUrl, expectedSlug, expectedVersion) {
   assert.deepEqual(
     Object.keys(body).sort(),
-    ["definition", "project", "steps"],
-    `browser API proxy published public PST ${probeUrl}: expected the public workspace envelope`,
+    ["project", "steps"],
+    `browser API proxy published public PST ${probeUrl}: expected the metadata-only public workspace envelope`,
+  );
+  assert.equal(
+    Object.hasOwn(body, "definition"),
+    false,
+    `browser API proxy published public PST ${probeUrl}: executable definition must remain server-side`,
   );
   assert.equal(body.project.slug, expectedSlug);
   assert.equal(body.project.status, "PUBLISHED");
@@ -217,8 +222,6 @@ function assertPublishedPublicWorkspacePayload(body, probeUrl, expectedSlug, exp
     assert.match(body.project.version, /^v\d+\.\d+$/);
   }
   assert.ok(body.steps.length > 0, "published public PST must include customer steps");
-  assert.equal(body.definition.runtimeVersion, "pst-runtime.v1");
-  assert.equal(body.definition.identity.releaseVersion, body.project.version);
   assert.deepEqual(
     body.steps.map((step) => step.title),
     body.project.blueprint.workflow.map((step) => step.title),
