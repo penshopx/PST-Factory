@@ -1641,8 +1641,8 @@ function PublicHome() {
       </div>
 
       <div className="relative z-10 mx-auto flex min-h-[100dvh] max-w-[1400px] flex-col px-6 lg:px-12">
-        <header className="flex h-24 items-center justify-between border-b border-[#2a4054]/50">
-          <Link href="/" className="focus-ring block w-40 shrink-0 lg:w-48" data-testid="link-public-logo">
+        <header className="flex h-32 items-center justify-between border-b border-[#2a4054]/50 lg:h-40">
+          <Link href="/" className="focus-ring block w-[min(30rem,60vw)] shrink-0 lg:w-[36rem]" data-testid="link-public-logo">
             <img src={`${basePath}/logo.svg`} alt="PST Factory" className="h-auto w-full" />
           </Link>
           <nav className="flex items-center gap-4 lg:gap-8">
