@@ -177,17 +177,6 @@ const browserProxyProbes = [
     expectedStatus: 404,
     expectedBody: { error: "Published customer workspace not found" },
   },
-  {
-    name: "published public PST fixture route",
-    path: `/api/pst/public/workspaces/${publishedWorkspaceFixtureSlug}`,
-    expectedStatus: 200,
-    assertBody: (body, probeUrl) => assertPublishedPublicWorkspacePayload(
-      body,
-      probeUrl,
-      publishedWorkspaceFixtureSlug,
-      publishedWorkspaceFixtureVersion,
-    ),
-  },
 ];
 
 function publishedWorkspaceProbe(slug, expectedVersion) {
@@ -295,21 +284,39 @@ async function assertBrowserProxyJsonResponse(browserUrl, probe) {
   }
 }
 
-async function assertBrowserProxyApiResponse({ publishedWorkspaceSlug } = {}) {
+async function assertPublicFixtureAvailable(browserUrl, { slug, expectedVersion }) {
+  try {
+    await assertBrowserProxyJsonResponse(browserUrl, publishedWorkspaceProbe(slug, expectedVersion));
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `PST public fixture preflight failed (slug=${slug}, expectedVersion=${expectedVersion ?? "any"}): ${detail}`,
+      { cause: error },
+    );
+  }
+}
+
+async function assertBrowserProxyApiResponse({
+  publishedWorkspaceSlug = publishedWorkspaceFixtureSlug,
+  expectedVersion = publishedWorkspaceFixtureVersion,
+} = {}) {
   const browserUrl = resolveBrowserBaseUrl({
     configuredUrl: process.env.PST_BROWSER_URL,
     developmentDomain: process.env.REPLIT_DEV_DOMAIN,
     webPort: process.env.PST_WEB_PORT ?? "21409",
   });
 
-  const probes = publishedWorkspaceSlug
-    ? [...browserProxyProbes, publishedWorkspaceProbe(publishedWorkspaceSlug)]
-    : browserProxyProbes;
+  await assertPublicFixtureAvailable(browserUrl, {
+    slug: publishedWorkspaceSlug,
+    expectedVersion,
+  });
+
+  const probes = browserProxyProbes;
   for (const probe of probes) {
     await assertBrowserProxyJsonResponse(browserUrl, probe);
   }
 
-  console.log(`PST browser API proxy checks (${probes.length} routes): PASS`);
+  console.log(`PST browser API proxy checks (${probes.length + 1} routes): PASS`);
 }
 
 async function runRoutingChecks() {
@@ -428,10 +435,6 @@ const browserBaseUrl = resolveBrowserBaseUrl({
 if (process.argv.includes("--check-browser-proxy")) {
   await assertBrowserProxyApiResponse();
   process.exit(0);
-}
-
-if (browserAcceptanceEnabled) {
-  await assertBrowserProxyApiResponse();
 }
 
 const workspaceRoot = resolve(fileURLToPath(new URL("../..", import.meta.url)));
@@ -1318,7 +1321,10 @@ async function runAuthenticatedRouteAcceptance() {
       expectedProjectName: afterPublish.body.project.name,
     });
     if (browserAcceptanceEnabled) {
-      await assertBrowserProxyApiResponse({ publishedWorkspaceSlug: slug });
+      await assertBrowserProxyApiResponse({
+        publishedWorkspaceSlug: slug,
+        expectedVersion: afterPublish.body.project.version,
+      });
     }
 
     const releases = await apiRequest(owner.token, `/pst/projects/${projectId}/releases`);
