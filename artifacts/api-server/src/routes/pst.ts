@@ -18,6 +18,7 @@ import {
   pstReleasesTable,
   pstQaRunsTable,
   pstRecipesTable,
+  pstSecurityAuditEventsTable,
   pstSimulationsTable,
   type WorkflowStep,
   type QaResult,
@@ -1165,6 +1166,40 @@ async function authorizeProject(
       ),
     );
   if (!projectAccess) {
+    const [existingProject] = await db
+      .select({ id: pstProjectsTable.id })
+      .from(pstProjectsTable)
+      .where(eq(pstProjectsTable.id, projectId));
+    if (existingProject) {
+      try {
+        await db.insert(pstSecurityAuditEventsTable).values({
+          id: randomUUID(),
+          type: "PST_PROJECT_ACCESS_DENIED",
+          actorUserId: userId,
+          targetProjectId: existingProject.id,
+          method: req.method,
+          routePattern: String(req.route?.path ?? "unknown"),
+        });
+      } catch (error) {
+        req.log.error(
+          {
+            err: error,
+            event: "pst_project_access_denied_audit_failed",
+          },
+          "Failed to persist denied PST project access audit event",
+        );
+      }
+      req.log.warn(
+        {
+          event: "pst_project_access_denied",
+          targetProjectId: existingProject.id,
+          actorUserId: userId,
+          method: req.method,
+          routePattern: String(req.route?.path ?? "unknown"),
+        },
+        "Denied cross-owner PST project access",
+      );
+    }
     // Keep missing and cross-owner projects indistinguishable.
     res.status(404).json({ error: "PST project not found" });
     return;

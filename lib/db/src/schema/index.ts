@@ -25,4 +25,5 @@ export * from "./pst-contract";
 export * from "./pst-executable";
 export * from "./pst-public-runtime-session";
 export * from "./pst-runtime";
+export * from "./pst-security-audit";
 export * from "./pst-validator";

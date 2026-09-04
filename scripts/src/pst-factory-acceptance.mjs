@@ -19,6 +19,7 @@ import {
   qaStatus,
   publicCustomerWorkspaceSteps,
 } from "../../artifacts/api-server/src/lib/services/pst/manufacturing.ts";
+import { compileExecutableRelease } from "../../artifacts/api-server/src/lib/services/pst/executable-release.ts";
 
 const assets = [
   { id: "asset-questions", name: "Guided questions", type: "MINI_APP", description: "Question flow", tags: ["questions", "assessment"], compatibility: ["ASSESSMENT"], status: "ACTIVE" },
@@ -881,13 +882,32 @@ async function runLegacyPublicCompatibilityAcceptance() {
     const legacyBefore = await persistedSnapshotText(legacyReleaseId);
     const legacyPublic = await apiRequest(undefined, `/pst/public/workspaces/${legacySlug}`);
     assertStatus(legacyPublic, 200, "legacy public workspace");
-    assert.equal(legacyPublic.body.definition.compiler.name, "pst-legacy-compat");
-    assert.equal(legacyPublic.body.definition.compiler.version, "pst-legacy-compat.v1");
     assert.equal(
-      legacyPublic.body.definition.identity.sourceSchemaVersion,
+      Object.hasOwn(legacyPublic.body, "definition"),
+      false,
+      "legacy public workspace must keep its executable definition server-side",
+    );
+    const legacyExecutable = compileExecutableRelease(
+      {
+        id: legacyReleaseId,
+        projectId: legacyProjectId,
+        version: "v1.0",
+        createdAt: new Date("2026-08-29T00:00:00.000Z"),
+      },
+      legacySlug,
+      legacySnapshot,
+    );
+    assert.equal(legacyExecutable.status, "COMPILED");
+    if (legacyExecutable.status !== "COMPILED") {
+      throw new Error("legacy compatibility fixture must compile");
+    }
+    assert.equal(legacyExecutable.definition.compiler.name, "pst-legacy-compat");
+    assert.equal(legacyExecutable.definition.compiler.version, "pst-legacy-compat.v1");
+    assert.equal(
+      legacyExecutable.definition.identity.sourceSchemaVersion,
       "pst-release-snapshot.legacy-v0",
     );
-    const runtime = runPstRuntime(legacyPublic.body.definition, [
+    const runtime = runPstRuntime(legacyExecutable.definition, [
       { "context.user_context": "Established business" },
       {
         "answers.assessment_score": "70",
@@ -930,7 +950,7 @@ async function runLegacyPublicCompatibilityAcceptance() {
     );
 
     return {
-      legacyCompiler: legacyPublic.body.definition.compiler.version,
+      legacyCompiler: legacyExecutable.definition.compiler.version,
       legacyRuntimeStatus: runtime.status,
       modernMalformedStatus: modernPublic.response.status,
       snapshotsUnchanged: true,
