@@ -42,3 +42,10 @@ mtime_ms = 1787880608327
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:b9c964a6-8e2c-4021-9426-fd478a93fec9/e6274b69-d4de-4336-9717-8a0d59e20bc1/7bd26b16-b668-4253-b785-309a1959cfef"
 storage_version_token = "1787880633401500"
 content_type = "image/png"
+
+[[outputs]]
+id = "_hfggxYOBDzhe9ptlhXwx"
+uri = "file://artifacts/pst-factory-video/public/audio/bg_music.mp3"
+type = "audio"
+title = "PST Factory background music"
+description = "Generated music: Driving electronic instrumental background music scoring a polished technology product motion-graphics reveal. Crisp analog synth pulse, restrained electronic percussion, subtle cine…"

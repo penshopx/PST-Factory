@@ -1,0 +1,25 @@
+@import 'tailwindcss';
+
+@theme inline {
+  --color-background: #07111d;
+  --color-foreground: #edf7ff;
+  --color-primary: #16d9f5;
+  --color-muted: #91a9bd;
+  --color-card: rgba(22, 217, 245, 0.05);
+
+  --font-sans: 'Manrope', sans-serif;
+  --font-display: 'Plus Jakarta Sans', sans-serif;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-family: var(--font-sans);
+}
+
+.perspective-container {
+  perspective: 1200px;
+}

@@ -1,0 +1,29 @@
+kind = "video"
+previewPath = "/pst-factory-video/"
+title = "Video Animasi PST Factory"
+description = "Video promosi animasi 16:9 yang memperkenalkan PST Factory dan alur Masalah, Rancangan, Perakitan, Periksa, hingga Terbitkan menjadi solusi siap digunakan."
+version = "1.0.0"
+id = "artifacts/pst-factory-video"
+router = "path"
+videoAspectRatio = "16:9"
+
+[[services]]
+name = "web"
+paths = [ "/pst-factory-video/" ]
+localPort = 22603
+
+[services.development]
+run = "pnpm --filter @workspace/pst-factory-video run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/pst-factory-video", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/pst-factory-video/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22603"
+BASE_PATH = "/pst-factory-video/"
