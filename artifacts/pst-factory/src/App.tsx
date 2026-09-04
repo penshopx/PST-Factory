@@ -1669,9 +1669,9 @@ function PublicHome() {
                   <span className="h-2 w-2 rounded-full bg-[#16d9f5] shadow-[0_0_8px_#16d9f5]" />
                   Untuk Operator & Pakar Domain
                 </div>
-                <h1 className="text-balance text-4xl font-semibold leading-[1.06] tracking-[-0.035em] sm:text-6xl lg:text-7xl animate-rise-2">
+                <h1 className="text-balance text-4xl font-extrabold leading-[1.06] tracking-[-0.035em] sm:text-6xl lg:text-7xl animate-rise-2">
                   Ubah Keahlian Diam Menjadi{' '}
-                  <span className="bg-gradient-to-r from-[#16d9f5] to-[#8beeff] bg-clip-text font-bold text-transparent sm:block">
+                  <span className="bg-gradient-to-r from-[#16d9f5] to-[#8beeff] bg-clip-text font-black text-transparent sm:block">
                     Alur Kerja Digital.
                   </span>
                 </h1>
