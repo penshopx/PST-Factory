@@ -9,6 +9,37 @@ export interface HealthStatus {
   status: string;
 }
 
+export type PstHelpChatMessageRole = typeof PstHelpChatMessageRole[keyof typeof PstHelpChatMessageRole];
+
+
+export const PstHelpChatMessageRole = {
+  user: 'user',
+  assistant: 'assistant',
+} as const;
+
+export interface PstHelpChatMessage {
+  role: PstHelpChatMessageRole;
+  /**
+     * @minLength 1
+     * @maxLength 2000
+     */
+  content: string;
+}
+
+export interface PstHelpChatInput {
+  /**
+     * @minLength 1
+     * @maxLength 2000
+     */
+  message: string;
+  /** @maxItems 8 */
+  history?: PstHelpChatMessage[];
+}
+
+export interface PstHelpChatResponse {
+  reply: string;
+}
+
 export interface PstPublicRuntimeDiagnostic {
   code: string;
   path: string;

@@ -990,6 +990,30 @@ export const AnalyzePstFrameworkResponse = zod.object({
 
 
 /**
+ * @summary Answer questions about PST Factory concepts and features
+ */
+export const sendPstHelpMessageBodyMessageMax = 2000;
+
+export const sendPstHelpMessageBodyHistoryItemContentMax = 2000;
+
+export const sendPstHelpMessageBodyHistoryMax = 8;
+
+
+
+export const SendPstHelpMessageBody = zod.object({
+  "message": zod.string().min(1).max(sendPstHelpMessageBodyMessageMax),
+  "history": zod.array(zod.object({
+  "role": zod.enum(['user', 'assistant']),
+  "content": zod.string().min(1).max(sendPstHelpMessageBodyHistoryItemContentMax)
+})).max(sendPstHelpMessageBodyHistoryMax).optional()
+})
+
+export const SendPstHelpMessageResponse = zod.object({
+  "reply": zod.string()
+})
+
+
+/**
  * @summary Convert selected solutions into an action plan
  */
 export const convertPstActionPlanBodySolutionsItemIdMax = 80;

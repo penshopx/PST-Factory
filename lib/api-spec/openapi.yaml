@@ -301,6 +301,42 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /pst/help-chat:
+    post:
+      operationId: sendPstHelpMessage
+      tags: [manufacturing]
+      summary: Answer questions about PST Factory concepts and features
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PstHelpChatInput"
+      responses:
+        "200":
+          description: Help desk response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PstHelpChatResponse"
+        "400":
+          description: Invalid message
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: AI usage limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Help desk AI unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /pst/action-plan:
     post:
       operationId: convertPstActionPlan
@@ -808,6 +844,39 @@ components:
           type: string
       required:
         - status
+    PstHelpChatMessage:
+      type: object
+      additionalProperties: false
+      required: [role, content]
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+          minLength: 1
+          maxLength: 2000
+    PstHelpChatInput:
+      type: object
+      additionalProperties: false
+      required: [message]
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        history:
+          type: array
+          maxItems: 8
+          items:
+            $ref: "#/components/schemas/PstHelpChatMessage"
+    PstHelpChatResponse:
+      type: object
+      additionalProperties: false
+      required: [reply]
+      properties:
+        reply:
+          type: string
     PstPublicRuntimeDiagnostic:
       type: object
       required: [code, path, message]

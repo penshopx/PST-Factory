@@ -27,6 +27,7 @@ import {
   useListPstProjectMembers, useListPstProjects, useListPstRecipes, usePublishPstProject, useRemovePstProjectMember, useRunPstArchitect,
   useRequestUploadUrl, useUpsertPstProjectMember,
   useRestorePstRelease, useRunPstQa, useSimulatePstProject, useUpdatePstBlueprint, useUpdatePstProject, useStartPublicPstRuntimeSession, useAdvancePublicPstRuntimeSession,
+  useSendPstHelpMessage,
 } from '@workspace/api-client-react';
 import type {
   BuildResult, FactoryEvent, PstAssembly, AssemblyChecklistItem, AssemblyRisk, PstAsset, PstBlueprint, PstDocument, PstPattern, PstProject,
@@ -53,6 +54,7 @@ import {
 import { PublishNoticePanel } from '@/lib/publish-feedback-panel';
 import PSTFactoryVideo from '@/components/PSTFactoryVideo';
 import FrameworkAnalyzer from '@/components/FrameworkAnalyzer';
+import { HelpDeskChatbot } from '@/components/HelpDeskChatbot';
 
 const queryClient = new QueryClient();
 const clerkPubKey = publishableKeyFromHost(
@@ -260,6 +262,7 @@ function Shell({ children }: { children: ReactNode }) {
   const [mobile, setMobile] = useState(false);
   const { user } = useUser();
   const { signOut } = useClerk();
+  const helpMessage = useSendPstHelpMessage();
   const displayName = user?.fullName || user?.primaryEmailAddress?.emailAddress || 'Anggota pabrik';
   const initials = displayName.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
   return <div className="min-h-[100dvh] bg-background text-foreground">
@@ -291,6 +294,20 @@ function Shell({ children }: { children: ReactNode }) {
       </header>
       <main className="factory-grid min-h-[calc(100dvh-72px)] px-5 py-8 md:px-9 lg:px-12">{children}</main>
     </div>
+    <HelpDeskChatbot onSendMessage={async (message, history) => {
+      try {
+        const response = await helpMessage.mutateAsync({
+          data: {
+            message,
+            history: history.slice(-8).map(({ role, content }) => ({ role, content })),
+          },
+        });
+        return response.reply;
+      } catch (error) {
+        const apiError = error as { data?: { error?: string } };
+        throw new Error(apiError.data?.error ?? 'Help Desk sedang tidak tersedia. Coba lagi sebentar.');
+      }
+    }} />
   </div>;
 }
 

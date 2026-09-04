@@ -45,6 +45,8 @@ import type {
   PstComponentInput,
   PstDocument,
   PstDocumentInput,
+  PstHelpChatInput,
+  PstHelpChatResponse,
   PstPattern,
   PstProject,
   PstProjectInput,
@@ -1280,6 +1282,77 @@ export const useAnalyzePstFramework = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getAnalyzePstFrameworkMutationOptions(options));
+    }
+
+export const getSendPstHelpMessageUrl = () => {
+
+
+
+
+  return `/api/pst/help-chat`
+}
+
+/**
+ * @summary Answer questions about PST Factory concepts and features
+ */
+export const sendPstHelpMessage = async (pstHelpChatInput: PstHelpChatInput, options?: Parameters<typeof customFetch>[1]): Promise<PstHelpChatResponse> => {
+
+  return customFetch<PstHelpChatResponse>(getSendPstHelpMessageUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pstHelpChatInput)
+  }
+);}
+
+
+
+
+
+export const getSendPstHelpMessageMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendPstHelpMessage>>, TError,{data: BodyType<PstHelpChatInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof sendPstHelpMessage>>, TError,{data: BodyType<PstHelpChatInput>}, TContext> => {
+
+const mutationKey = ['sendPstHelpMessage'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendPstHelpMessage>>, {data: BodyType<PstHelpChatInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  sendPstHelpMessage(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SendPstHelpMessageMutationResult = NonNullable<Awaited<ReturnType<typeof sendPstHelpMessage>>>
+    export type SendPstHelpMessageMutationBody = BodyType<PstHelpChatInput>
+    export type SendPstHelpMessageMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Answer questions about PST Factory concepts and features
+ */
+export const useSendPstHelpMessage = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendPstHelpMessage>>, TError,{data: BodyType<PstHelpChatInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof sendPstHelpMessage>>,
+        TError,
+        {data: BodyType<PstHelpChatInput>},
+        TContext
+      > => {
+      return useMutation(getSendPstHelpMessageMutationOptions(options));
     }
 
 export const getConvertPstActionPlanUrl = () => {
