@@ -1631,348 +1631,252 @@ function HomeRoute() {
 
 function PublicHome() {
   return (
-    <main className="min-h-[100dvh] overflow-x-hidden bg-[#030910] text-[#edf7ff] font-sans selection:bg-[#16d9f5]/30 selection:text-white">
-      <div className="absolute inset-0 z-0 opacity-40">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(22,217,245,.1),transparent_50%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.02)_1px,transparent_1px)] bg-[size:auto,48px_48px,48px_48px]" />
+    <main className="min-h-[100dvh] overflow-x-hidden bg-[#030910] text-[#edf7ff] font-sans selection:bg-[#16d9f5]/30 selection:text-[#030910]">
+      {/* Background grids and lights */}
+      <div className="pointer-events-none fixed inset-0 z-0 flex justify-center">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:linear-gradient(to_bottom,white,transparent)]" />
+        <div className="absolute top-0 h-[600px] w-[800px] rounded-full bg-[#16d9f5]/10 blur-[120px]" />
       </div>
 
-      <div className="relative z-10 mx-auto flex min-h-[100dvh] max-w-7xl flex-col px-6 sm:px-10 lg:px-12">
-        <header className="flex flex-col items-stretch gap-4 py-6 sm:flex-row sm:items-center sm:justify-between">
-          <Link href="/" className="focus-ring block w-full max-w-[420px] shrink-0 rounded-xl sm:w-auto sm:max-w-none" data-testid="link-public-logo">
-            <img src={`${basePath}/logo.svg`} alt="PST Factory" className="h-auto w-full sm:h-28 sm:w-auto" />
+      <div className="relative z-10 mx-auto flex min-h-[100dvh] max-w-[1400px] flex-col px-6 lg:px-12">
+        <header className="flex h-24 items-center justify-between border-b border-[#2a4054]/50">
+          <Link href="/" className="focus-ring block w-40 shrink-0 lg:w-48" data-testid="link-public-logo">
+            <img src={`${basePath}/logo.svg`} alt="PST Factory" className="h-auto w-full" />
           </Link>
-          <nav className="flex items-center justify-end gap-2">
-            <Link href="/video" className="focus-ring hidden rounded-lg px-4 py-2.5 text-sm font-semibold text-[#a9c1d3] transition-colors hover:text-[#edf7ff] sm:inline-flex" data-testid="link-process-film">Film proses</Link>
-            <Link href="/sign-in" className="focus-ring rounded-lg px-4 py-2.5 text-sm font-semibold text-[#a9c1d3] transition-colors hover:text-[#edf7ff]" data-testid="link-sign-in">Masuk</Link>
-            <Link href="/sign-up" className="focus-ring rounded-lg border border-[#16d9f5]/50 bg-[#16d9f5] px-4 py-2.5 text-sm font-bold text-[#030910] transition-colors hover:bg-[#72edff]" data-testid="link-sign-up">Buat akun</Link>
+          <nav className="flex items-center gap-4 lg:gap-8">
+            <Link href="/video" className="focus-ring hidden text-sm font-semibold tracking-wide text-[#91a9bd] transition-colors hover:text-[#16d9f5] md:block" data-testid="link-process-film">
+              Film proses
+            </Link>
+            <div className="flex items-center gap-3">
+              <Link href="/sign-in" className="focus-ring hidden rounded-lg px-4 py-2.5 text-sm font-bold text-[#edf7ff] transition-colors hover:bg-[#ffffff0a] md:block" data-testid="link-sign-in">
+                Masuk
+              </Link>
+              <Link href="/sign-up" className="focus-ring rounded-lg border border-[#16d9f5]/30 bg-[#16d9f5]/10 px-5 py-2.5 text-sm font-bold text-[#16d9f5] shadow-[0_0_20px_rgba(22,217,245,0.1)] transition-all hover:bg-[#16d9f5] hover:text-[#030910]" data-testid="link-sign-up">
+                Akses Pabrik
+              </Link>
+            </div>
           </nav>
         </header>
 
-        <div className="flex-1 pb-24 pt-16 sm:pt-24 lg:pt-32">
-          {/* Attention */}
-          <section className="mx-auto max-w-4xl text-center">
-            <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-[#16d9f5]/20 bg-[#16d9f5]/5 px-4 py-1.5 font-mono text-xs font-medium text-[#16d9f5] animate-rise">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#16d9f5] shadow-[0_0_12px_#16d9f5]" />
-              Studio produk untuk membuat solusi nyata
-            </div>
-            <h1 className="text-balance text-5xl font-extrabold leading-[1.05] tracking-tight sm:text-7xl lg:text-8xl animate-rise-2">
-              Ubah masalah menjadi <span className="text-[#16d9f5]">solusi siap pakai.</span>
-            </h1>
-            <p className="mx-auto mt-8 max-w-2xl text-balance text-lg leading-relaxed text-[#91a9bd] animate-rise-3">
-              Ide yang berserakan tidak menghasilkan kemajuan. PST Factory menyatukan kebingungan menjadi arah yang jelas — dari penjelasan awal hingga ruang kerja yang terstruktur dan siap digunakan.
-            </p>
-            <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row animate-rise-3" style={{ animationDelay: '0.24s' }}>
-              <Link href="/sign-up" className="focus-ring group flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#16d9f5] px-8 text-base font-bold text-[#030910] transition-all hover:bg-[#72edff] hover:shadow-[0_0_32px_rgba(22,217,245,0.4)] sm:w-auto" data-testid="button-hero-sign-up">
-                Mulai membuat solusi
-                <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
-              </Link>
-              <Link href="/video" className="focus-ring group flex h-14 w-full items-center justify-center gap-2 rounded-xl border border-[#2a4054] bg-[#101a2a] px-8 text-base font-bold text-[#edf7ff] transition-colors hover:border-[#16d9f5]/50 hover:bg-[#16273a] sm:w-auto" data-testid="button-hero-video">
-                <Rocket size={18} className="text-[#16d9f5]" /> Lihat cara kerjanya
-              </Link>
-            </div>
-            <div className="mt-14 flex flex-wrap justify-center gap-x-8 gap-y-3 font-mono text-[10px] uppercase tracking-[.16em] text-[#6f8ca3] animate-rise-3">
-              <span>Masalah → Rancangan</span>
-              <span>Rancangan → Perakitan</span>
-              <span>Perakitan → Periksa</span>
-              <span>Periksa → Terbitkan</span>
-            </div>
-          </section>
-
-          {/* Interest */}
-          <section className="mt-32 sm:mt-48 lg:mt-56">
-            <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-24">
-              <div className="relative order-2 lg:order-1">
-                <div className="absolute -inset-10 rounded-full bg-[#16d9f5]/5 blur-3xl" />
-                <div className="relative rounded-2xl border border-[#2a4054] bg-[#0d1522] p-6 shadow-2xl sm:p-8">
-                  <div className="mb-6 flex items-center justify-between border-b border-[#1f3143] pb-4">
-                    <div>
-                      <p className="font-mono text-[10px] uppercase tracking-widest text-[#91a9bd]">Tahap Awal</p>
-                      <p className="mt-1 text-base font-bold text-[#edf7ff]">Rancangan Solusi</p>
-                    </div>
-                    <FileCode2 className="text-[#16d9f5]" size={24} />
-                  </div>
-                  <div className="space-y-4">
-                    <div className="rounded-xl border border-[#1f3143] bg-[#142031] p-4 transition-colors hover:border-[#16d9f5]/40">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#16d9f5]/10 text-[#16d9f5]">
-                          <Check size={16} />
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-[#edf7ff]">Pernyataan masalah</p>
-                          <p className="text-sm text-[#91a9bd]">Tajam dan dapat diamati.</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="rounded-xl border border-[#1f3143] bg-[#142031] p-4 transition-colors hover:border-[#16d9f5]/40">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#16d9f5]/10 text-[#16d9f5]">
-                          <Check size={16} />
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-[#edf7ff]">Pola kerja</p>
-                          <p className="text-sm text-[#91a9bd]">Pilihan terpandu yang aman.</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="rounded-xl border border-[#1f3143] bg-[#142031] p-4 transition-colors hover:border-[#16d9f5]/40">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#16d9f5]/10 text-[#16d9f5]">
-                          <Check size={16} />
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-[#edf7ff]">Pengguna</p>
-                          <p className="text-sm text-[#91a9bd]">Peran yang akan menggunakan alat.</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+        <div className="flex-1 pb-32">
+          {/* Hero Section */}
+          <section className="mt-20 lg:mt-32">
+            <div className="grid gap-16 lg:grid-cols-[1fr_0.8fr] lg:items-center">
+              <div className="max-w-3xl">
+                <div className="mb-6 inline-flex items-center gap-2.5 rounded-full border border-[#2a4054] bg-[#101a2a] px-3 py-1 font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-[#91a9bd] animate-rise">
+                  <span className="h-2 w-2 rounded-full bg-[#16d9f5] shadow-[0_0_8px_#16d9f5]" />
+                  Untuk Operator & Pakar Domain
                 </div>
-              </div>
-              <div className="order-1 lg:order-2">
-                <h2 className="text-3xl font-bold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
-                  Dari kekacauan menuju kejelasan.
-                </h2>
-                <p className="mt-6 text-lg leading-relaxed text-[#91a9bd]">
-                  Setiap masalah yang rumit dipecah menjadi komponen dasar yang bisa dikelola. PST Factory memaksa Anda untuk memikirkan ulang keluhan sebagai pola yang dapat diamati dan ditindaklanjuti, menciptakan fondasi kuat sebelum pembuatan alat dimulai.
+                <h1 className="text-balance text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-6xl lg:text-7xl animate-rise-2">
+                  Ubah keahlian diam menjadi <span className="text-[#16d9f5]">alur kerja digital.</span>
+                </h1>
+                <p className="mt-8 max-w-2xl text-lg leading-relaxed text-[#91a9bd] animate-rise-3">
+                  Berhenti mengandalkan memori pakar dan dokumen yang berserakan. PST Factory membantu Anda merangkai metode penyelesaian masalah operasional menjadi alur kerja yang terstruktur, dapat diuji, dan selalu konsisten setiap kali digunakan.
                 </p>
-                <ul className="mt-8 space-y-4">
-                  <li className="flex gap-4">
-                    <div className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#16d9f5]/20 text-[#16d9f5]">
-                      <ArrowRight size={14} />
-                    </div>
-                    <div>
-                      <strong className="block text-[#edf7ff]">Amati sinyal</strong>
-                      <span className="text-[#91a9bd]">Kumpulkan bukti yang tersebar di lapangan.</span>
-                    </div>
-                  </li>
-                  <li className="flex gap-4">
-                    <div className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#16d9f5]/20 text-[#16d9f5]">
-                      <ArrowRight size={14} />
-                    </div>
-                    <div>
-                      <strong className="block text-[#edf7ff]">Beri bentuk pada masalah</strong>
-                      <span className="text-[#91a9bd]">Tentukan target dan arah perbaikan yang terukur.</span>
-                    </div>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </section>
-
-          {/* Workflow explanation */}
-          <section id="alur-kerja" className="mt-32 sm:mt-48 lg:mt-56" data-testid="section-workflow-explanation">
-            <div className="mx-auto max-w-3xl text-center">
-              <p className="font-mono text-[10px] uppercase tracking-[.22em] text-[#16d9f5]">Alur dari ide ke penggunaan</p>
-              <h2 className="mt-4 text-3xl font-bold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
-                Setiap langkah punya arah yang jelas.
-              </h2>
-              <p className="mt-6 text-lg leading-relaxed text-[#91a9bd]">
-                PST Factory menjaga proses tetap utuh: mulai dari memahami masalah, merancang pendekatan, hingga membuka ruang kerja yang siap dipakai.
-              </p>
-            </div>
-            <div className="mx-auto mt-12 grid max-w-5xl gap-4 md:grid-cols-2">
-              {[
-                { title: 'Tentukan arah', detail: 'Rumuskan masalah, pengguna, dan hasil yang ingin dicapai.', icon: Target },
-                { title: 'Susun rancangan', detail: 'Hubungkan pola kerja, pengetahuan, dan komponen menjadi satu alur.', icon: FileCode2 },
-                { title: 'Rakit pengalaman', detail: 'Ubah rancangan menjadi ruang kerja yang memandu tindakan pengguna.', icon: LayoutDashboard },
-                { title: 'Uji lalu terbitkan', detail: 'Periksa setiap bagian sebelum membuka solusi untuk tim Anda.', icon: Rocket },
-              ].map(({ title, detail, icon: Icon }, index) => (
-                <div
-                  key={title}
-                  className="group relative overflow-hidden rounded-2xl border border-[#2a4054] bg-[#0d1522] p-6 transition-colors hover:border-[#16d9f5]/60"
-                  data-testid={`card-workflow-${index}`}
-                >
-                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#16d9f5]/50 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#16d9f5]/10 text-[#16d9f5]">
-                      <Icon size={21} />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-bold text-[#edf7ff]">{title}</h3>
-                      <p className="mt-2 text-sm leading-6 text-[#91a9bd]">{detail}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* Audience value */}
-          <section id="untuk-siapa" className="mt-32 sm:mt-48 lg:mt-56" data-testid="section-audience-value">
-            <div className="mx-auto max-w-3xl text-center">
-              <p className="font-mono text-[10px] uppercase tracking-[.22em] text-[#16d9f5]">Untuk setiap peran</p>
-              <h2 className="mt-4 text-3xl font-bold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
-                Satu alur yang membuat semua orang lebih jelas.
-              </h2>
-              <p className="mt-6 text-lg leading-relaxed text-[#91a9bd]">
-                Dari orang yang membawa masalah hingga pengguna yang menjalankan solusinya, setiap peran mendapat konteks yang sama dan langkah yang mudah diikuti.
-              </p>
-            </div>
-            <div className="mx-auto mt-12 grid max-w-5xl gap-4 md:grid-cols-3">
-              {[
-                { id: 'problem-owner', role: 'Pemilik masalah', title: 'Melihat arah', detail: 'Mengubah keluhan yang kabur menjadi masalah yang bisa dipahami bersama.', icon: BriefcaseBusiness },
-                { id: 'solution-builder', role: 'Perakit solusi', title: 'Menyusun dengan tenang', detail: 'Membawa pola, pengetahuan, dan komponen ke dalam rancangan yang utuh.', icon: Workflow },
-                { id: 'end-user', role: 'Pengguna akhir', title: 'Mengikuti jalur yang jelas', detail: 'Mendapat ruang kerja yang memandu tindakan tanpa membebani mereka.', icon: Users },
-              ].map(({ id, role, title, detail, icon: Icon }) => (
-                <div
-                  key={id}
-                  className="rounded-2xl border border-[#2a4054] bg-[#0d1522] p-6 transition-colors hover:border-[#16d9f5]/60"
-                  data-testid={`card-audience-${id}`}
-                >
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#16d9f5]/10 text-[#16d9f5]">
-                    <Icon size={21} />
-                  </div>
-                  <p className="mt-8 font-mono text-[10px] uppercase tracking-[.18em] text-[#6f8ca3]">{role}</p>
-                  <h3 className="mt-2 text-lg font-bold text-[#edf7ff]">{title}</h3>
-                  <p className="mt-3 text-sm leading-6 text-[#91a9bd]">{detail}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* Desire */}
-          <section className="mt-32 sm:mt-48 lg:mt-56">
-            <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-24">
-              <div>
-                <h2 className="text-3xl font-bold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
-                  Bukan sekadar dokumen. <span className="text-[#16d9f5]">Sebuah ruang kerja.</span>
-                </h2>
-                <p className="mt-6 text-lg leading-relaxed text-[#91a9bd]">
-                  Setiap masalah yang selesai dirancang akan dirakit menjadi ruang kerja interaktif. Dengan menggunakan komponen siap pakai dan pola pengalaman yang konsisten, pengguna akhir Anda akan dipandu langkah demi langkah menuju hasil yang dapat dipertanggungjawabkan.
-                </p>
-                <div className="mt-8 flex flex-col gap-4">
-                  <div className="flex items-start gap-4 rounded-xl border border-[#2a4054] bg-[#0d1522] p-5 transition-colors hover:border-[#16d9f5]/50">
-                    <div className="rounded-lg bg-[#16d9f5]/10 p-2 text-[#16d9f5]">
-                      <LayoutDashboard size={20} />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-[#edf7ff]">Antarmuka interaktif</h4>
-                      <p className="mt-1 text-sm text-[#91a9bd]">Ruang kerja yang memandu dan merespons pilihan pengguna.</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-4 rounded-xl border border-[#2a4054] bg-[#0d1522] p-5 transition-colors hover:border-[#16d9f5]/50">
-                    <div className="rounded-lg bg-[#16d9f5]/10 p-2 text-[#16d9f5]">
-                      <Workflow size={20} />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-[#edf7ff]">Bahan yang bisa dipakai lagi</h4>
-                      <p className="mt-1 text-sm text-[#91a9bd]">Pola dan komponen yang mempercepat perakitan PST berikutnya.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="relative">
-                <div className="absolute -inset-10 rounded-full bg-[#16d9f5]/5 blur-3xl" />
-                <div className="relative overflow-hidden rounded-2xl border border-[#2a4054] bg-[#0d1522] shadow-2xl">
-                  <div className="flex items-center gap-2 border-b border-[#1f3143] bg-[#0a101a] px-4 py-3">
-                    <div className="flex gap-1.5">
-                      <span className="h-3 w-3 rounded-full bg-[#2a4054]" />
-                      <span className="h-3 w-3 rounded-full bg-[#2a4054]" />
-                      <span className="h-3 w-3 rounded-full bg-[#2a4054]" />
-                    </div>
-                    <div className="mx-auto flex h-6 w-1/2 items-center justify-center rounded bg-[#142031] font-mono text-[10px] text-[#91a9bd]">
-                      ruang-kerja / kejernihan-arus-kas
-                    </div>
-                  </div>
-                  <div className="flex h-[320px]">
-                    <div className="flex w-16 flex-col items-center gap-4 border-r border-[#1f3143] bg-[#0a101a] py-4">
-                      <div className="flex h-8 w-8 items-center justify-center rounded bg-[#16d9f5]/20 font-bold text-[#16d9f5]">P</div>
-                      <span className="h-8 w-8 rounded border border-[#2a4054]" />
-                      <span className="h-8 w-8 rounded border border-[#2a4054]" />
-                    </div>
-                    <div className="flex-1 p-6">
-                      <div className="mb-6 flex gap-2">
-                        <span className="h-1.5 flex-1 rounded-full bg-[#16d9f5]" />
-                        <span className="h-1.5 flex-1 rounded-full bg-[#2a4054]" />
-                        <span className="h-1.5 flex-1 rounded-full bg-[#2a4054]" />
-                      </div>
-                      <p className="font-mono text-[10px] uppercase tracking-widest text-[#16d9f5]">Tahap Utama</p>
-                      <h3 className="mt-2 text-2xl font-bold">Apa yang berubah hari ini?</h3>
-                      <p className="mt-2 text-sm text-[#91a9bd]">Pilih sinyal pengamatan sebelum memberikan tindakan.</p>
-                      <div className="mt-6 space-y-3">
-                        <div className="flex h-12 items-center justify-between rounded-lg border border-[#16d9f5] bg-[#16d9f5]/10 px-4">
-                          <span className="font-semibold text-[#edf7ff]">Pendapatan bertambah</span>
-                          <CheckCircle2 className="text-[#16d9f5]" size={18} />
-                        </div>
-                        <div className="flex h-12 items-center rounded-lg border border-[#2a4054] bg-[#142031] px-4 opacity-50">
-                          <span className="font-semibold text-[#edf7ff]">Biaya berkurang</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Product value */}
-          <section className="mt-32 sm:mt-48 lg:mt-56" data-testid="section-product-value">
-            <div className="rounded-3xl border border-[#2a4054] bg-[#0d1522] p-8 shadow-2xl sm:p-12 lg:p-16">
-              <div className="grid gap-12 lg:grid-cols-[.8fr_1.2fr] lg:items-center lg:gap-20">
-                <div>
-                  <p className="font-mono text-[10px] uppercase tracking-[.22em] text-[#16d9f5]">Yang tetap terbawa</p>
-                  <h2 className="mt-4 text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
-                    Hasilnya bukan hanya selesai. Hasilnya bisa dipakai lagi.
-                  </h2>
-                  <p className="mt-6 text-lg leading-relaxed text-[#91a9bd]">
-                    Setiap keputusan penting tetap terlihat, setiap komponen punya konteks, dan setiap ruang kerja bisa menjadi dasar untuk perbaikan berikutnya.
-                  </p>
-                  <Link href="/video" className="focus-ring mt-8 inline-flex items-center gap-2 rounded-lg border border-[#2a4054] px-4 py-2.5 text-sm font-bold text-[#edf7ff] transition-colors hover:border-[#16d9f5]/60 hover:bg-[#16273a]" data-testid="link-product-value-video">
-                    Lihat prosesnya
-                    <ArrowRight size={16} className="text-[#16d9f5]" />
-                  </Link>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {[
-                    { title: 'Jejak yang jelas', detail: 'Rancangan tetap mudah dibaca dan ditinjau.', icon: FileSearch },
-                    { title: 'Bahan yang siap', detail: 'Komponen dan pola dapat dipakai kembali.', icon: Package },
-                    { title: 'Ruang yang hidup', detail: 'Pengguna mendapat arahan yang bisa dijalankan.', icon: LayoutDashboard },
-                  ].map(({ title, detail, icon: Icon }) => (
-                    <div key={title} className="rounded-2xl border border-[#2a4054] bg-[#101a2a] p-5" data-testid={`card-product-value-${title.toLowerCase().replaceAll(' ', '-')}`}>
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#16d9f5]/10 text-[#16d9f5]">
-                        <Icon size={19} />
-                      </div>
-                      <h3 className="mt-6 text-sm font-bold text-[#edf7ff]">{title}</h3>
-                      <p className="mt-2 text-sm leading-6 text-[#91a9bd]">{detail}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Action */}
-          <section className="mt-32 sm:mt-48 lg:mt-56 text-center">
-            <div className="relative mx-auto max-w-3xl overflow-hidden rounded-3xl border border-[#2a4054] bg-[#0d1522] p-8 shadow-2xl sm:p-16">
-              <div className="absolute -inset-24 opacity-20">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_100%,rgba(22,217,245,1),transparent_70%)]" />
-              </div>
-              <div className="relative z-10">
-                <h2 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-5xl">
-                  Siap membangun alat bantu pertama Anda?
-                </h2>
-                <p className="mx-auto mt-6 max-w-xl text-lg text-[#91a9bd]">
-                  PST Factory adalah tempat Anda mulai memetakan, merakit, dan menerbitkan solusi yang benar-benar bisa digunakan oleh tim Anda.
-                </p>
-                <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-                  <Link href="/sign-up" className="focus-ring group flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#16d9f5] px-8 text-base font-bold text-[#030910] transition-all hover:bg-[#72edff] hover:shadow-[0_0_32px_rgba(22,217,245,0.4)] sm:w-auto" data-testid="link-cta-sign-up">
-                    Buat akun pabrik
+                <div className="mt-10 flex flex-col gap-4 sm:flex-row animate-rise-3" style={{ animationDelay: '0.15s' }}>
+                  <Link href="/sign-up" className="focus-ring group inline-flex h-14 items-center justify-center gap-3 rounded-xl bg-[#16d9f5] px-8 text-sm font-extrabold text-[#030910] shadow-[0_0_30px_rgba(22,217,245,0.3)] transition-all hover:bg-[#72edff] sm:w-auto" data-testid="button-hero-sign-up">
+                    Mulai Merakit Alur
                     <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
                   </Link>
+                  <Link href="/video" className="focus-ring group inline-flex h-14 items-center justify-center gap-3 rounded-xl border border-[#2a4054] bg-[#101a2a] px-8 text-sm font-bold text-[#edf7ff] transition-all hover:border-[#16d9f5]/50 hover:bg-[#16273a] sm:w-auto" data-testid="button-hero-video">
+                    <Rocket size={18} className="text-[#16d9f5]" />
+                    Lihat Cara Kerja
+                  </Link>
                 </div>
               </div>
+
+              {/* Hero visual representation of a messy to clean state */}
+              <div className="relative mx-auto w-full max-w-[500px] lg:mx-0 animate-rise-3" style={{ animationDelay: '0.2s' }}>
+                <div className="absolute -inset-4 rounded-3xl bg-gradient-to-tr from-[#16d9f5]/20 to-transparent opacity-50 blur-2xl" />
+                <div className="relative rounded-2xl border border-[#2a4054] bg-[#0b121c] p-6 shadow-2xl overflow-hidden">
+                  <div className="absolute top-0 right-0 p-4">
+                    <div className="font-mono text-[9px] text-[#2a4054] uppercase tracking-widest">System_State</div>
+                  </div>
+                  <div className="space-y-6">
+                    <div>
+                      <p className="font-mono text-[10px] uppercase tracking-wider text-[#ff7184] mb-3 flex items-center gap-2"><X size={12}/> Kondisi Manual</p>
+                      <div className="flex flex-wrap gap-2 opacity-60">
+                        <div className="h-8 w-24 rounded border border-[#2a4054] bg-[#101a2a]" />
+                        <div className="h-8 w-32 rounded border border-[#2a4054] bg-[#101a2a]" />
+                        <div className="h-8 w-16 rounded border border-[#2a4054] bg-[#101a2a]" />
+                        <div className="h-8 w-28 rounded border border-[#2a4054] bg-[#101a2a]" />
+                        <div className="h-8 w-20 rounded border border-[#2a4054] bg-[#101a2a]" />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-center border-y border-[#2a4054]/50 py-3">
+                      <div className="h-6 w-px bg-gradient-to-b from-[#16d9f5]/0 via-[#16d9f5] to-[#16d9f5]/0" />
+                    </div>
+
+                    <div>
+                      <p className="font-mono text-[10px] uppercase tracking-wider text-[#16d9f5] mb-3 flex items-center gap-2"><Check size={12}/> PST Executable</p>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3 rounded-lg border border-[#16d9f5]/30 bg-[#16d9f5]/10 px-4 py-2.5">
+                          <CircleDot size={14} className="text-[#16d9f5]" />
+                          <div className="h-2 w-3/4 rounded bg-[#16d9f5]/40" />
+                        </div>
+                        <div className="flex items-center gap-3 rounded-lg border border-[#2a4054] bg-[#101a2a] px-4 py-2.5 ml-6">
+                          <ArrowRight size={14} className="text-[#91a9bd]" />
+                          <div className="h-2 w-1/2 rounded bg-[#2a4054]" />
+                        </div>
+                        <div className="flex items-center gap-3 rounded-lg border border-[#2a4054] bg-[#101a2a] px-4 py-2.5 ml-12">
+                          <CheckCircle2 size={14} className="text-[#91a9bd]" />
+                          <div className="h-2 w-1/3 rounded bg-[#2a4054]" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Identity Statement */}
+          <section className="mt-32 border-y border-[#2a4054]/50 bg-[#070c14] py-24 sm:mt-48">
+            <div className="mx-auto max-w-4xl text-center">
+              <h2 className="text-3xl font-extrabold tracking-tight text-[#edf7ff] sm:text-5xl">Bukan pembuat aplikasi generik.</h2>
+              <p className="mt-6 text-xl leading-relaxed text-[#91a9bd]">
+                PST Factory dibuat khusus untuk prosedur yang ruwet—keputusan berulang yang butuh akurasi tinggi. Kami tidak membuat chatbot, tidak membuat generator dokumen acak, dan tidak membuat manajer proyek kosong. Kami membangun <strong>Problem-Solving Toolkits</strong>.
+              </p>
+            </div>
+          </section>
+
+          {/* What is a PST? */}
+          <section className="mt-32 sm:mt-48" data-testid="section-workflow-explanation">
+            <div className="grid gap-12 lg:grid-cols-2 lg:gap-24">
+              <div>
+                <div className="mb-4 inline-flex items-center gap-2 text-[#16d9f5]">
+                  <Database size={20} />
+                  <span className="font-mono text-xs uppercase tracking-widest">Anatomi Toolkit</span>
+                </div>
+                <h2 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-5xl">
+                  Apa itu Problem-Solving Toolkit (PST)?
+                </h2>
+                <p className="mt-6 text-lg leading-relaxed text-[#91a9bd]">
+                  PST adalah panduan digital yang deterministik. Ia mengambil input yang terstruktur, menjalankan logika bisnis yang telah Anda tentukan, dan menghasilkan output keputusan operasional yang bisa dieksekusi secara instan.
+                </p>
+                <ul className="mt-10 flex flex-col gap-6">
+                  {[
+                    { title: "Input Terpandu", desc: "Tidak ada layar kosong. Pengguna menjawab variabel spesifik yang dibutuhkan untuk mengambil keputusan.", icon: ArrowRight },
+                    { title: "Logika Tetap", desc: "Keahlian Anda dikodekan ke dalam sistem—mengurangi deviasi manual dan keputusan impulsif.", icon: Workflow },
+                    { title: "Output Terukur", desc: "Setiap sesi menghasilkan rekam jejak. Bisa diaudit, bisa diuji kembali, dan selalu konsisten.", icon: CheckCircle2 }
+                  ].map((item, idx) => (
+                    <li key={idx} className="flex gap-4">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#101a2a] border border-[#2a4054] text-[#16d9f5]">
+                        <item.icon size={18} />
+                      </div>
+                      <div>
+                        <h4 className="text-base font-bold text-[#edf7ff]">{item.title}</h4>
+                        <p className="mt-1 text-sm text-[#91a9bd]">{item.desc}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                {[
+                  { title: "Definisi Masalah", detail: "Batasi cakupan operasional.", icon: Target },
+                  { title: "Rancangan Arsitektur", detail: "Petakan logika dan langkah penyelesaian.", icon: FileCode2 },
+                  { title: "Perakitan Toolkit", detail: "Ubah komponen menjadi antarmuka yang membimbing.", icon: Hammer },
+                  { title: "Publikasi", detail: "Uji dan terbitkan versi rilis ke lapangan.", icon: Rocket },
+                ].map(({ title, detail, icon: Icon }, index) => (
+                  <div key={title} className="group relative rounded-2xl border border-[#2a4054] bg-[#0b121c] p-6 transition-all hover:border-[#16d9f5]/50" data-testid={`card-workflow-${index}`}>
+                    <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-[#101a2a] text-[#16d9f5] border border-[#2a4054] transition-colors group-hover:bg-[#16d9f5]/10 group-hover:border-[#16d9f5]/30">
+                      <Icon size={22} />
+                    </div>
+                    <h3 className="font-mono text-[10px] uppercase tracking-widest text-[#91a9bd] mb-2">Langkah {index + 1}</h3>
+                    <h4 className="text-lg font-bold text-[#edf7ff] mb-2">{title}</h4>
+                    <p className="text-sm text-[#6f8ca3] leading-relaxed">{detail}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* Value Props / Audience */}
+          <section className="mt-32 sm:mt-48" data-testid="section-audience-value">
+            <div className="mb-16 text-center">
+              <h2 className="text-3xl font-extrabold tracking-tight sm:text-5xl">Metodologi yang dikemas menjadi sistem.</h2>
+              <p className="mx-auto mt-6 max-w-2xl text-lg text-[#91a9bd]">PST Factory mendigitalkan keahlian lapangan menjadi alat bantu harian.</p>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-3">
+              {[
+                { id: 'operator', role: 'Operator Lapangan', title: 'Eksekusi Tanpa Ragu', detail: 'Saat terjadi krisis operasional, operator tidak perlu menebak. PST memberikan instruksi langkah-demi-langkah sesuai prosedur.', icon: Gauge },
+                { id: 'consultant', role: 'Konsultan & Spesialis', title: 'Skalakan Metodologi', detail: 'Ubah kerangka kerja manual Anda di spreadsheet menjadi aplikasi mandiri yang bisa didistribusikan ke klien tanpa kehadiran Anda secara fisik.', icon: BriefcaseBusiness },
+                { id: 'expert', role: 'Pakar Domain', title: 'Warisan Pengetahuan', detail: 'Cegah hilangnya ilmu saat karyawan senior pergi. Ekstrak memori pakar ke dalam toolkit sistematis yang awet.', icon: Database },
+              ].map(({ id, role, title, detail, icon: Icon }) => (
+                <div key={id} className="relative overflow-hidden rounded-2xl border border-[#2a4054] bg-[#0b121c] p-8" data-testid={`card-audience-${id}`}>
+                  <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-[#16d9f5]/5 blur-2xl" />
+                  <Icon size={28} className="text-[#16d9f5] mb-6" />
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-[#91a9bd] mb-2">{role}</p>
+                  <h3 className="text-xl font-bold text-[#edf7ff] mb-4">{title}</h3>
+                  <p className="text-sm leading-relaxed text-[#6f8ca3]">{detail}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Detail: Reusability */}
+          <section className="mt-32 sm:mt-48" data-testid="section-product-value">
+             <div className="relative overflow-hidden rounded-3xl border border-[#2a4054] bg-[#0b121c] p-8 sm:p-16 lg:p-20">
+               <div className="absolute right-0 top-0 h-[500px] w-[500px] translate-x-1/3 -translate-y-1/3 rounded-full bg-[#16d9f5]/5 blur-[100px]" />
+
+               <div className="grid gap-12 lg:grid-cols-2 lg:items-center relative z-10">
+                 <div>
+                   <h2 className="text-3xl font-extrabold tracking-tight sm:text-5xl">Hasilnya dapat digunakan ulang.</h2>
+                   <p className="mt-6 text-lg leading-relaxed text-[#91a9bd]">
+                     Anda tidak membangun aplikasi sekali pakai. Setiap toolkit, pola, dan resep yang Anda ciptakan masuk ke dalam pustaka aset Anda—siap digabungkan dengan solusi baru di masa depan.
+                   </p>
+                   <Link href="/video" className="focus-ring mt-10 inline-flex h-12 items-center justify-center gap-3 rounded-xl bg-[#101a2a] border border-[#2a4054] px-6 text-sm font-bold text-[#edf7ff] transition-all hover:border-[#16d9f5]/50 hover:bg-[#16273a]" data-testid="link-product-value-video">
+                     <FileSearch size={16} className="text-[#16d9f5]" />
+                     Jelajahi Pustaka Aset
+                   </Link>
+                 </div>
+
+                 <div className="grid gap-4 sm:grid-cols-2">
+                   {[
+                     { title: "Jejak Audit", detail: "Semua keputusan tercatat.", icon: Activity },
+                     { title: "Pola Modular", detail: "Alur kerja yang bisa dibagikan.", icon: Box },
+                     { title: "Pengembangan Cepat", detail: "Rakit tanpa mulai dari nol.", icon: Sparkles },
+                     { title: "Standar Terpusat", detail: "Satu sumber kebenaran operasional.", icon: Library }
+                   ].map(({ title, detail, icon: Icon }) => (
+                     <div key={title} className="rounded-xl border border-[#2a4054] bg-[#070c14] p-5" data-testid={`card-product-value-${title.toLowerCase().replaceAll(' ', '-')}`}>
+                       <Icon size={20} className="text-[#16d9f5] mb-4" />
+                       <h4 className="text-sm font-bold text-[#edf7ff] mb-1">{title}</h4>
+                       <p className="text-xs text-[#6f8ca3]">{detail}</p>
+                     </div>
+                   ))}
+                 </div>
+               </div>
+             </div>
+          </section>
+
+          {/* Final CTA */}
+          <section className="mt-32 mb-16 text-center sm:mt-48">
+            <h2 className="text-4xl font-extrabold tracking-tight sm:text-6xl">
+              Tertibkan operasi Anda hari ini.
+            </h2>
+            <p className="mx-auto mt-6 max-w-xl text-lg text-[#91a9bd]">
+              PST Factory merampingkan proses yang kacau menjadi sistem digital yang terpandu. Berhenti memecahkan masalah yang sama dua kali.
+            </p>
+            <div className="mt-12 flex justify-center">
+              <Link href="/sign-up" className="focus-ring group inline-flex h-16 items-center justify-center gap-3 rounded-2xl bg-[#16d9f5] px-10 text-base font-extrabold text-[#030910] shadow-[0_0_40px_rgba(22,217,245,0.25)] transition-all hover:-translate-y-1 hover:bg-[#72edff] hover:shadow-[0_0_60px_rgba(22,217,245,0.4)]" data-testid="link-cta-sign-up">
+                Akses Pabrik Sekarang
+                <ArrowRight size={20} className="transition-transform group-hover:translate-x-1" />
+              </Link>
             </div>
           </section>
         </div>
 
-        <footer className="flex flex-col items-center justify-between gap-6 border-t border-[#1f3143] py-8 sm:flex-row">
-          <div className="flex items-center gap-2">
+        <footer className="flex flex-col items-center justify-between gap-6 border-t border-[#2a4054]/50 py-10 sm:flex-row">
+          <div className="flex items-center gap-3">
             <img src={`${basePath}/logo.svg`} alt="PST Factory" className="h-6 w-auto opacity-50 grayscale" />
-            <span className="font-mono text-xs text-[#5c778c]">© PST Factory Studio</span>
+            <span className="font-mono text-xs text-[#5c778c]">© PST Factory</span>
           </div>
-          <div className="flex font-mono text-xs uppercase tracking-widest text-[#5c778c]">
-            Dibuat untuk kemajuan
+          <div className="font-mono text-[10px] uppercase tracking-widest text-[#5c778c]">
+            Structured Problem Solving
           </div>
         </footer>
       </div>
