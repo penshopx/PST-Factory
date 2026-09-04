@@ -1670,9 +1670,9 @@ function PublicHome() {
                   Untuk Operator & Pakar Domain
                 </div>
                 <h1 className="text-balance text-4xl font-semibold leading-[1.06] tracking-[-0.035em] sm:text-6xl lg:text-7xl animate-rise-2">
-                  Ubah keahlian diam menjadi{' '}
+                  Ubah Keahlian Diam Menjadi{' '}
                   <span className="bg-gradient-to-r from-[#16d9f5] to-[#8beeff] bg-clip-text font-bold text-transparent sm:block">
-                    alur kerja digital.
+                    Alur Kerja Digital.
                   </span>
                 </h1>
                 <p className="mt-8 max-w-2xl text-lg leading-relaxed text-[#91a9bd] animate-rise-3">
