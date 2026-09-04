@@ -1631,6 +1631,22 @@ function HomeRoute() {
   </>;
 }
 
+function getPublicHelpReply(message: string) {
+  const question = message.toLowerCase();
+
+  if (question.includes('proyek') || question.includes('alur')) {
+    return 'PST Factory memandu Anda melalui lima tahap: Masalah, Rancangan, Perakitan, Periksa, lalu Terbitkan. Masuk atau buat akun untuk mulai merakit proyek.';
+  }
+  if (question.includes('rancangan') || question.includes('blueprint')) {
+    return 'Rancangan mengubah masalah dan keahlian Anda menjadi Blueprint yang terstruktur. Setelah masuk, Anda dapat meninjau dan menyempurnakannya sebelum perakitan.';
+  }
+  if (question.includes('publikasi') || question.includes('terbit')) {
+    return 'PST hanya dapat diterbitkan setelah kandidat rilis melewati pemeriksaan QA dan memperoleh persetujuan. Customer kemudian menjalankan versi rilis yang tetap dan konsisten.';
+  }
+
+  return 'Saya dapat menjelaskan alur PST Factory, Blueprint, perakitan, pemeriksaan, dan publikasi. Untuk bantuan AI yang lebih mendalam tentang proyek Anda, silakan masuk ke pabrik.';
+}
+
 function PublicHome() {
   return (
     <main className="min-h-[100dvh] overflow-x-hidden bg-[#030910] text-[#edf7ff] font-sans selection:bg-[#16d9f5]/30 selection:text-[#030910]">
@@ -1905,6 +1921,7 @@ function PublicHome() {
           </div>
         </footer>
       </div>
+      <HelpDeskChatbot onSendMessage={async (message) => getPublicHelpReply(message)} />
     </main>
   );
 }

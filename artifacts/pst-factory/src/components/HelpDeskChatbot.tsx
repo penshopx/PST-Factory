@@ -105,7 +105,7 @@ export function HelpDeskChatbot({ onSendMessage }: HelpDeskChatbotProps) {
       <button
         onClick={() => setIsOpen(true)}
         className={cn(
-          "fixed bottom-6 left-[calc(100vw-5rem)] z-40 grid h-14 w-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover-elevate focus-ring md:bottom-8",
+          "fixed bottom-6 right-6 z-[100] grid h-14 w-14 place-items-center rounded-full border border-[#8beeff]/50 bg-[#16d9f5] text-[#030910] shadow-[0_0_30px_rgba(22,217,245,0.45)] transition-transform hover:scale-105 hover:bg-[#8beeff] focus-ring md:bottom-8 md:right-8",
           isOpen ? "scale-0 opacity-0" : "scale-100 opacity-100"
         )}
         aria-label="Buka bantuan"
@@ -120,9 +120,9 @@ export function HelpDeskChatbot({ onSendMessage }: HelpDeskChatbotProps) {
         aria-label="Help Desk PST Factory"
         aria-hidden={!isOpen}
         className={cn(
-          "fixed z-50 flex flex-col bg-card shadow-2xl transition-all duration-300 ease-out border-border",
+          "fixed z-[110] flex flex-col bg-card shadow-2xl transition-all duration-300 ease-out border-border",
           isOpen ? "translate-y-0 opacity-100 pointer-events-auto" : "translate-y-8 opacity-0 pointer-events-none",
-          "inset-0 w-full sm:inset-auto sm:bottom-8 sm:left-[calc(100vw-432px)] sm:h-[600px] sm:w-[400px] sm:rounded-2xl sm:border"
+          "inset-0 w-full sm:inset-auto sm:bottom-8 sm:right-8 sm:h-[600px] sm:w-[400px] sm:rounded-2xl sm:border"
         )}
         data-testid="container-chatbot"
       >
