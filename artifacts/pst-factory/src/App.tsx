@@ -55,6 +55,8 @@ import { PublishNoticePanel } from '@/lib/publish-feedback-panel';
 import PSTFactoryVideo from '@/components/PSTFactoryVideo';
 import FrameworkAnalyzer from '@/components/FrameworkAnalyzer';
 import { HelpDeskChatbot } from '@/components/HelpDeskChatbot';
+import operationsExpertImage from '@assets/generated_images/pst-operations-expert.jpg';
+import systemAssemblyImage from '@assets/generated_images/pst-system-assembly.jpg';
 
 const queryClient = new QueryClient();
 const clerkPubKey = publishableKeyFromHost(
@@ -1678,55 +1680,66 @@ function PublicHome() {
                     Mulai Merakit Alur
                     <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
                   </Link>
-                  <Link href="/video" className="focus-ring group inline-flex h-14 items-center justify-center gap-3 rounded-xl border border-[#2a4054] bg-[#101a2a] px-8 text-sm font-bold text-[#edf7ff] transition-all hover:border-[#16d9f5]/50 hover:bg-[#16273a] sm:w-auto" data-testid="button-hero-video">
+                  <a href="#video-demo" className="focus-ring group inline-flex h-14 items-center justify-center gap-3 rounded-xl border border-[#2a4054] bg-[#101a2a] px-8 text-sm font-bold text-[#edf7ff] transition-all hover:border-[#16d9f5]/50 hover:bg-[#16273a] sm:w-auto" data-testid="button-hero-video-scroll">
                     <Rocket size={18} className="text-[#16d9f5]" />
                     Lihat Cara Kerja
-                  </Link>
+                  </a>
                 </div>
               </div>
 
               {/* Hero visual representation of a messy to clean state */}
               <div className="relative mx-auto w-full max-w-[500px] lg:mx-0 animate-rise-3" style={{ animationDelay: '0.2s' }}>
                 <div className="absolute -inset-4 rounded-3xl bg-gradient-to-tr from-[#16d9f5]/20 to-transparent opacity-50 blur-2xl" />
-                <div className="relative rounded-2xl border border-[#2a4054] bg-[#0b121c] p-6 shadow-2xl overflow-hidden">
-                  <div className="absolute top-0 right-0 p-4">
-                    <div className="font-mono text-[9px] text-[#2a4054] uppercase tracking-widest">System_State</div>
-                  </div>
-                  <div className="space-y-6">
-                    <div>
-                      <p className="font-mono text-[10px] uppercase tracking-wider text-[#ff7184] mb-3 flex items-center gap-2"><X size={12}/> Kondisi Manual</p>
-                      <div className="flex flex-wrap gap-2 opacity-60">
-                        <div className="h-8 w-24 rounded border border-[#2a4054] bg-[#101a2a]" />
-                        <div className="h-8 w-32 rounded border border-[#2a4054] bg-[#101a2a]" />
-                        <div className="h-8 w-16 rounded border border-[#2a4054] bg-[#101a2a]" />
-                        <div className="h-8 w-28 rounded border border-[#2a4054] bg-[#101a2a]" />
-                        <div className="h-8 w-20 rounded border border-[#2a4054] bg-[#101a2a]" />
-                      </div>
-                    </div>
-
-                    <div className="flex justify-center border-y border-[#2a4054]/50 py-3">
-                      <div className="h-6 w-px bg-gradient-to-b from-[#16d9f5]/0 via-[#16d9f5] to-[#16d9f5]/0" />
-                    </div>
-
-                    <div>
-                      <p className="font-mono text-[10px] uppercase tracking-wider text-[#16d9f5] mb-3 flex items-center gap-2"><Check size={12}/> PST Executable</p>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-3 rounded-lg border border-[#16d9f5]/30 bg-[#16d9f5]/10 px-4 py-2.5">
-                          <CircleDot size={14} className="text-[#16d9f5]" />
-                          <div className="h-2 w-3/4 rounded bg-[#16d9f5]/40" />
-                        </div>
-                        <div className="flex items-center gap-3 rounded-lg border border-[#2a4054] bg-[#101a2a] px-4 py-2.5 ml-6">
-                          <ArrowRight size={14} className="text-[#91a9bd]" />
-                          <div className="h-2 w-1/2 rounded bg-[#2a4054]" />
-                        </div>
-                        <div className="flex items-center gap-3 rounded-lg border border-[#2a4054] bg-[#101a2a] px-4 py-2.5 ml-12">
-                          <CheckCircle2 size={14} className="text-[#91a9bd]" />
-                          <div className="h-2 w-1/3 rounded bg-[#2a4054]" />
-                        </div>
-                      </div>
-                    </div>
+                <div className="relative rounded-2xl border border-[#2a4054] bg-[#0b121c] p-2 shadow-2xl overflow-hidden aspect-[4/3]">
+                  <div className="absolute inset-0 bg-[#0b121c] opacity-80" />
+                  <img
+                    src={systemAssemblyImage}
+                    alt="Ilustrasi konseptual penggabungan potongan informasi menjadi satu alur sistematis"
+                    className="relative z-10 w-full h-full object-cover rounded-xl border border-[#2a4054]/50"
+                    loading="lazy"
+                  />
+                  <div className="absolute bottom-4 left-4 right-4 z-20 rounded-lg border border-[#16d9f5]/30 bg-[#030910]/80 p-3 backdrop-blur-md">
+                     <p className="font-mono text-[10px] uppercase tracking-wider text-[#16d9f5] mb-1 flex items-center gap-2"><Check size={12}/> Eksekusi Terstruktur</p>
+                     <p className="text-xs text-[#91a9bd] line-clamp-2">Dari bukti yang berserakan menjadi jalur berulang dari masalah menuju kemajuan.</p>
                   </div>
                 </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Process Video Section */}
+          <section id="video-demo" className="mt-32 scroll-mt-24 border-t border-[#2a4054]/30 pt-20">
+            <div className="mb-10 text-center">
+               <h2 className="text-3xl font-extrabold uppercase tracking-tight lg:text-4xl">
+                 Proses Perakitan <span className="text-[#16d9f5]">PST</span>
+               </h2>
+               <p className="mt-4 mx-auto max-w-2xl text-[#91a9bd]">
+                 Lihat bagaimana masalah operasional dibedah, dirancang, dan dirakit menjadi perangkat yang dapat dieksekusi.
+               </p>
+            </div>
+
+            <div className="mx-auto max-w-5xl overflow-hidden rounded-2xl border border-[#2a4054] bg-[#0b121c] shadow-2xl ring-1 ring-white/5">
+              <div className="flex items-center gap-2 border-b border-[#2a4054]/60 bg-[#101a2a] px-4 py-3">
+                <div className="flex gap-1.5">
+                  <div className="h-3 w-3 rounded-full bg-[#ff7184]/40" />
+                  <div className="h-3 w-3 rounded-full bg-[#f2bb67]/40" />
+                  <div className="h-3 w-3 rounded-full bg-[#9be6c0]/40" />
+                </div>
+                <div className="ml-4 font-mono text-[10px] text-[#91a9bd]">ruang-kerja / simulasi-perakitan</div>
+              </div>
+              <div className="relative aspect-video w-full bg-[#030910]">
+                 <iframe
+                   src={`${basePath}/video`}
+                   title="Simulasi Perakitan PST Factory"
+                   className="absolute inset-0 h-full w-full border-0"
+                   loading="lazy"
+                 />
+              </div>
+              <div className="border-t border-[#2a4054]/60 bg-[#101a2a] px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+                 <p className="text-sm text-[#91a9bd]">Animasi proses penuh layar tersedia di rute terpisah.</p>
+                 <Link href="/video" className="focus-ring inline-flex items-center gap-2 rounded-lg border border-[#2a4054] px-4 py-2 text-xs font-semibold text-[#edf7ff] hover:bg-[#16273a] hover:text-[#16d9f5] transition-colors" data-testid="link-full-video">
+                   <ExternalLink size={14} /> Buka Layar Penuh
+                 </Link>
               </div>
             </div>
           </section>
@@ -1755,6 +1768,15 @@ function PublicHome() {
                 <p className="mt-6 text-lg leading-relaxed text-[#91a9bd]">
                   PST adalah panduan digital yang deterministik. Ia mengambil input yang terstruktur, menjalankan logika bisnis yang telah Anda tentukan, dan menghasilkan output keputusan operasional yang bisa dieksekusi secara instan.
                 </p>
+                <div className="relative mt-8 aspect-video overflow-hidden rounded-2xl border border-[#2a4054] bg-[#0b121c] p-2">
+                  <div className="absolute inset-0 bg-[#0b121c] opacity-80" />
+                  <img
+                    src={operationsExpertImage}
+                    alt="Pakar domain merancang arsitektur sistem operasional pada antarmuka digital"
+                    className="relative z-10 w-full h-full object-cover rounded-xl border border-[#2a4054]/50"
+                    loading="lazy"
+                  />
+                </div>
                 <ul className="mt-10 flex flex-col gap-6">
                   {[
                     { title: "Input Terpandu", desc: "Tidak ada layar kosong. Pengguna menjawab variabel spesifik yang dibutuhkan untuk mengambil keputusan.", icon: ArrowRight },
