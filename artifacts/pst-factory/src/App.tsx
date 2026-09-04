@@ -1667,7 +1667,7 @@ function PublicHome() {
                   <span className="h-2 w-2 rounded-full bg-[#16d9f5] shadow-[0_0_8px_#16d9f5]" />
                   Untuk Operator & Pakar Domain
                 </div>
-                <h1 className="text-balance text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-6xl lg:text-7xl animate-rise-2">
+                <h1 className="text-balance text-4xl font-extrabold uppercase leading-[1.1] tracking-tight sm:text-6xl lg:text-7xl animate-rise-2">
                   Ubah keahlian diam menjadi <span className="text-[#16d9f5]">alur kerja digital.</span>
                 </h1>
                 <p className="mt-8 max-w-2xl text-lg leading-relaxed text-[#91a9bd] animate-rise-3">
