@@ -549,8 +549,20 @@ function ProjectWorkspace() {
     if (action === 'architect') architect.mutate({ projectId, data: { additionalContext: architectContext, documentIds: selectedArchitectDocumentIds, ...references } }, { onSuccess: () => { invalidate(); setTab('architect'); } });
     if (action === 'build') buildMutation.mutate({ projectId, data: references }, { onSuccess: (result) => { setBuild(result); invalidate(); setTab('build'); } });
     if (action === 'simulate') simulate.mutate({ projectId, data: { mode: 'SYNTHETIC' } }, { onSuccess: (result) => setSimulation(result) });
-    if (action === 'qa') runQa.mutate({ projectId }, { onSuccess: (result) => { setQa(result); invalidate(); setTab('qa'); } });
-    if (action === 'approve') approve.mutate({ projectId }, { onSuccess: invalidate });
+    if (action === 'qa') runQa.mutate({ projectId }, { onSuccess: (result) => { setPublishNotice(null); setQa(result); invalidate(); setTab('qa'); } });
+    if (action === 'approve') approve.mutate({ projectId }, {
+      onSuccess: () => {
+        setPublishNotice(null);
+        invalidate();
+      },
+      onError: (error) => {
+        const apiError = error as { data?: { error?: string } };
+        setPublishNotice({
+          kind: 'requirements',
+          message: apiError.data?.error ?? 'Persetujuan belum dapat dilakukan. Jalankan Perakitan dan QA kembali.',
+        });
+      },
+    });
     if (action === 'publish') publish.mutate({ projectId }, {
       onSuccess: () => {
         setPublishNotice(null);

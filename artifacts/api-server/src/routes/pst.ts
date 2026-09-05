@@ -2190,7 +2190,7 @@ router.post("/pst/projects/:projectId/qa", async (req, res): Promise<void> => {
       ? await tx.select().from(pstAssetsTable).where(inArray(pstAssetsTable.id, assetIds))
       : [];
     const assetById = new Map(assets.map((asset) => [asset.id, asset]));
-    const results: QaResult[] = evaluateQa({
+    let results: QaResult[] = evaluateQa({
       ...project,
       components: componentRows.map((component) => {
         const asset = assetById.get(component.assetId);
@@ -2203,17 +2203,33 @@ router.post("/pst/projects/:projectId/qa", async (req, res): Promise<void> => {
         };
       }),
     }, blueprint);
-    const status = qaStatus(results);
-    const candidateProject = { ...project, qaStatus: status };
+    const preliminaryStatus = qaStatus(results);
+    const candidateProject = { ...project, qaStatus: preliminaryStatus };
     let candidateHash: string | null = null;
     try {
       const candidate = materializeCompilerReadySnapshot(
         await releaseSnapshot(candidateProject, blueprint, await nextReleaseVersion(project.id, tx), tx),
       );
-      if (candidate.status === "READY") candidateHash = candidate.snapshot.snapshotHash ?? null;
+      if (candidate.status === "READY") {
+        candidateHash = candidate.snapshot.snapshotHash ?? null;
+      } else {
+        results = [...results, {
+          category: "TECHNICAL",
+          label: "Kandidat rilis siap diterbitkan",
+          status: "ERROR",
+          detail: "Perakitan belum menghasilkan konfigurasi runtime yang lengkap. Jalankan Perakitan ulang dengan pola atau resep yang sesuai, lalu ulangi QA.",
+        }];
+      }
     } catch (error) {
       if (!(error instanceof PublishRequirementError)) throw error;
+      results = [...results, {
+        category: "TECHNICAL",
+        label: "Kandidat rilis siap diterbitkan",
+        status: "ERROR",
+        detail: error.message,
+      }];
     }
+    const status = qaStatus(results);
     const [created] = await tx.insert(pstQaRunsTable).values({
       id: randomUUID(),
       projectId: project.id,
@@ -2258,6 +2274,11 @@ router.post("/pst/projects/:projectId/approve", async (req, res): Promise<void> 
         || !canApprove({ qaStatus: latestQa.status })
       ) {
         throw new PublishRequirementError("Run a passing QA before approval.");
+      }
+      if (!latestQa.candidateHash) {
+        throw new PublishRequirementError(
+          "Kandidat rilis belum lengkap. Jalankan Perakitan ulang dengan pola atau resep yang sesuai, lalu ulangi QA.",
+        );
       }
       const candidate = materializeCompilerReadySnapshot(
         await releaseSnapshot(project, blueprint, await nextReleaseVersion(project.id, tx), tx),
