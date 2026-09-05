@@ -29,11 +29,27 @@ Kembalikan JSON valid saja, tanpa markdown atau komentar, dengan bentuk persis:
       "expectedImpact": "perubahan yang diharapkan",
       "effort": "Low"
     }
+  ],
+  "digital_product_recommendations": [
+    {
+      "id": "product-1",
+      "title": "nama produk yang layak dijual",
+      "product_type": "contoh: assessment digital, diagnostic report, planner, toolkit, atau program terpandu",
+      "product_promise": "hasil konkret yang dibeli customer, bukan deskripsi workflow",
+      "target_buyer": "siapa pembeli paling spesifik dan situasi pemicunya",
+      "deliverables": ["hasil utama yang diterima", "hasil pendukung yang diterima"],
+      "revenue_model": "One-time",
+      "why_it_fits": "hubungan antara problem, insight framework, journey PST, dan bentuk produk",
+      "validation_step": "eksperimen kecil untuk menguji minat sebelum produk dibangun penuh"
+    }
   ]
 }
 
 Framework breakdown harus MECE: cabang tidak tumpang tindih dan bersama-sama mencakup area utama problem.
 Berikan 3-5 cabang dan 3-5 solusi yang dapat ditindaklanjuti. Gunakan effort hanya "Low", "Med", atau "High".
+Berikan tepat 3 rekomendasi produk digital yang benar-benar berbeda. Gunakan revenue_model hanya "One-time", "Subscription", atau "Lead generation".
+Prioritaskan produk yang mengubah journey PST menjadi hasil bernilai: diagnosis, skor, laporan personal, rencana aksi, toolkit, pembelajaran terpandu, atau pintu masuk layanan premium.
+Jangan menyebut "workflow" sebagai produk utama. Rumuskan product_promise dari sudut pandang hasil yang dibeli customer.
 Jangan membuat klaim angka atau fakta yang tidak diberikan pengguna. Jika konteks kurang, tuliskan asumsi yang perlu divalidasi di dalam reason atau description.
 `;
 
@@ -69,8 +85,13 @@ export async function analyzePstFramework(input: unknown) {
   const result = AnalyzePstFrameworkResponse.parse(raw);
   const nodeIds = result.framework_breakdown.map((node) => node.id);
   const solutionIds = result.recommended_solutions.map((solution) => solution.id);
-  if (new Set(nodeIds).size !== nodeIds.length || new Set(solutionIds).size !== solutionIds.length) {
-    throw new Error("LLM returned duplicate framework or solution identifiers.");
+  const productIds = result.digital_product_recommendations.map((product) => product.id);
+  if (
+    new Set(nodeIds).size !== nodeIds.length
+    || new Set(solutionIds).size !== solutionIds.length
+    || new Set(productIds).size !== productIds.length
+  ) {
+    throw new Error("LLM returned duplicate framework, solution, or product identifiers.");
   }
   return result;
 }

@@ -8,7 +8,7 @@ import {
   type PstProject,
 } from '@workspace/api-client-react';
 import {
-  Bot, Check, CheckCircle2, Clipboard, Download, GitBranch, Sparkles, Target, TriangleAlert, MoveRight, Layers, LayoutGrid, FileText, ShieldCheck
+  Bot, Check, CheckCircle2, Clipboard, Download, GitBranch, Sparkles, Target, TriangleAlert, MoveRight, Layers, LayoutGrid, FileText, ShieldCheck, PackageOpen, CircleDollarSign, Users, BookOpen, MessageCircle, GraduationCap, FileCog, AppWindow
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -61,6 +61,119 @@ function priorityTone(priority: ActionPlanItem['priority']) {
   return 'border-sky-500/35 bg-sky-500/10 text-sky-700 dark:text-sky-300';
 }
 
+const productFormatGuides = [
+  {
+    name: 'Ebook',
+    icon: BookOpen,
+    guidance: 'Jadikan cabang analisis sebagai bab, pertanyaan sebagai refleksi, dan rekomendasi sebagai latihan serta rencana tindakan pembaca.',
+  },
+  {
+    name: 'Chatbot',
+    icon: MessageCircle,
+    guidance: 'Jadikan pertanyaan analisis sebagai alur percakapan, simpan jawaban sebagai konteks, lalu berikan diagnosis dan rekomendasi personal.',
+  },
+  {
+    name: 'E-course',
+    icon: GraduationCap,
+    guidance: 'Jadikan cabang analisis sebagai modul, tambahkan tujuan belajar dan latihan, lalu gunakan rekomendasi sebagai proyek akhir atau action plan.',
+  },
+  {
+    name: 'Document Generator',
+    icon: FileCog,
+    guidance: 'Ubah pertanyaan menjadi form intake dan petakan jawabannya ke template laporan, proposal, SOP, atau rencana tindakan yang dapat diunduh.',
+  },
+  {
+    name: 'Mini App',
+    icon: AppWindow,
+    guidance: 'Bangun layar intake, analisis, hasil, dan riwayat. Gunakan framework sebagai logika inti dan deliverable sebagai keluaran utama aplikasi.',
+  },
+];
+
+function executiveSummaryData(project: PstProject, analysis: FrameworkAnalysis, blueprint?: PstBlueprint) {
+  return {
+    title: `Executive Summary Produk Digital — ${project.name}`,
+    product_context: {
+      problem: analysis.problem_statement,
+      target_user: project.targetUser,
+      desired_outcome: project.desiredOutcome,
+      selected_framework: analysis.selected_framework,
+    },
+    key_insights: analysis.framework_breakdown.map((item) => ({
+      area: item.label,
+      question: item.question,
+      focus: item.focus,
+      signals_to_explore: item.children,
+    })),
+    recommended_solutions: analysis.recommended_solutions,
+    digital_product_opportunities: analysis.digital_product_recommendations,
+    source_blueprint: blueprint ? {
+      journey: blueprint.journey,
+      expected_output: blueprint.expectedOutput,
+      knowledge_requirements: blueprint.knowledgeRequirements,
+    } : undefined,
+    format_adaptation_guide: productFormatGuides.map(({ name, guidance }) => ({ format: name, guidance })),
+    recommended_next_steps: [
+      'Pilih satu produk berdasarkan urgensi masalah, kemampuan membayar target buyer, dan kemudahan menghasilkan deliverable.',
+      'Validasi janji hasil kepada calon customer sebelum membangun produk lengkap.',
+      'Buat versi minimum yang menghasilkan satu hasil utama dengan baik.',
+      'Uji journey bersama pengguna nyata dan perbaiki pertanyaan, logika, serta hasil akhir.',
+      'Tambahkan halaman penjualan, akses customer, pembayaran, dan mekanisme pengiriman hasil.',
+    ],
+  };
+}
+
+function executiveSummaryMarkdown(project: PstProject, analysis: FrameworkAnalysis, blueprint?: PstBlueprint) {
+  const data = executiveSummaryData(project, analysis, blueprint);
+  const lines = [
+    `# ${data.title}`,
+    '',
+    '## Ringkasan Eksekutif',
+    `**Masalah:** ${data.product_context.problem}`,
+    '',
+    `**Target pengguna:** ${data.product_context.target_user}`,
+    '',
+    `**Hasil yang diinginkan:** ${data.product_context.desired_outcome}`,
+    '',
+    `**Framework terpilih:** ${data.product_context.selected_framework.name}`,
+    '',
+    data.product_context.selected_framework.reason,
+    '',
+    '## Insight Utama',
+    ...data.key_insights.flatMap((insight, index) => [
+      `### ${index + 1}. ${insight.area}`,
+      insight.question,
+      '',
+      `**Fokus:** ${insight.focus}`,
+      '',
+      ...insight.signals_to_explore.map((signal) => `- ${signal}`),
+      '',
+    ]),
+    '## Rekomendasi Produk Digital',
+    ...data.digital_product_opportunities.flatMap((product, index) => [
+      `### ${index + 1}. ${product.title}`,
+      `- **Jenis:** ${product.product_type}`,
+      `- **Model pendapatan:** ${product.revenue_model}`,
+      `- **Target pembeli:** ${product.target_buyer}`,
+      `- **Janji hasil:** ${product.product_promise}`,
+      `- **Mengapa cocok:** ${product.why_it_fits}`,
+      `- **Validasi pertama:** ${product.validation_step}`,
+      '- **Deliverable:**',
+      ...product.deliverables.map((deliverable) => `  - ${deliverable}`),
+      '',
+    ]),
+    '## Panduan Adaptasi Format',
+    ...data.format_adaptation_guide.flatMap((format) => [
+      `### ${format.format}`,
+      format.guidance,
+      '',
+    ]),
+    '## Langkah Berikutnya',
+    ...data.recommended_next_steps.map((step, index) => `${index + 1}. ${step}`),
+    '',
+  ];
+  return lines.join('\n');
+}
+
 export default function FrameworkAnalyzer({ project, blueprint }: { project: PstProject; blueprint?: PstBlueprint }) {
   const [problemStatement, setProblemStatement] = useState(project.problemStatement);
   const [additionalContext, setAdditionalContext] = useState('');
@@ -68,6 +181,7 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
   const [selectedSolutionIds, setSelectedSolutionIds] = useState<string[]>([]);
   const [actionPlan, setActionPlan] = useState<ActionPlanItem[]>([]);
   const [copied, setCopied] = useState(false);
+  const [summaryCopied, setSummaryCopied] = useState(false);
   const analyzer = useAnalyzePstFramework();
   const converter = useConvertPstActionPlan();
 
@@ -84,6 +198,7 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
   );
   const validProblem = problemStatement.trim().length >= 10;
   const markdown = actionPlanMarkdown(actionPlan);
+  const summaryMarkdown = analysis ? executiveSummaryMarkdown(project, analysis, blueprint) : '';
 
   const runAnalysis = () => {
     const normalizedTargetUser = project.targetUser?.trim().slice(0, 500);
@@ -125,6 +240,13 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
     await navigator.clipboard.writeText(markdown);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1800);
+  };
+
+  const copySummary = async () => {
+    if (!summaryMarkdown) return;
+    await navigator.clipboard.writeText(summaryMarkdown);
+    setSummaryCopied(true);
+    window.setTimeout(() => setSummaryCopied(false), 1800);
   };
 
   return (
@@ -400,6 +522,185 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
                   })}
                 </div>
               </div>
+
+              <section className="space-y-4" data-testid="digital-product-recommendations">
+                <div className="px-1">
+                  <div className="mb-1 flex items-center gap-2">
+                    <PackageOpen size={18} className="text-cyan-400" />
+                    <h3 className="text-lg font-bold">Peluang Produk Digital</h3>
+                  </div>
+                  <p className="max-w-3xl text-sm text-muted-foreground">
+                    Bentuk produk yang dapat dijual dari keahlian dan journey ini—lengkap dengan hasil yang dibeli customer.
+                  </p>
+                </div>
+
+                <div className="grid gap-4 xl:grid-cols-3">
+                  {analysis.digital_product_recommendations.map((product, index) => (
+                    <article
+                      className="flex flex-col overflow-hidden rounded-xl border border-cyan-400/20 bg-card shadow-sm transition-all hover:-translate-y-0.5 hover:border-cyan-400/45 hover:shadow-md"
+                      key={product.id}
+                      data-testid={`digital-product-${product.id}`}
+                    >
+                      <div className="border-b border-cyan-400/15 bg-cyan-400/[.04] p-5">
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-cyan-400">
+                            Produk {String(index + 1).padStart(2, '0')}
+                          </span>
+                          <Badge variant="outline" className="border-cyan-400/30 bg-cyan-400/10 text-[9px] uppercase tracking-wider text-cyan-300">
+                            {product.revenue_model}
+                          </Badge>
+                        </div>
+                        <h4 className="text-base font-extrabold leading-tight">{product.title}</h4>
+                        <p className="mt-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                          {product.product_type}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-1 flex-col gap-5 p-5">
+                        <div>
+                          <p className="mb-1.5 font-mono text-[9px] font-semibold uppercase tracking-widest text-cyan-400">Janji hasil</p>
+                          <p className="text-sm font-medium leading-relaxed">{product.product_promise}</p>
+                        </div>
+
+                        <div className="flex items-start gap-2.5 rounded-lg border border-border/60 bg-muted/25 p-3">
+                          <Users size={15} className="mt-0.5 shrink-0 text-cyan-400" />
+                          <div>
+                            <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Pembeli utama</p>
+                            <p className="mt-1 text-xs leading-relaxed">{product.target_buyer}</p>
+                          </div>
+                        </div>
+
+                        <div>
+                          <p className="mb-2 font-mono text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">Yang diterima customer</p>
+                          <div className="space-y-2">
+                            {product.deliverables.map((deliverable) => (
+                              <div className="flex items-start gap-2 text-xs text-foreground/85" key={deliverable}>
+                                <CheckCircle2 size={13} className="mt-0.5 shrink-0 text-emerald-400" />
+                                <span className="leading-relaxed">{deliverable}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="mt-auto space-y-3 border-t border-border/70 pt-4">
+                          <div>
+                            <p className="font-mono text-[9px] font-semibold uppercase tracking-widest text-cyan-400">Mengapa cocok</p>
+                            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{product.why_it_fits}</p>
+                          </div>
+                          <div className="rounded-lg bg-cyan-400/[.06] p-3">
+                            <div className="mb-1 flex items-center gap-1.5">
+                              <CircleDollarSign size={13} className="text-cyan-400" />
+                              <p className="font-mono text-[9px] font-semibold uppercase tracking-widest text-cyan-400">Validasi sebelum membangun</p>
+                            </div>
+                            <p className="text-xs leading-relaxed">{product.validation_step}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+
+              <section className="overflow-hidden rounded-xl border-2 border-cyan-400/25 bg-card shadow-lg" data-testid="executive-summary-export">
+                <div className="flex flex-col gap-4 border-b border-cyan-400/15 bg-cyan-400/[.04] px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-lg bg-cyan-400/10 p-2 text-cyan-400">
+                      <FileText size={19} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold">Executive Summary Siap Ekspor</h3>
+                      <p className="mt-0.5 text-xs text-muted-foreground">Material awal untuk merancang produk digital dalam berbagai format.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={copySummary}
+                      className={summaryCopied ? 'border-emerald-500 bg-emerald-500/10 text-emerald-500' : ''}
+                      data-testid="button-copy-executive-summary"
+                    >
+                      {summaryCopied ? <CheckCircle2 size={14} className="mr-1.5" /> : <Clipboard size={14} className="mr-1.5" />}
+                      {summaryCopied ? 'Tersalin' : 'Salin'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => downloadFile('pst-executive-summary.md', summaryMarkdown, 'text/markdown;charset=utf-8')}
+                      data-testid="button-download-executive-summary-md"
+                    >
+                      <Download size={14} className="mr-1.5" /> Markdown
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => downloadFile('pst-executive-summary.txt', summaryMarkdown, 'text/plain;charset=utf-8')}
+                      data-testid="button-download-executive-summary-txt"
+                    >
+                      TXT
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => downloadFile(
+                        'pst-executive-summary.json',
+                        JSON.stringify(executiveSummaryData(project, analysis, blueprint), null, 2),
+                        'application/json;charset=utf-8',
+                      )}
+                      data-testid="button-download-executive-summary-json"
+                    >
+                      JSON
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid gap-6 p-6 lg:grid-cols-[1.1fr_.9fr]">
+                  <div>
+                    <p className="font-mono text-[10px] font-semibold uppercase tracking-widest text-cyan-400">Isi rangkuman</p>
+                    <h4 className="mt-2 text-xl font-extrabold">Dari insight menjadi bahan produksi</h4>
+                    <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                      Dokumen mencakup ringkasan masalah, target pengguna, hasil yang dijanjikan, insight utama,
+                      rekomendasi solusi, tiga peluang produk, deliverable, model pendapatan, dan langkah validasi.
+                    </p>
+                    <div className="mt-5 rounded-lg border border-border/60 bg-muted/25 p-4">
+                      <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Rekomendasi utama tersedia</p>
+                      <div className="mt-3 space-y-2">
+                        {analysis.digital_product_recommendations.map((product) => (
+                          <div className="flex items-center gap-2 text-sm" key={product.id}>
+                            <CheckCircle2 size={14} className="shrink-0 text-emerald-400" />
+                            <span className="font-medium">{product.title}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="font-mono text-[10px] font-semibold uppercase tracking-widest text-cyan-400">Panduan konversi format</p>
+                    <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
+                      {productFormatGuides.map(({ name, icon: Icon, guidance }) => (
+                        <div className="rounded-lg border border-border/70 bg-background/50 p-3" key={name}>
+                          <div className="flex items-center gap-2">
+                            <Icon size={14} className="text-cyan-400" />
+                            <p className="text-xs font-bold">{name}</p>
+                          </div>
+                          <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">{guidance}</p>
+                        </div>
+                      ))}
+                      <div className="rounded-lg border border-dashed border-cyan-400/25 bg-cyan-400/[.03] p-3">
+                        <div className="flex items-center gap-2">
+                          <Sparkles size={14} className="text-cyan-400" />
+                          <p className="text-xs font-bold">Produk lainnya</p>
+                        </div>
+                        <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                          Gunakan problem, buyer, janji hasil, dan deliverable sebagai brief untuk format digital lain.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
             </div>
           )}
 

@@ -580,6 +580,61 @@ export interface RecommendedSolution {
   effort: RecommendedSolutionEffort;
 }
 
+export type DigitalProductRecommendationRevenueModel = typeof DigitalProductRecommendationRevenueModel[keyof typeof DigitalProductRecommendationRevenueModel];
+
+
+export const DigitalProductRecommendationRevenueModel = {
+  'One-time': 'One-time',
+  Subscription: 'Subscription',
+  Lead_generation: 'Lead generation',
+} as const;
+
+export interface DigitalProductRecommendation {
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  id: string;
+  /**
+     * @minLength 5
+     * @maxLength 180
+     */
+  title: string;
+  /**
+     * @minLength 3
+     * @maxLength 120
+     */
+  product_type: string;
+  /**
+     * @minLength 20
+     * @maxLength 700
+     */
+  product_promise: string;
+  /**
+     * @minLength 10
+     * @maxLength 500
+     */
+  target_buyer: string;
+  /**
+     * @minItems 2
+     * @maxItems 5
+     * @items.minLength 3
+     * @items.maxLength 300
+     */
+  deliverables: string[];
+  revenue_model: DigitalProductRecommendationRevenueModel;
+  /**
+     * @minLength 20
+     * @maxLength 700
+     */
+  why_it_fits: string;
+  /**
+     * @minLength 20
+     * @maxLength 700
+     */
+  validation_step: string;
+}
+
 export interface FrameworkAnalysis {
   problem_statement: string;
   selected_framework: SelectedFramework;
@@ -593,6 +648,11 @@ export interface FrameworkAnalysis {
      * @maxItems 5
      */
   recommended_solutions: RecommendedSolution[];
+  /**
+     * @minItems 3
+     * @maxItems 3
+     */
+  digital_product_recommendations: DigitalProductRecommendation[];
 }
 
 export type ActionPlanSolutionEffort = typeof ActionPlanSolutionEffort[keyof typeof ActionPlanSolutionEffort];

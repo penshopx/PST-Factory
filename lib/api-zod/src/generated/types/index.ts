@@ -27,6 +27,8 @@ export * from './buildResultStatus';
 export * from './componentSelection';
 export * from './componentSelectionStatus';
 export * from './dashboardSummary';
+export * from './digitalProductRecommendation';
+export * from './digitalProductRecommendationRevenueModel';
 export * from './documentAccessTarget';
 export * from './errorResponse';
 export * from './executablePstDefinition';

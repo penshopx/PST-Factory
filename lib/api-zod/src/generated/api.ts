@@ -964,6 +964,35 @@ export const analyzePstFrameworkResponseRecommendedSolutionsItemExpectedImpactMa
 export const analyzePstFrameworkResponseRecommendedSolutionsMin = 3;
 export const analyzePstFrameworkResponseRecommendedSolutionsMax = 5;
 
+export const analyzePstFrameworkResponseDigitalProductRecommendationsItemIdMax = 80;
+
+export const analyzePstFrameworkResponseDigitalProductRecommendationsItemTitleMin = 5;
+export const analyzePstFrameworkResponseDigitalProductRecommendationsItemTitleMax = 180;
+
+export const analyzePstFrameworkResponseDigitalProductRecommendationsItemProductTypeMin = 3;
+export const analyzePstFrameworkResponseDigitalProductRecommendationsItemProductTypeMax = 120;
+
+export const analyzePstFrameworkResponseDigitalProductRecommendationsItemProductPromiseMin = 20;
+export const analyzePstFrameworkResponseDigitalProductRecommendationsItemProductPromiseMax = 700;
+
+export const analyzePstFrameworkResponseDigitalProductRecommendationsItemTargetBuyerMin = 10;
+export const analyzePstFrameworkResponseDigitalProductRecommendationsItemTargetBuyerMax = 500;
+
+export const analyzePstFrameworkResponseDigitalProductRecommendationsItemDeliverablesItemMin = 3;
+export const analyzePstFrameworkResponseDigitalProductRecommendationsItemDeliverablesItemMax = 300;
+
+export const analyzePstFrameworkResponseDigitalProductRecommendationsItemDeliverablesMin = 2;
+export const analyzePstFrameworkResponseDigitalProductRecommendationsItemDeliverablesMax = 5;
+
+export const analyzePstFrameworkResponseDigitalProductRecommendationsItemWhyItFitsMin = 20;
+export const analyzePstFrameworkResponseDigitalProductRecommendationsItemWhyItFitsMax = 700;
+
+export const analyzePstFrameworkResponseDigitalProductRecommendationsItemValidationStepMin = 20;
+export const analyzePstFrameworkResponseDigitalProductRecommendationsItemValidationStepMax = 700;
+
+export const analyzePstFrameworkResponseDigitalProductRecommendationsMin = 3;
+export const analyzePstFrameworkResponseDigitalProductRecommendationsMax = 3;
+
 
 
 export const AnalyzePstFrameworkResponse = zod.object({
@@ -985,7 +1014,18 @@ export const AnalyzePstFrameworkResponse = zod.object({
   "description": zod.string().min(analyzePstFrameworkResponseRecommendedSolutionsItemDescriptionMin).max(analyzePstFrameworkResponseRecommendedSolutionsItemDescriptionMax),
   "expectedImpact": zod.string().min(analyzePstFrameworkResponseRecommendedSolutionsItemExpectedImpactMin).max(analyzePstFrameworkResponseRecommendedSolutionsItemExpectedImpactMax),
   "effort": zod.enum(['Low', 'Med', 'High'])
-})).min(analyzePstFrameworkResponseRecommendedSolutionsMin).max(analyzePstFrameworkResponseRecommendedSolutionsMax)
+})).min(analyzePstFrameworkResponseRecommendedSolutionsMin).max(analyzePstFrameworkResponseRecommendedSolutionsMax),
+  "digital_product_recommendations": zod.array(zod.object({
+  "id": zod.string().min(1).max(analyzePstFrameworkResponseDigitalProductRecommendationsItemIdMax),
+  "title": zod.string().min(analyzePstFrameworkResponseDigitalProductRecommendationsItemTitleMin).max(analyzePstFrameworkResponseDigitalProductRecommendationsItemTitleMax),
+  "product_type": zod.string().min(analyzePstFrameworkResponseDigitalProductRecommendationsItemProductTypeMin).max(analyzePstFrameworkResponseDigitalProductRecommendationsItemProductTypeMax),
+  "product_promise": zod.string().min(analyzePstFrameworkResponseDigitalProductRecommendationsItemProductPromiseMin).max(analyzePstFrameworkResponseDigitalProductRecommendationsItemProductPromiseMax),
+  "target_buyer": zod.string().min(analyzePstFrameworkResponseDigitalProductRecommendationsItemTargetBuyerMin).max(analyzePstFrameworkResponseDigitalProductRecommendationsItemTargetBuyerMax),
+  "deliverables": zod.array(zod.string().min(analyzePstFrameworkResponseDigitalProductRecommendationsItemDeliverablesItemMin).max(analyzePstFrameworkResponseDigitalProductRecommendationsItemDeliverablesItemMax)).min(analyzePstFrameworkResponseDigitalProductRecommendationsItemDeliverablesMin).max(analyzePstFrameworkResponseDigitalProductRecommendationsItemDeliverablesMax),
+  "revenue_model": zod.enum(['One-time', 'Subscription', 'Lead generation']),
+  "why_it_fits": zod.string().min(analyzePstFrameworkResponseDigitalProductRecommendationsItemWhyItFitsMin).max(analyzePstFrameworkResponseDigitalProductRecommendationsItemWhyItFitsMax),
+  "validation_step": zod.string().min(analyzePstFrameworkResponseDigitalProductRecommendationsItemValidationStepMin).max(analyzePstFrameworkResponseDigitalProductRecommendationsItemValidationStepMax)
+})).min(analyzePstFrameworkResponseDigitalProductRecommendationsMin).max(analyzePstFrameworkResponseDigitalProductRecommendationsMax)
 })
 
 

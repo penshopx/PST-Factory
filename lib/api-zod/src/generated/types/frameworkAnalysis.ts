@@ -5,6 +5,7 @@
  * PST Factory product manufacturing platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { DigitalProductRecommendation } from './digitalProductRecommendation';
 import type { FrameworkBreakdownItem } from './frameworkBreakdownItem';
 import type { RecommendedSolution } from './recommendedSolution';
 import type { SelectedFramework } from './selectedFramework';
@@ -22,4 +23,9 @@ export interface FrameworkAnalysis {
      * @maxItems 5
      */
   recommended_solutions: RecommendedSolution[];
+  /**
+     * @minItems 3
+     * @maxItems 3
+     */
+  digital_product_recommendations: DigitalProductRecommendation[];
 }

@@ -1222,9 +1222,26 @@ components:
         description: { type: string, minLength: 20, maxLength: 1200 }
         expectedImpact: { type: string, minLength: 10, maxLength: 700 }
         effort: { type: string, enum: [Low, Med, High] }
+    DigitalProductRecommendation:
+      type: object
+      required: [id, title, product_type, product_promise, target_buyer, deliverables, revenue_model, why_it_fits, validation_step]
+      properties:
+        id: { type: string, minLength: 1, maxLength: 80 }
+        title: { type: string, minLength: 5, maxLength: 180 }
+        product_type: { type: string, minLength: 3, maxLength: 120 }
+        product_promise: { type: string, minLength: 20, maxLength: 700 }
+        target_buyer: { type: string, minLength: 10, maxLength: 500 }
+        deliverables:
+          type: array
+          minItems: 2
+          maxItems: 5
+          items: { type: string, minLength: 3, maxLength: 300 }
+        revenue_model: { type: string, enum: [One-time, Subscription, Lead generation] }
+        why_it_fits: { type: string, minLength: 20, maxLength: 700 }
+        validation_step: { type: string, minLength: 20, maxLength: 700 }
     FrameworkAnalysis:
       type: object
-      required: [problem_statement, selected_framework, framework_breakdown, recommended_solutions]
+      required: [problem_statement, selected_framework, framework_breakdown, recommended_solutions, digital_product_recommendations]
       properties:
         problem_statement: { type: string }
         selected_framework: { $ref: "#/components/schemas/SelectedFramework" }
@@ -1238,6 +1255,11 @@ components:
           minItems: 3
           maxItems: 5
           items: { $ref: "#/components/schemas/RecommendedSolution" }
+        digital_product_recommendations:
+          type: array
+          minItems: 3
+          maxItems: 3
+          items: { $ref: "#/components/schemas/DigitalProductRecommendation" }
     ActionPlanSolution:
       type: object
       required: [id, title, description, expectedImpact, effort]
