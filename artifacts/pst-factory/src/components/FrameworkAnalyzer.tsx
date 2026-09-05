@@ -86,10 +86,11 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
   const markdown = actionPlanMarkdown(actionPlan);
 
   const runAnalysis = () => {
+    const normalizedTargetUser = project.targetUser?.trim();
     analyzer.mutate({
       data: {
         problemStatement: problemStatement.trim(),
-        targetUser: project.targetUser,
+        ...(normalizedTargetUser ? { targetUser: normalizedTargetUser } : {}),
         additionalContext: additionalContext.trim() || undefined,
       },
     }, {
@@ -176,7 +177,10 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
                 {analyzer.isError && (
                   <div className="mt-3 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive" role="alert" data-testid="status-framework-error">
                     <TriangleAlert className="mt-0.5 shrink-0" size={14} /> 
-                    <span>Analisis AI belum tersedia. Periksa konteks lalu coba lagi.</span>
+                    <span>
+                      {(analyzer.error as { data?: { error?: string } })?.data?.error
+                        ?? 'Analisis AI belum tersedia. Periksa konteks lalu coba lagi.'}
+                    </span>
                   </div>
                 )}
               </div>
