@@ -574,7 +574,7 @@ function ProjectWorkspace() {
      {tab === 'architect' && <ArchitectTab project={project} context={architectContext} setContext={setArchitectContext} patterns={patternsQuery.data ?? []} recipes={recipesQuery.data ?? []} selectedPatternId={selectedPatternId} selectedRecipeId={selectedRecipeId} setSelectedPatternId={setSelectedPatternId} setSelectedRecipeId={setSelectedRecipeId} selectedDocumentIds={selectedArchitectDocumentIds} setSelectedDocumentIds={setSelectedArchitectDocumentIds} onRun={() => run('architect')} pending={architect.isPending} />}
     {tab === 'blueprint' && <BlueprintTab projectId={projectId} blueprint={blueprint} onSave={(data) => updateBlueprint.mutate({ projectId, data }, { onSuccess: invalidate })} onBuild={() => run('build')} buildPending={buildMutation.isPending} />}
     {tab === 'assets' && <ProjectAssetsEditor project={project} />}
-    {tab === 'workflow' && <WorkflowTab workflow={blueprint?.workflow ?? []} />}
+    {tab === 'workflow' && <WorkflowTab workflow={blueprint?.workflow ?? []} project={project} />}
     {tab === 'ai' && <FrameworkAnalyzer project={project} blueprint={blueprint} />}
     {tab === 'preview' && <PreviewTab project={project} simulation={simulation} onSimulate={() => run('simulate')} pending={simulate.isPending} />}
     {tab === 'qa' && <QaTab project={project} qa={qa} onRun={() => run('qa')} pending={runQa.isPending} />}
@@ -796,7 +796,62 @@ function ProjectAssetsEditor({ project }: { project: PstProject }) {
     </AlertDialog>
   </div>;
 }
-function WorkflowTab({ workflow }: { workflow: WorkflowStep[] }) { return <Card><CardHeader><CardTitle className="text-base">Langkah kerja</CardTitle><CardDescription>Setiap langkah menjelaskan masukan, hasil, dan tindakan berikutnya.</CardDescription></CardHeader><CardContent>{workflow.length ? <div className="space-y-3">{workflow.map((step, i) => <div className="flex gap-4 rounded-xl border border-border p-4" key={step.id}><div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/10 font-mono text-xs text-primary">{String(i + 1).padStart(2, '0')}</div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="font-semibold">{step.title}</p><Badge variant="outline" className="font-mono text-[9px]">{step.type}</Badge></div><p className="mt-1 text-sm text-muted-foreground">{step.description}</p><div className="mt-3 flex flex-wrap gap-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground"><span>masukan: {step.inputs?.join(', ') || 'tidak ada'}</span><span>hasil: {step.outputs?.join(', ') || 'tidak ada'}</span></div></div><ChevronRight size={16} className="mt-1 text-muted-foreground" /></div>)}</div> : <EmptyState icon={Workflow} title="Langkah kerja belum ada" detail="Buat rancangan untuk menyusun langkah-langkah kerja." />}</CardContent></Card>; }
+function WorkflowTab({ workflow, project }: { workflow: WorkflowStep[]; project: PstProject }) {
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+          <div>
+            <CardTitle className="text-base">Struktur langkah kerja</CardTitle>
+            <CardDescription className="mt-1">
+              Halaman ini menjelaskan rancangan alur. Jawaban diisi melalui Tampilan pengguna.
+            </CardDescription>
+          </div>
+          <Link
+            href={`/workspace/${project.slug}`}
+            className="focus-ring inline-flex shrink-0 items-center justify-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90"
+            data-testid="button-open-workflow-form"
+          >
+            <ExternalLink size={15} />
+            Buka Form Pengguna
+          </Link>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="mb-5 rounded-xl border border-primary/25 bg-primary/[.06] p-4 text-sm">
+          <p className="font-bold text-foreground">Ingin mencoba atau mengisi langkah?</p>
+          <p className="mt-1 text-muted-foreground">
+            Klik <span className="font-semibold text-primary">Buka Form Pengguna</span>. Form akan menampilkan satu langkah pada satu waktu dan menyimpan jawaban saat Anda melanjutkan.
+          </p>
+        </div>
+        {workflow.length ? (
+          <div className="space-y-3">
+            {workflow.map((step, i) => (
+              <div className="flex gap-4 rounded-xl border border-border p-4" key={step.id}>
+                <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/10 font-mono text-xs text-primary">
+                  {String(i + 1).padStart(2, '0')}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-semibold">{step.title}</p>
+                    <Badge variant="outline" className="font-mono text-[9px]">{step.type}</Badge>
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground">{step.description}</p>
+                  <div className="mt-3 flex flex-wrap gap-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                    <span>masukan: {step.inputs?.join(', ') || 'tidak ada'}</span>
+                    <span>hasil: {step.outputs?.join(', ') || 'tidak ada'}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <EmptyState icon={Workflow} title="Langkah kerja belum ada" detail="Buat rancangan untuk menyusun langkah-langkah kerja." />
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 function BuildTab({ projectId, assembly, buildReport, onBuild, buildPending }: { projectId: string; assembly?: PstAssembly; buildReport?: BuildResult | null; onBuild: () => void; buildPending: boolean }) {
   const qc = useQueryClient();
   const updateChecklist = useUpdatePstAssemblyChecklistItem();
