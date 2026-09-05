@@ -86,7 +86,7 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
   const markdown = actionPlanMarkdown(actionPlan);
 
   const runAnalysis = () => {
-    const normalizedTargetUser = project.targetUser?.trim();
+    const normalizedTargetUser = project.targetUser?.trim().slice(0, 500);
     analyzer.mutate({
       data: {
         problemStatement: problemStatement.trim(),
@@ -178,8 +178,10 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
                   <div className="mt-3 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive" role="alert" data-testid="status-framework-error">
                     <TriangleAlert className="mt-0.5 shrink-0" size={14} /> 
                     <span>
-                      {(analyzer.error as { data?: { error?: string } })?.data?.error
-                        ?? 'Analisis AI belum tersedia. Periksa konteks lalu coba lagi.'}
+                      {(analyzer.error as { data?: { error?: string } })?.data?.error?.includes('targetUser')
+                        ? 'Deskripsi target pengguna pada proyek terlalu panjang. Sistem sudah menyingkatnya otomatis; silakan jalankan analisis kembali.'
+                        : (analyzer.error as { data?: { error?: string } })?.data?.error
+                          ?? 'Analisis AI belum tersedia. Periksa konteks lalu coba lagi.'}
                     </span>
                   </div>
                 )}
