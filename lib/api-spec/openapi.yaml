@@ -1326,10 +1326,11 @@ components:
         success_metric: { type: string }
     PstProductBriefInput:
       type: object
-      required: [frameworkAnalysis, selectedSolutionIds, actionPlan]
+      required: [frameworkAnalysis, selectedProductId, selectedSolutionIds, actionPlan]
       properties:
         frameworkAnalysis:
           $ref: "#/components/schemas/FrameworkAnalysis"
+        selectedProductId: { type: string, nullable: true }
         selectedSolutionIds:
           type: array
           items: { type: string }

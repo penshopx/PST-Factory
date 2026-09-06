@@ -10,6 +10,7 @@ import type { FrameworkAnalysis } from './frameworkAnalysis';
 
 export interface PstProductBriefInput {
   frameworkAnalysis: FrameworkAnalysis;
+  selectedProductId: string | null;
   selectedSolutionIds: string[];
   actionPlan: ActionPlanItem[];
 }

@@ -180,6 +180,7 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
   const [problemStatement, setProblemStatement] = useState(project.problemStatement);
   const [additionalContext, setAdditionalContext] = useState('');
   const [analysis, setAnalysis] = useState<FrameworkAnalysis | null>(null);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [selectedSolutionIds, setSelectedSolutionIds] = useState<string[]>([]);
   const [actionPlan, setActionPlan] = useState<ActionPlanItem[]>([]);
   const [copied, setCopied] = useState(false);
@@ -192,6 +193,7 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
   useEffect(() => {
     setProblemStatement(project.problemStatement);
     setAnalysis(null);
+    setSelectedProductId(null);
     setSelectedSolutionIds([]);
     setActionPlan([]);
   }, [project.id, project.problemStatement]);
@@ -199,6 +201,7 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
   useEffect(() => {
     if (!briefQuery.data) return;
     setAnalysis(briefQuery.data.frameworkAnalysis);
+    setSelectedProductId(briefQuery.data.selectedProductId ?? null);
     setSelectedSolutionIds(briefQuery.data.selectedSolutionIds);
     setActionPlan(briefQuery.data.actionPlan);
   }, [briefQuery.data]);
@@ -210,6 +213,10 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
   const validProblem = problemStatement.trim().length >= 10;
   const markdown = actionPlanMarkdown(actionPlan);
   const summaryMarkdown = analysis ? executiveSummaryMarkdown(project, analysis, blueprint) : '';
+  const briefIsStale = Boolean(
+    briefQuery.data && blueprint
+    && new Date(briefQuery.data.blueprintUpdatedAt).getTime() !== new Date(blueprint.updatedAt).getTime(),
+  );
 
   const runAnalysis = () => {
     const normalizedTargetUser = project.targetUser?.trim().slice(0, 500);
@@ -223,11 +230,12 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
       onSuccess: (result) => {
         const solutionIds = result.recommended_solutions.map((solution) => solution.id);
         setAnalysis(result);
+        setSelectedProductId(null);
         setSelectedSolutionIds(solutionIds);
         setActionPlan([]);
         saveBrief.mutate({
           projectId: project.id,
-          data: { frameworkAnalysis: result, selectedSolutionIds: solutionIds, actionPlan: [] },
+          data: { frameworkAnalysis: result, selectedProductId: null, selectedSolutionIds: solutionIds, actionPlan: [] },
         });
       },
     });
@@ -247,6 +255,7 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
           projectId: project.id,
           data: {
             frameworkAnalysis: analysis,
+            selectedProductId,
             selectedSolutionIds,
             actionPlan: result.action_plan,
           },
@@ -264,9 +273,24 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
     if (analysis) {
       saveBrief.mutate({
         projectId: project.id,
-        data: { frameworkAnalysis: analysis, selectedSolutionIds: nextIds, actionPlan: [] },
+        data: { frameworkAnalysis: analysis, selectedProductId, selectedSolutionIds: nextIds, actionPlan: [] },
       });
     }
+  };
+
+  const selectProduct = (id: string) => {
+    if (!analysis) return;
+    const nextId = selectedProductId === id ? null : id;
+    setSelectedProductId(nextId);
+    saveBrief.mutate({
+      projectId: project.id,
+      data: {
+        frameworkAnalysis: analysis,
+        selectedProductId: nextId,
+        selectedSolutionIds,
+        actionPlan,
+      },
+    });
   };
 
   const copyPlan = async () => {
@@ -343,6 +367,12 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
                 {saveBrief.isPending && <p className="mt-3 text-center text-[11px] text-muted-foreground">Menyimpan Product Brief...</p>}
                 {saveBrief.isSuccess && <p className="mt-3 text-center text-[11px] text-emerald-600 dark:text-emerald-400">Product Brief tersimpan di proyek.</p>}
                 {saveBrief.isError && <p className="mt-3 text-center text-[11px] text-destructive">Product Brief belum tersimpan. Coba jalankan analisis kembali.</p>}
+                {briefIsStale && (
+                  <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300">
+                    <TriangleAlert className="mt-0.5 shrink-0" size={14} />
+                    Blueprint berubah setelah Product Brief ini dibuat. Jalankan analisis kembali sebelum memakai hasilnya.
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -571,9 +601,13 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
                 </div>
 
                 <div className="grid gap-4 xl:grid-cols-3">
-                  {analysis.digital_product_recommendations.map((product, index) => (
+                  {analysis.digital_product_recommendations.map((product, index) => {
+                    const selected = selectedProductId === product.id;
+                    return (
                     <article
-                      className="flex flex-col overflow-hidden rounded-xl border border-cyan-400/20 bg-card shadow-sm transition-all hover:-translate-y-0.5 hover:border-cyan-400/45 hover:shadow-md"
+                      className={`flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${
+                        selected ? 'border-cyan-300 ring-2 ring-cyan-400/25' : 'border-cyan-400/20 hover:border-cyan-400/45'
+                      }`}
                       key={product.id}
                       data-testid={`digital-product-${product.id}`}
                     >
@@ -630,10 +664,20 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
                             </div>
                             <p className="text-xs leading-relaxed">{product.validation_step}</p>
                           </div>
+                          <Button
+                            variant={selected ? 'default' : 'outline'}
+                            onClick={() => selectProduct(product.id)}
+                            className="w-full"
+                            data-testid={`button-select-product-${product.id}`}
+                          >
+                            {selected ? <CheckCircle2 size={14} className="mr-2" /> : null}
+                            {selected ? 'Produk utama dipilih' : 'Pilih sebagai produk utama'}
+                          </Button>
                         </div>
                       </div>
                     </article>
-                  ))}
+                    );
+                  })}
                 </div>
               </section>
 

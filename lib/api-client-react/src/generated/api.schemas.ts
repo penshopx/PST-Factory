@@ -721,6 +721,7 @@ export interface ActionPlanItem {
 
 export interface PstProductBriefInput {
   frameworkAnalysis: FrameworkAnalysis;
+  selectedProductId: string | null;
   selectedSolutionIds: string[];
   actionPlan: ActionPlanItem[];
 }

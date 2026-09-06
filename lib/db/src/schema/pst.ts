@@ -103,6 +103,7 @@ export const pstProductBriefsTable = pgTable(
       .references(() => pstAnalysisArtifactsTable.id, { onDelete: "set null" }),
     blueprintUpdatedAt: timestamp("blueprint_updated_at", { withTimezone: true }).notNull(),
     frameworkAnalysis: jsonb("framework_analysis").$type<Record<string, unknown>>().notNull(),
+    selectedProductId: text("selected_product_id"),
     selectedSolutionIds: text("selected_solution_ids").array().notNull(),
     actionPlan: jsonb("action_plan").$type<Record<string, unknown>[]>().notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

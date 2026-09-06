@@ -1017,6 +1017,7 @@ export const GetPstProductBriefResponse = zod.object({
   "validation_step": zod.string().min(getPstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemValidationStepMin).max(getPstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemValidationStepMax)
 })).min(getPstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsMin).max(getPstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsMax)
 }),
+  "selectedProductId": zod.string().nullable(),
   "selectedSolutionIds": zod.array(zod.string()),
   "actionPlan": zod.array(zod.object({
   "task_title": zod.string(),
@@ -1143,6 +1144,7 @@ export const UpsertPstProductBriefBody = zod.object({
   "validation_step": zod.string().min(upsertPstProductBriefBodyFrameworkAnalysisDigitalProductRecommendationsItemValidationStepMin).max(upsertPstProductBriefBodyFrameworkAnalysisDigitalProductRecommendationsItemValidationStepMax)
 })).min(upsertPstProductBriefBodyFrameworkAnalysisDigitalProductRecommendationsMin).max(upsertPstProductBriefBodyFrameworkAnalysisDigitalProductRecommendationsMax)
 }),
+  "selectedProductId": zod.string().nullable(),
   "selectedSolutionIds": zod.array(zod.string()),
   "actionPlan": zod.array(zod.object({
   "task_title": zod.string(),
@@ -1253,6 +1255,7 @@ export const UpsertPstProductBriefResponse = zod.object({
   "validation_step": zod.string().min(upsertPstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemValidationStepMin).max(upsertPstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemValidationStepMax)
 })).min(upsertPstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsMin).max(upsertPstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsMax)
 }),
+  "selectedProductId": zod.string().nullable(),
   "selectedSolutionIds": zod.array(zod.string()),
   "actionPlan": zod.array(zod.object({
   "task_title": zod.string(),

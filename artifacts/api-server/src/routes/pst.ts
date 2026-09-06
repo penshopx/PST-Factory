@@ -1743,6 +1743,11 @@ router.put("/pst/projects/:projectId/product-brief", async (req, res): Promise<v
     res.status(400).json({ error: "Selected solutions must belong to the submitted framework analysis." });
     return;
   }
+  const validProductIds = new Set(body.data.frameworkAnalysis.digital_product_recommendations.map((product) => product.id));
+  if (body.data.selectedProductId && !validProductIds.has(body.data.selectedProductId)) {
+    res.status(400).json({ error: "Selected product must belong to the submitted framework analysis." });
+    return;
+  }
   const [blueprint] = await db.select().from(pstBlueprintsTable)
     .where(eq(pstBlueprintsTable.projectId, access.project.id));
   if (!blueprint) {
@@ -1757,6 +1762,7 @@ router.put("/pst/projects/:projectId/product-brief", async (req, res): Promise<v
     sourceAnalysisArtifactId: blueprint.analysisArtifactId,
     blueprintUpdatedAt: blueprint.updatedAt,
     frameworkAnalysis: body.data.frameworkAnalysis,
+    selectedProductId: body.data.selectedProductId,
     selectedSolutionIds: body.data.selectedSolutionIds,
     actionPlan: body.data.actionPlan,
     createdAt: now,
@@ -1767,6 +1773,7 @@ router.put("/pst/projects/:projectId/product-brief", async (req, res): Promise<v
       sourceAnalysisArtifactId: blueprint.analysisArtifactId,
       blueprintUpdatedAt: blueprint.updatedAt,
       frameworkAnalysis: body.data.frameworkAnalysis,
+      selectedProductId: body.data.selectedProductId,
       selectedSolutionIds: body.data.selectedSolutionIds,
       actionPlan: body.data.actionPlan,
       updatedAt: now,
