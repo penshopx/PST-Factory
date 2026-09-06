@@ -1707,6 +1707,9 @@ router.post("/pst/projects/:projectId/architect", async (req, res): Promise<void
       updatedAt: new Date(),
     }).where(eq(pstBlueprintsTable.projectId, project.id)).returning();
     await tx.delete(pstProjectAssembliesTable).where(eq(pstProjectAssembliesTable.projectId, project.id));
+    await tx.update(pstProductBriefsTable)
+      .set({ status: "DRAFT", updatedAt: new Date() })
+      .where(eq(pstProductBriefsTable.projectId, project.id));
     await tx.update(pstProjectsTable).set({ status: "ARCHITECTED", updatedAt: new Date() }).where(eq(pstProjectsTable.id, project.id));
     return result;
   });
@@ -1795,32 +1798,36 @@ router.post("/pst/projects/:projectId/product-brief/approve", async (req, res): 
   }
   const access = await authorizeProject(req, res, params.data.projectId, editorRoles);
   if (!access) return;
-  const [[brief], [blueprint]] = await Promise.all([
-    db.select().from(pstProductBriefsTable).where(eq(pstProductBriefsTable.projectId, access.project.id)),
-    db.select().from(pstBlueprintsTable).where(eq(pstBlueprintsTable.projectId, access.project.id)),
-  ]);
-  if (!brief || !blueprint) {
-    res.status(404).json({ error: "Product brief or Blueprint not found." });
+  const approval = await db.transaction(async (tx) => {
+    await tx.execute(sql`select ${pstProjectsTable.id} from ${pstProjectsTable} where ${pstProjectsTable.id} = ${access.project.id} for update`);
+    await tx.execute(sql`select ${pstBlueprintsTable.id} from ${pstBlueprintsTable} where ${pstBlueprintsTable.projectId} = ${access.project.id} for update`);
+    await tx.execute(sql`select ${pstProductBriefsTable.id} from ${pstProductBriefsTable} where ${pstProductBriefsTable.projectId} = ${access.project.id} for update`);
+    const [[brief], [blueprint]] = await Promise.all([
+      tx.select().from(pstProductBriefsTable).where(eq(pstProductBriefsTable.projectId, access.project.id)),
+      tx.select().from(pstBlueprintsTable).where(eq(pstBlueprintsTable.projectId, access.project.id)),
+    ]);
+    if (!brief || !blueprint) return { status: 404 as const, error: "Product brief or Blueprint not found." };
+    if (brief.blueprintUpdatedAt.getTime() !== blueprint.updatedAt.getTime()) {
+      return { status: 409 as const, error: "Product Brief sudah kedaluwarsa. Jalankan analisis kembali sebelum menyetujui." };
+    }
+    if (!brief.selectedProductId) {
+      return { status: 409 as const, error: "Pilih satu produk utama sebelum menyetujui Product Brief." };
+    }
+    if (!brief.actionPlan.length) {
+      return { status: 409 as const, error: "Buat action plan sebelum menyetujui Product Brief." };
+    }
+    const [approved] = await tx.update(pstProductBriefsTable)
+      .set({ status: "APPROVED", updatedAt: new Date() })
+      .where(eq(pstProductBriefsTable.id, brief.id))
+      .returning();
+    return { status: 200 as const, brief: approved };
+  });
+  if (approval.status !== 200) {
+    res.status(approval.status).json({ error: approval.error });
     return;
   }
-  if (brief.blueprintUpdatedAt.getTime() !== blueprint.updatedAt.getTime()) {
-    res.status(409).json({ error: "Product Brief sudah kedaluwarsa. Jalankan analisis kembali sebelum menyetujui." });
-    return;
-  }
-  if (!brief.selectedProductId) {
-    res.status(409).json({ error: "Pilih satu produk utama sebelum menyetujui Product Brief." });
-    return;
-  }
-  if (!brief.actionPlan.length) {
-    res.status(409).json({ error: "Buat action plan sebelum menyetujui Product Brief." });
-    return;
-  }
-  const [approved] = await db.update(pstProductBriefsTable)
-    .set({ status: "APPROVED", updatedAt: new Date() })
-    .where(eq(pstProductBriefsTable.id, brief.id))
-    .returning();
   await addEvent("PRODUCT_BRIEF_APPROVED", `${access.project.name} approved its active product brief.`, access.project.id);
-  res.json(ApprovePstProductBriefResponse.parse(approved));
+  res.json(ApprovePstProductBriefResponse.parse(approval.brief));
 });
 
 router.get("/pst/projects/:projectId/blueprint", async (req, res): Promise<void> => {
@@ -1862,6 +1869,9 @@ router.patch("/pst/projects/:projectId/blueprint", async (req, res): Promise<voi
     }).where(eq(pstBlueprintsTable.projectId, access.project.id)).returning();
     if (result) {
       await tx.delete(pstProjectAssembliesTable).where(eq(pstProjectAssembliesTable.projectId, access.project.id));
+      await tx.update(pstProductBriefsTable)
+        .set({ status: "DRAFT", updatedAt: new Date() })
+        .where(eq(pstProductBriefsTable.projectId, access.project.id));
       await tx.update(pstProjectsTable).set({ status: "BLUEPRINT_READY", updatedAt: new Date() }).where(eq(pstProjectsTable.id, access.project.id));
     }
     return result;
