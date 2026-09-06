@@ -36,6 +36,8 @@ import {
 import {
   ArchivePstProjectParams,
   ArchivePstProjectResponse,
+  ApprovePstProductBriefParams,
+  ApprovePstProductBriefResponse,
   ApprovePstProjectParams,
   ApprovePstProjectResponse,
   BuildPstProjectBody,
@@ -1759,6 +1761,7 @@ router.put("/pst/projects/:projectId/product-brief", async (req, res): Promise<v
     id: randomUUID(),
     projectId: access.project.id,
     createdBy: access.userId,
+    status: "DRAFT",
     sourceAnalysisArtifactId: blueprint.analysisArtifactId,
     blueprintUpdatedAt: blueprint.updatedAt,
     frameworkAnalysis: body.data.frameworkAnalysis,
@@ -1771,6 +1774,7 @@ router.put("/pst/projects/:projectId/product-brief", async (req, res): Promise<v
     target: pstProductBriefsTable.projectId,
     set: {
       sourceAnalysisArtifactId: blueprint.analysisArtifactId,
+      status: "DRAFT",
       blueprintUpdatedAt: blueprint.updatedAt,
       frameworkAnalysis: body.data.frameworkAnalysis,
       selectedProductId: body.data.selectedProductId,
@@ -1781,6 +1785,42 @@ router.put("/pst/projects/:projectId/product-brief", async (req, res): Promise<v
   }).returning();
   await addEvent("PRODUCT_BRIEF_SAVED", `${access.project.name} saved its active product brief.`, access.project.id);
   res.json(UpsertPstProductBriefResponse.parse(brief));
+});
+
+router.post("/pst/projects/:projectId/product-brief/approve", async (req, res): Promise<void> => {
+  const params = ApprovePstProductBriefParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const access = await authorizeProject(req, res, params.data.projectId, editorRoles);
+  if (!access) return;
+  const [[brief], [blueprint]] = await Promise.all([
+    db.select().from(pstProductBriefsTable).where(eq(pstProductBriefsTable.projectId, access.project.id)),
+    db.select().from(pstBlueprintsTable).where(eq(pstBlueprintsTable.projectId, access.project.id)),
+  ]);
+  if (!brief || !blueprint) {
+    res.status(404).json({ error: "Product brief or Blueprint not found." });
+    return;
+  }
+  if (brief.blueprintUpdatedAt.getTime() !== blueprint.updatedAt.getTime()) {
+    res.status(409).json({ error: "Product Brief sudah kedaluwarsa. Jalankan analisis kembali sebelum menyetujui." });
+    return;
+  }
+  if (!brief.selectedProductId) {
+    res.status(409).json({ error: "Pilih satu produk utama sebelum menyetujui Product Brief." });
+    return;
+  }
+  if (!brief.actionPlan.length) {
+    res.status(409).json({ error: "Buat action plan sebelum menyetujui Product Brief." });
+    return;
+  }
+  const [approved] = await db.update(pstProductBriefsTable)
+    .set({ status: "APPROVED", updatedAt: new Date() })
+    .where(eq(pstProductBriefsTable.id, brief.id))
+    .returning();
+  await addEvent("PRODUCT_BRIEF_APPROVED", `${access.project.name} approved its active product brief.`, access.project.id);
+  res.json(ApprovePstProductBriefResponse.parse(approved));
 });
 
 router.get("/pst/projects/:projectId/blueprint", async (req, res): Promise<void> => {

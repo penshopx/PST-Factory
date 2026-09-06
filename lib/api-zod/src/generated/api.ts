@@ -1030,6 +1030,135 @@ export const GetPstProductBriefResponse = zod.object({
   "id": zod.string(),
   "projectId": zod.string(),
   "createdBy": zod.string(),
+  "status": zod.enum(['DRAFT', 'APPROVED']),
+  "sourceAnalysisArtifactId": zod.string().nullish(),
+  "blueprintUpdatedAt": zod.coerce.date(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}))
+
+
+/**
+ * @summary Approve the current product brief
+ */
+export const ApprovePstProductBriefParams = zod.object({
+  "projectId": zod.coerce.string()
+})
+
+export const approvePstProductBriefResponseOneFrameworkAnalysisSelectedFrameworkReasonMin = 20;
+export const approvePstProductBriefResponseOneFrameworkAnalysisSelectedFrameworkReasonMax = 1000;
+
+export const approvePstProductBriefResponseOneFrameworkAnalysisFrameworkBreakdownItemIdMax = 80;
+
+export const approvePstProductBriefResponseOneFrameworkAnalysisFrameworkBreakdownItemLabelMin = 3;
+export const approvePstProductBriefResponseOneFrameworkAnalysisFrameworkBreakdownItemLabelMax = 160;
+
+export const approvePstProductBriefResponseOneFrameworkAnalysisFrameworkBreakdownItemQuestionMin = 10;
+export const approvePstProductBriefResponseOneFrameworkAnalysisFrameworkBreakdownItemQuestionMax = 500;
+
+export const approvePstProductBriefResponseOneFrameworkAnalysisFrameworkBreakdownItemFocusMin = 5;
+export const approvePstProductBriefResponseOneFrameworkAnalysisFrameworkBreakdownItemFocusMax = 500;
+
+export const approvePstProductBriefResponseOneFrameworkAnalysisFrameworkBreakdownItemChildrenItemMin = 2;
+export const approvePstProductBriefResponseOneFrameworkAnalysisFrameworkBreakdownItemChildrenItemMax = 300;
+
+export const approvePstProductBriefResponseOneFrameworkAnalysisFrameworkBreakdownItemChildrenMax = 5;
+
+export const approvePstProductBriefResponseOneFrameworkAnalysisFrameworkBreakdownMin = 3;
+export const approvePstProductBriefResponseOneFrameworkAnalysisFrameworkBreakdownMax = 5;
+
+export const approvePstProductBriefResponseOneFrameworkAnalysisRecommendedSolutionsItemIdMax = 80;
+
+export const approvePstProductBriefResponseOneFrameworkAnalysisRecommendedSolutionsItemTitleMin = 5;
+export const approvePstProductBriefResponseOneFrameworkAnalysisRecommendedSolutionsItemTitleMax = 180;
+
+export const approvePstProductBriefResponseOneFrameworkAnalysisRecommendedSolutionsItemDescriptionMin = 20;
+export const approvePstProductBriefResponseOneFrameworkAnalysisRecommendedSolutionsItemDescriptionMax = 1200;
+
+export const approvePstProductBriefResponseOneFrameworkAnalysisRecommendedSolutionsItemExpectedImpactMin = 10;
+export const approvePstProductBriefResponseOneFrameworkAnalysisRecommendedSolutionsItemExpectedImpactMax = 700;
+
+export const approvePstProductBriefResponseOneFrameworkAnalysisRecommendedSolutionsMin = 3;
+export const approvePstProductBriefResponseOneFrameworkAnalysisRecommendedSolutionsMax = 5;
+
+export const approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemIdMax = 80;
+
+export const approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemTitleMin = 5;
+export const approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemTitleMax = 180;
+
+export const approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemProductTypeMin = 3;
+export const approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemProductTypeMax = 120;
+
+export const approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemProductPromiseMin = 20;
+export const approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemProductPromiseMax = 700;
+
+export const approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemTargetBuyerMin = 10;
+export const approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemTargetBuyerMax = 500;
+
+export const approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemDeliverablesItemMin = 3;
+export const approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemDeliverablesItemMax = 300;
+
+export const approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemDeliverablesMin = 2;
+export const approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemDeliverablesMax = 5;
+
+export const approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemWhyItFitsMin = 20;
+export const approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemWhyItFitsMax = 700;
+
+export const approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemValidationStepMin = 20;
+export const approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemValidationStepMax = 700;
+
+export const approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsMin = 3;
+export const approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsMax = 3;
+
+
+
+export const ApprovePstProductBriefResponse = zod.object({
+  "frameworkAnalysis": zod.object({
+  "problem_statement": zod.string(),
+  "selected_framework": zod.object({
+  "name": zod.enum(['5 Whys', 'Fishbone', 'ICE Scoring', 'SWOT']),
+  "reason": zod.string().min(approvePstProductBriefResponseOneFrameworkAnalysisSelectedFrameworkReasonMin).max(approvePstProductBriefResponseOneFrameworkAnalysisSelectedFrameworkReasonMax)
+}),
+  "framework_breakdown": zod.array(zod.object({
+  "id": zod.string().min(1).max(approvePstProductBriefResponseOneFrameworkAnalysisFrameworkBreakdownItemIdMax),
+  "label": zod.string().min(approvePstProductBriefResponseOneFrameworkAnalysisFrameworkBreakdownItemLabelMin).max(approvePstProductBriefResponseOneFrameworkAnalysisFrameworkBreakdownItemLabelMax),
+  "question": zod.string().min(approvePstProductBriefResponseOneFrameworkAnalysisFrameworkBreakdownItemQuestionMin).max(approvePstProductBriefResponseOneFrameworkAnalysisFrameworkBreakdownItemQuestionMax),
+  "focus": zod.string().min(approvePstProductBriefResponseOneFrameworkAnalysisFrameworkBreakdownItemFocusMin).max(approvePstProductBriefResponseOneFrameworkAnalysisFrameworkBreakdownItemFocusMax),
+  "children": zod.array(zod.string().min(approvePstProductBriefResponseOneFrameworkAnalysisFrameworkBreakdownItemChildrenItemMin).max(approvePstProductBriefResponseOneFrameworkAnalysisFrameworkBreakdownItemChildrenItemMax)).min(1).max(approvePstProductBriefResponseOneFrameworkAnalysisFrameworkBreakdownItemChildrenMax)
+})).min(approvePstProductBriefResponseOneFrameworkAnalysisFrameworkBreakdownMin).max(approvePstProductBriefResponseOneFrameworkAnalysisFrameworkBreakdownMax),
+  "recommended_solutions": zod.array(zod.object({
+  "id": zod.string().min(1).max(approvePstProductBriefResponseOneFrameworkAnalysisRecommendedSolutionsItemIdMax),
+  "title": zod.string().min(approvePstProductBriefResponseOneFrameworkAnalysisRecommendedSolutionsItemTitleMin).max(approvePstProductBriefResponseOneFrameworkAnalysisRecommendedSolutionsItemTitleMax),
+  "description": zod.string().min(approvePstProductBriefResponseOneFrameworkAnalysisRecommendedSolutionsItemDescriptionMin).max(approvePstProductBriefResponseOneFrameworkAnalysisRecommendedSolutionsItemDescriptionMax),
+  "expectedImpact": zod.string().min(approvePstProductBriefResponseOneFrameworkAnalysisRecommendedSolutionsItemExpectedImpactMin).max(approvePstProductBriefResponseOneFrameworkAnalysisRecommendedSolutionsItemExpectedImpactMax),
+  "effort": zod.enum(['Low', 'Med', 'High'])
+})).min(approvePstProductBriefResponseOneFrameworkAnalysisRecommendedSolutionsMin).max(approvePstProductBriefResponseOneFrameworkAnalysisRecommendedSolutionsMax),
+  "digital_product_recommendations": zod.array(zod.object({
+  "id": zod.string().min(1).max(approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemIdMax),
+  "title": zod.string().min(approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemTitleMin).max(approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemTitleMax),
+  "product_type": zod.string().min(approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemProductTypeMin).max(approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemProductTypeMax),
+  "product_promise": zod.string().min(approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemProductPromiseMin).max(approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemProductPromiseMax),
+  "target_buyer": zod.string().min(approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemTargetBuyerMin).max(approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemTargetBuyerMax),
+  "deliverables": zod.array(zod.string().min(approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemDeliverablesItemMin).max(approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemDeliverablesItemMax)).min(approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemDeliverablesMin).max(approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemDeliverablesMax),
+  "revenue_model": zod.enum(['One-time', 'Subscription', 'Lead generation']),
+  "why_it_fits": zod.string().min(approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemWhyItFitsMin).max(approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemWhyItFitsMax),
+  "validation_step": zod.string().min(approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemValidationStepMin).max(approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsItemValidationStepMax)
+})).min(approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsMin).max(approvePstProductBriefResponseOneFrameworkAnalysisDigitalProductRecommendationsMax)
+}),
+  "selectedProductId": zod.string().nullable(),
+  "selectedSolutionIds": zod.array(zod.string()),
+  "actionPlan": zod.array(zod.object({
+  "task_title": zod.string(),
+  "description": zod.string(),
+  "priority": zod.enum(['High', 'Med', 'Low']),
+  "suggested_timeline": zod.string(),
+  "success_metric": zod.string()
+}))
+}).and(zod.object({
+  "id": zod.string(),
+  "projectId": zod.string(),
+  "createdBy": zod.string(),
+  "status": zod.enum(['DRAFT', 'APPROVED']),
   "sourceAnalysisArtifactId": zod.string().nullish(),
   "blueprintUpdatedAt": zod.coerce.date(),
   "createdAt": zod.coerce.date(),
@@ -1268,6 +1397,7 @@ export const UpsertPstProductBriefResponse = zod.object({
   "id": zod.string(),
   "projectId": zod.string(),
   "createdBy": zod.string(),
+  "status": zod.enum(['DRAFT', 'APPROVED']),
   "sourceAnalysisArtifactId": zod.string().nullish(),
   "blueprintUpdatedAt": zod.coerce.date(),
   "createdAt": zod.coerce.date(),

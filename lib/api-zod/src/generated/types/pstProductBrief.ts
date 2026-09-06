@@ -6,11 +6,13 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { PstProductBriefInput } from './pstProductBriefInput';
+import type { PstProductBriefStatus } from './pstProductBriefStatus';
 
 export type PstProductBrief = PstProductBriefInput & ({
   id: string;
   projectId: string;
   createdBy: string;
+  status: PstProductBriefStatus;
   sourceAnalysisArtifactId?: string | null;
   blueprintUpdatedAt: Date;
   createdAt: Date;

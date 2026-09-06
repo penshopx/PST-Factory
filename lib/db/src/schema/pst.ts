@@ -99,6 +99,7 @@ export const pstProductBriefsTable = pgTable(
       .notNull()
       .references(() => pstProjectsTable.id, { onDelete: "cascade" }),
     createdBy: text("created_by").notNull(),
+    status: text("status").$type<"DRAFT" | "APPROVED">().notNull().default("DRAFT"),
     sourceAnalysisArtifactId: text("source_analysis_artifact_id")
       .references(() => pstAnalysisArtifactsTable.id, { onDelete: "set null" }),
     blueprintUpdatedAt: timestamp("blueprint_updated_at", { withTimezone: true }).notNull(),

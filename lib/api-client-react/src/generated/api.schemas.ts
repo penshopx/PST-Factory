@@ -726,10 +726,19 @@ export interface PstProductBriefInput {
   actionPlan: ActionPlanItem[];
 }
 
+export type PstProductBriefStatus = typeof PstProductBriefStatus[keyof typeof PstProductBriefStatus];
+
+
+export const PstProductBriefStatus = {
+  DRAFT: 'DRAFT',
+  APPROVED: 'APPROVED',
+} as const;
+
 export type PstProductBrief = PstProductBriefInput & ({
   id: string;
   projectId: string;
   createdBy: string;
+  status: PstProductBriefStatus;
   sourceAnalysisArtifactId?: string | null;
   blueprintUpdatedAt: string;
   createdAt: string;

@@ -1248,7 +1248,7 @@ export const getGetPstProductBriefQueryKey = (projectId: string,) => {
     }
 
 
-export const getGetPstProductBriefQueryOptions = <TData = Awaited<ReturnType<typeof getPstProductBrief>>, TError = ErrorType<void>>(projectId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPstProductBrief>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetPstProductBriefQueryOptions = <TData = Awaited<ReturnType<typeof getPstProductBrief>>, TError = ErrorType<unknown>>(projectId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPstProductBrief>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -1267,14 +1267,14 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetPstProductBriefQueryResult = NonNullable<Awaited<ReturnType<typeof getPstProductBrief>>>
-export type GetPstProductBriefQueryError = ErrorType<void>
+export type GetPstProductBriefQueryError = ErrorType<unknown>
 
 
 /**
  * @summary Get the active product brief for a PST project
  */
 
-export function useGetPstProductBrief<TData = Awaited<ReturnType<typeof getPstProductBrief>>, TError = ErrorType<void>>(
+export function useGetPstProductBrief<TData = Awaited<ReturnType<typeof getPstProductBrief>>, TError = ErrorType<unknown>>(
  projectId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPstProductBrief>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
@@ -1292,12 +1292,83 @@ export function useGetPstProductBrief<TData = Awaited<ReturnType<typeof getPstPr
 
 
 
+export const getApprovePstProductBriefUrl = (projectId: string,) => {
+
+
+
+
+  return `/api/pst/projects/${projectId}/product-brief/approve`
+}
+
+/**
+ * @summary Approve the current product brief
+ */
+export const approvePstProductBrief = async (projectId: string, options?: Parameters<typeof customFetch>[1]): Promise<PstProductBrief> => {
+
+  return customFetch<PstProductBrief>(getApprovePstProductBriefUrl(projectId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getApprovePstProductBriefMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approvePstProductBrief>>, TError,{projectId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof approvePstProductBrief>>, TError,{projectId: string}, TContext> => {
+
+const mutationKey = ['approvePstProductBrief'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof approvePstProductBrief>>, {projectId: string}> = (props) => {
+          const {projectId} = props ?? {};
+
+          return  approvePstProductBrief(projectId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApprovePstProductBriefMutationResult = NonNullable<Awaited<ReturnType<typeof approvePstProductBrief>>>
+
+    export type ApprovePstProductBriefMutationError = ErrorType<void>
+
+    /**
+ * @summary Approve the current product brief
+ */
+export const useApprovePstProductBrief = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approvePstProductBrief>>, TError,{projectId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof approvePstProductBrief>>,
+        TError,
+        {projectId: string},
+        TContext
+      > => {
+      return useMutation(getApprovePstProductBriefMutationOptions(options));
+    }
+
 export const getUpsertPstProductBriefUrl = (projectId: string,) => {
 
 
 
 
-  return `/api/pst/projects/${projectId}/product-brief`
+  return `/api/pst/projects/${projectId}/product-brief/approve`
 }
 
 /**

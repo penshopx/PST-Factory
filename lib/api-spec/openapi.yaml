@@ -285,6 +285,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PstProductBrief"
+  /pst/projects/{projectId}/product-brief/approve:
+    post:
+      operationId: approvePstProductBrief
+      tags: [manufacturing]
+      summary: Approve the current product brief
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Approved product brief
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PstProductBrief"
         "404":
           description: Product brief not found
     put:
@@ -1342,11 +1356,12 @@ components:
       allOf:
         - $ref: "#/components/schemas/PstProductBriefInput"
         - type: object
-          required: [id, projectId, createdBy, blueprintUpdatedAt, createdAt, updatedAt]
+          required: [id, projectId, createdBy, status, blueprintUpdatedAt, createdAt, updatedAt]
           properties:
             id: { type: string }
             projectId: { type: string }
             createdBy: { type: string }
+            status: { type: string, enum: [DRAFT, APPROVED] }
             sourceAnalysisArtifactId: { type: string, nullable: true }
             blueprintUpdatedAt: { type: string, format: date-time }
             createdAt: { type: string, format: date-time }

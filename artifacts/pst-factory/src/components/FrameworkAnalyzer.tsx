@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   useAnalyzePstFramework,
+  useApprovePstProductBrief,
   useConvertPstActionPlan,
   useGetPstProductBrief,
   useUpsertPstProductBrief,
@@ -188,7 +189,12 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
   const analyzer = useAnalyzePstFramework();
   const converter = useConvertPstActionPlan();
   const briefQuery = useGetPstProductBrief(project.id);
-  const saveBrief = useUpsertPstProductBrief();
+  const saveBrief = useUpsertPstProductBrief({
+    mutation: { onSuccess: () => void briefQuery.refetch() },
+  });
+  const approveBrief = useApprovePstProductBrief({
+    mutation: { onSuccess: () => void briefQuery.refetch() },
+  });
 
   useEffect(() => {
     setProblemStatement(project.problemStatement);
@@ -694,6 +700,25 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
+                    {briefQuery.data?.status && (
+                      <Badge
+                        variant="outline"
+                        className={briefQuery.data.status === 'APPROVED'
+                          ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-500'
+                          : 'border-amber-500/40 bg-amber-500/10 text-amber-500'}
+                      >
+                        {briefQuery.data.status === 'APPROVED' ? 'Brief disetujui' : 'Brief draft'}
+                      </Badge>
+                    )}
+                    <Button
+                      size="sm"
+                      onClick={() => approveBrief.mutate({ projectId: project.id })}
+                      disabled={!selectedProductId || actionPlan.length === 0 || briefIsStale || approveBrief.isPending || saveBrief.isPending}
+                      data-testid="button-approve-product-brief"
+                    >
+                      <ShieldCheck size={14} className="mr-1.5" />
+                      {approveBrief.isPending ? 'Menyetujui...' : 'Setujui Brief'}
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
@@ -734,6 +759,11 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
                     </Button>
                   </div>
                 </div>
+                {approveBrief.isError && (
+                  <div className="border-b border-destructive/20 bg-destructive/10 px-6 py-3 text-xs text-destructive">
+                    {(approveBrief.error as { data?: { error?: string } })?.data?.error ?? 'Product Brief belum dapat disetujui.'}
+                  </div>
+                )}
 
                 <div className="grid gap-6 p-6 lg:grid-cols-[1.1fr_.9fr]">
                   <div>
