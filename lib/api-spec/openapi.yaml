@@ -271,6 +271,41 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PstBlueprint"
+  /pst/projects/{projectId}/product-brief:
+    get:
+      operationId: getPstProductBrief
+      tags: [manufacturing]
+      summary: Get the active product brief for a PST project
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Active product brief
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PstProductBrief"
+        "404":
+          description: Product brief not found
+    put:
+      operationId: upsertPstProductBrief
+      tags: [manufacturing]
+      summary: Persist the active product brief for a PST project
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PstProductBriefInput"
+      responses:
+        "200":
+          description: Saved product brief
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PstProductBrief"
   /pst/framework-analyzer:
     post:
       operationId: analyzePstFramework
@@ -1289,6 +1324,32 @@ components:
         priority: { type: string, enum: [High, Med, Low] }
         suggested_timeline: { type: string }
         success_metric: { type: string }
+    PstProductBriefInput:
+      type: object
+      required: [frameworkAnalysis, selectedSolutionIds, actionPlan]
+      properties:
+        frameworkAnalysis:
+          $ref: "#/components/schemas/FrameworkAnalysis"
+        selectedSolutionIds:
+          type: array
+          items: { type: string }
+        actionPlan:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActionPlanItem"
+    PstProductBrief:
+      allOf:
+        - $ref: "#/components/schemas/PstProductBriefInput"
+        - type: object
+          required: [id, projectId, createdBy, blueprintUpdatedAt, createdAt, updatedAt]
+          properties:
+            id: { type: string }
+            projectId: { type: string }
+            createdBy: { type: string }
+            sourceAnalysisArtifactId: { type: string, nullable: true }
+            blueprintUpdatedAt: { type: string, format: date-time }
+            createdAt: { type: string, format: date-time }
+            updatedAt: { type: string, format: date-time }
     ActionPlanOutput:
       type: object
       required: [action_plan]

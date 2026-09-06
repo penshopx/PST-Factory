@@ -48,6 +48,8 @@ import type {
   PstHelpChatInput,
   PstHelpChatResponse,
   PstPattern,
+  PstProductBrief,
+  PstProductBriefInput,
   PstProject,
   PstProjectInput,
   PstProjectMember,
@@ -1211,6 +1213,155 @@ export const useRunPstArchitect = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getRunPstArchitectMutationOptions(options));
+    }
+
+export const getGetPstProductBriefUrl = (projectId: string,) => {
+
+
+
+
+  return `/api/pst/projects/${projectId}/product-brief`
+}
+
+/**
+ * @summary Get the active product brief for a PST project
+ */
+export const getPstProductBrief = async (projectId: string, options?: Parameters<typeof customFetch>[1]): Promise<PstProductBrief> => {
+
+  return customFetch<PstProductBrief>(getGetPstProductBriefUrl(projectId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPstProductBriefQueryKey = (projectId: string,) => {
+    return [
+    `/api/pst/projects/${projectId}/product-brief`
+    ] as const;
+    }
+
+
+export const getGetPstProductBriefQueryOptions = <TData = Awaited<ReturnType<typeof getPstProductBrief>>, TError = ErrorType<void>>(projectId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPstProductBrief>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPstProductBriefQueryKey(projectId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPstProductBrief>>> = ({ signal }) => getPstProductBrief(projectId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: projectId !== null && projectId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPstProductBrief>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPstProductBriefQueryResult = NonNullable<Awaited<ReturnType<typeof getPstProductBrief>>>
+export type GetPstProductBriefQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get the active product brief for a PST project
+ */
+
+export function useGetPstProductBrief<TData = Awaited<ReturnType<typeof getPstProductBrief>>, TError = ErrorType<void>>(
+ projectId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPstProductBrief>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPstProductBriefQueryOptions(projectId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpsertPstProductBriefUrl = (projectId: string,) => {
+
+
+
+
+  return `/api/pst/projects/${projectId}/product-brief`
+}
+
+/**
+ * @summary Persist the active product brief for a PST project
+ */
+export const upsertPstProductBrief = async (projectId: string,
+    pstProductBriefInput: PstProductBriefInput, options?: Parameters<typeof customFetch>[1]): Promise<PstProductBrief> => {
+
+  return customFetch<PstProductBrief>(getUpsertPstProductBriefUrl(projectId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pstProductBriefInput)
+  }
+);}
+
+
+
+
+
+export const getUpsertPstProductBriefMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertPstProductBrief>>, TError,{projectId: string;data: BodyType<PstProductBriefInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof upsertPstProductBrief>>, TError,{projectId: string;data: BodyType<PstProductBriefInput>}, TContext> => {
+
+const mutationKey = ['upsertPstProductBrief'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof upsertPstProductBrief>>, {projectId: string;data: BodyType<PstProductBriefInput>}> = (props) => {
+          const {projectId,data} = props ?? {};
+
+          return  upsertPstProductBrief(projectId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpsertPstProductBriefMutationResult = NonNullable<Awaited<ReturnType<typeof upsertPstProductBrief>>>
+    export type UpsertPstProductBriefMutationBody = BodyType<PstProductBriefInput>
+    export type UpsertPstProductBriefMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Persist the active product brief for a PST project
+ */
+export const useUpsertPstProductBrief = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertPstProductBrief>>, TError,{projectId: string;data: BodyType<PstProductBriefInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof upsertPstProductBrief>>,
+        TError,
+        {projectId: string;data: BodyType<PstProductBriefInput>},
+        TContext
+      > => {
+      return useMutation(getUpsertPstProductBriefMutationOptions(options));
     }
 
 export const getAnalyzePstFrameworkUrl = () => {

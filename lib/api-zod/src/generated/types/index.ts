@@ -56,6 +56,8 @@ export * from './pstHelpChatMessage';
 export * from './pstHelpChatMessageRole';
 export * from './pstHelpChatResponse';
 export * from './pstPattern';
+export * from './pstProductBrief';
+export * from './pstProductBriefInput';
 export * from './pstProject';
 export * from './pstProjectInput';
 export * from './pstProjectMember';

@@ -719,6 +719,22 @@ export interface ActionPlanItem {
   success_metric: string;
 }
 
+export interface PstProductBriefInput {
+  frameworkAnalysis: FrameworkAnalysis;
+  selectedSolutionIds: string[];
+  actionPlan: ActionPlanItem[];
+}
+
+export type PstProductBrief = PstProductBriefInput & ({
+  id: string;
+  projectId: string;
+  createdBy: string;
+  sourceAnalysisArtifactId?: string | null;
+  blueprintUpdatedAt: string;
+  createdAt: string;
+  updatedAt: string;
+});
+
 export interface ActionPlanOutput {
   /**
      * @minItems 1

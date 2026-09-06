@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   useAnalyzePstFramework,
   useConvertPstActionPlan,
+  useGetPstProductBrief,
+  useUpsertPstProductBrief,
   type ActionPlanItem,
   type FrameworkAnalysis,
   type PstBlueprint,
@@ -184,6 +186,8 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
   const [summaryCopied, setSummaryCopied] = useState(false);
   const analyzer = useAnalyzePstFramework();
   const converter = useConvertPstActionPlan();
+  const briefQuery = useGetPstProductBrief(project.id);
+  const saveBrief = useUpsertPstProductBrief();
 
   useEffect(() => {
     setProblemStatement(project.problemStatement);
@@ -191,6 +195,13 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
     setSelectedSolutionIds([]);
     setActionPlan([]);
   }, [project.id, project.problemStatement]);
+
+  useEffect(() => {
+    if (!briefQuery.data) return;
+    setAnalysis(briefQuery.data.frameworkAnalysis);
+    setSelectedSolutionIds(briefQuery.data.selectedSolutionIds);
+    setActionPlan(briefQuery.data.actionPlan);
+  }, [briefQuery.data]);
 
   const selectedSolutions = useMemo(
     () => analysis?.recommended_solutions.filter((solution) => selectedSolutionIds.includes(solution.id)) ?? [],
@@ -210,9 +221,14 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
       },
     }, {
       onSuccess: (result) => {
+        const solutionIds = result.recommended_solutions.map((solution) => solution.id);
         setAnalysis(result);
-        setSelectedSolutionIds(result.recommended_solutions.map((solution) => solution.id));
+        setSelectedSolutionIds(solutionIds);
         setActionPlan([]);
+        saveBrief.mutate({
+          projectId: project.id,
+          data: { frameworkAnalysis: result, selectedSolutionIds: solutionIds, actionPlan: [] },
+        });
       },
     });
   };
@@ -225,15 +241,32 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
         solutions: selectedSolutions,
       },
     }, {
-      onSuccess: (result) => setActionPlan(result.action_plan),
+      onSuccess: (result) => {
+        setActionPlan(result.action_plan);
+        saveBrief.mutate({
+          projectId: project.id,
+          data: {
+            frameworkAnalysis: analysis,
+            selectedSolutionIds,
+            actionPlan: result.action_plan,
+          },
+        });
+      },
     });
   };
 
   const toggleSolution = (id: string) => {
-    setSelectedSolutionIds((current) =>
-      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
-    );
+    const nextIds = selectedSolutionIds.includes(id)
+      ? selectedSolutionIds.filter((item) => item !== id)
+      : [...selectedSolutionIds, id];
+    setSelectedSolutionIds(nextIds);
     setActionPlan([]);
+    if (analysis) {
+      saveBrief.mutate({
+        projectId: project.id,
+        data: { frameworkAnalysis: analysis, selectedSolutionIds: nextIds, actionPlan: [] },
+      });
+    }
   };
 
   const copyPlan = async () => {
@@ -307,6 +340,9 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
                     </span>
                   </div>
                 )}
+                {saveBrief.isPending && <p className="mt-3 text-center text-[11px] text-muted-foreground">Menyimpan Product Brief...</p>}
+                {saveBrief.isSuccess && <p className="mt-3 text-center text-[11px] text-emerald-600 dark:text-emerald-400">Product Brief tersimpan di proyek.</p>}
+                {saveBrief.isError && <p className="mt-3 text-center text-[11px] text-destructive">Product Brief belum tersimpan. Coba jalankan analisis kembali.</p>}
               </div>
             </div>
           </div>

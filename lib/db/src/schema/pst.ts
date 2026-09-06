@@ -91,6 +91,31 @@ export const pstAnalysisArtifactsTable = pgTable("pst_analysis_artifacts", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const pstProductBriefsTable = pgTable(
+  "pst_product_briefs",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => pstProjectsTable.id, { onDelete: "cascade" }),
+    createdBy: text("created_by").notNull(),
+    sourceAnalysisArtifactId: text("source_analysis_artifact_id")
+      .references(() => pstAnalysisArtifactsTable.id, { onDelete: "set null" }),
+    blueprintUpdatedAt: timestamp("blueprint_updated_at", { withTimezone: true }).notNull(),
+    frameworkAnalysis: jsonb("framework_analysis").$type<Record<string, unknown>>().notNull(),
+    selectedSolutionIds: text("selected_solution_ids").array().notNull(),
+    actionPlan: jsonb("action_plan").$type<Record<string, unknown>[]>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => ({
+    projectUnique: uniqueIndex("pst_product_briefs_project_idx").on(table.projectId),
+  }),
+);
+
 export const pstBlueprintsTable = pgTable("pst_blueprints", {
   id: text("id").primaryKey(),
   projectId: text("project_id")

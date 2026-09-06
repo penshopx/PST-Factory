@@ -8,6 +8,7 @@ import {
   pstBlueprintsTable,
   pstFactoryEventsTable,
   pstPatternsTable,
+  pstProductBriefsTable,
   pstProjectPatternsTable,
   pstProjectMembersTable,
   pstProjectComponentsTable,
@@ -61,6 +62,8 @@ import {
   GetPstBlueprintResponse,
   GetPstProjectParams,
   GetPstProjectResponse,
+  GetPstProductBriefParams,
+  GetPstProductBriefResponse,
   GetPublicPstWorkspaceResponse,
   StartPublicPstRuntimeSessionParams,
   StartPublicPstRuntimeSessionResponse,
@@ -103,6 +106,9 @@ import {
   UpdatePstProjectBody,
   UpdatePstProjectParams,
   UpdatePstProjectResponse,
+  UpsertPstProductBriefBody,
+  UpsertPstProductBriefParams,
+  UpsertPstProductBriefResponse,
   UpsertPstProjectMemberBody,
 } from "@workspace/api-zod";
 import { aiProvider } from "../lib/services/ai/provider";
@@ -1704,6 +1710,70 @@ router.post("/pst/projects/:projectId/architect", async (req, res): Promise<void
   });
   await addEvent("BLUEPRINT_GENERATED", `${project.name} received an AI blueprint proposal.`, project.id);
   res.json(RunPstArchitectResponse.parse(updated));
+});
+
+router.get("/pst/projects/:projectId/product-brief", async (req, res): Promise<void> => {
+  const params = GetPstProductBriefParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const access = await authorizeProject(req, res, params.data.projectId);
+  if (!access) return;
+  const [brief] = await db.select().from(pstProductBriefsTable)
+    .where(eq(pstProductBriefsTable.projectId, access.project.id));
+  if (!brief) {
+    res.status(404).json({ error: "Product brief not found" });
+    return;
+  }
+  res.json(GetPstProductBriefResponse.parse(brief));
+});
+
+router.put("/pst/projects/:projectId/product-brief", async (req, res): Promise<void> => {
+  const params = UpsertPstProductBriefParams.safeParse(req.params);
+  const body = UpsertPstProductBriefBody.safeParse(req.body);
+  if (!params.success || !body.success) {
+    res.status(400).json({ error: !params.success ? params.error.message : body.error?.message ?? "Invalid request body" });
+    return;
+  }
+  const access = await authorizeProject(req, res, params.data.projectId, editorRoles);
+  if (!access) return;
+  const validSolutionIds = new Set(body.data.frameworkAnalysis.recommended_solutions.map((solution) => solution.id));
+  if (body.data.selectedSolutionIds.some((id) => !validSolutionIds.has(id))) {
+    res.status(400).json({ error: "Selected solutions must belong to the submitted framework analysis." });
+    return;
+  }
+  const [blueprint] = await db.select().from(pstBlueprintsTable)
+    .where(eq(pstBlueprintsTable.projectId, access.project.id));
+  if (!blueprint) {
+    res.status(409).json({ error: "Create a Blueprint before saving a product brief." });
+    return;
+  }
+  const now = new Date();
+  const [brief] = await db.insert(pstProductBriefsTable).values({
+    id: randomUUID(),
+    projectId: access.project.id,
+    createdBy: access.userId,
+    sourceAnalysisArtifactId: blueprint.analysisArtifactId,
+    blueprintUpdatedAt: blueprint.updatedAt,
+    frameworkAnalysis: body.data.frameworkAnalysis,
+    selectedSolutionIds: body.data.selectedSolutionIds,
+    actionPlan: body.data.actionPlan,
+    createdAt: now,
+    updatedAt: now,
+  }).onConflictDoUpdate({
+    target: pstProductBriefsTable.projectId,
+    set: {
+      sourceAnalysisArtifactId: blueprint.analysisArtifactId,
+      blueprintUpdatedAt: blueprint.updatedAt,
+      frameworkAnalysis: body.data.frameworkAnalysis,
+      selectedSolutionIds: body.data.selectedSolutionIds,
+      actionPlan: body.data.actionPlan,
+      updatedAt: now,
+    },
+  }).returning();
+  await addEvent("PRODUCT_BRIEF_SAVED", `${access.project.name} saved its active product brief.`, access.project.id);
+  res.json(UpsertPstProductBriefResponse.parse(brief));
 });
 
 router.get("/pst/projects/:projectId/blueprint", async (req, res): Promise<void> => {
