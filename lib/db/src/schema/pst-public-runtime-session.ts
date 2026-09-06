@@ -1,4 +1,4 @@
-import { integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { pstProjectsTable, pstReleasesTable } from "./pst";
@@ -28,6 +28,24 @@ export const pstPublicRuntimeSessionsTable = pgTable("pst_public_runtime_session
     .defaultNow()
     .$onUpdate(() => new Date()),
 });
+
+export const pstPublicRuntimeSessionAdvancesTable = pgTable(
+  "pst_public_runtime_session_advances",
+  {
+    id: text("id").primaryKey(),
+    sessionId: text("session_id")
+      .notNull()
+      .references(() => pstPublicRuntimeSessionsTable.id, { onDelete: "cascade" }),
+    requestId: text("request_id").notNull(),
+    requestHash: text("request_hash").notNull(),
+    response: jsonb("response").$type<Record<string, unknown>>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    sessionRequestUnique: uniqueIndex("pst_public_runtime_advances_session_request_idx")
+      .on(table.sessionId, table.requestId),
+  }),
+);
 
 export const insertPstPublicRuntimeSessionSchema = createInsertSchema(
   pstPublicRuntimeSessionsTable,

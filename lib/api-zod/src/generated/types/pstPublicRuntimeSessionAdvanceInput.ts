@@ -8,6 +8,11 @@
 import type { PstPublicRuntimeSessionAdvanceInputInput } from './pstPublicRuntimeSessionAdvanceInputInput';
 
 export interface PstPublicRuntimeSessionAdvanceInput {
+  /**
+     * @minLength 1
+     * @maxLength 128
+     */
+  requestId: string;
   /** @minimum 0 */
   revision: number;
   input: PstPublicRuntimeSessionAdvanceInputInput;

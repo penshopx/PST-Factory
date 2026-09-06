@@ -926,8 +926,9 @@ components:
           items: { $ref: "#/components/schemas/PstPublicRuntimeDiagnostic" }
     PstPublicRuntimeSessionAdvanceInput:
       type: object
-      required: [revision, input]
+      required: [requestId, revision, input]
       properties:
+        requestId: { type: string, minLength: 1, maxLength: 128 }
         revision: { type: number, multipleOf: 1, minimum: 0 }
         input: { type: object, additionalProperties: true }
     ProjectStatus:

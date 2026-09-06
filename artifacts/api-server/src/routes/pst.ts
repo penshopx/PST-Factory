@@ -14,6 +14,7 @@ import {
   pstProjectDocumentsTable,
   pstProjectsTable,
   pstProjectRecipesTable,
+  pstPublicRuntimeSessionAdvancesTable,
   pstPublicRuntimeSessionsTable,
   pstReleasesTable,
   pstQaRunsTable,
@@ -28,6 +29,7 @@ import {
   type PstAssemblyRisk,
   type PstReleaseSnapshot,
   type PstRuntimeInputV1,
+  pstCanonicalJsonHash,
 } from "@workspace/db";
 import {
   ArchivePstProjectParams,
@@ -2839,6 +2841,7 @@ router.post("/pst/public/workspaces/:slug/sessions/:sessionId/advance", async (r
   type AdvanceTransactionResult =
     | { kind: "NOT_FOUND" }
     | { kind: "STALE"; revision: number }
+    | { kind: "IDEMPOTENCY_CONFLICT" }
     | { kind: "RELEASE_CHANGED" }
     | { kind: "UNAVAILABLE"; error: string }
     | { kind: "SUCCESS"; response: ReturnType<typeof publicRuntimeSessionView> };
@@ -2849,6 +2852,26 @@ router.post("/pst/public/workspaces/:slug/sessions/:sessionId/advance", async (r
       .where(eq(pstPublicRuntimeSessionsTable.id, params.data.sessionId))
       .for("update");
     if (!session) return { kind: "NOT_FOUND" };
+    const requestHash = pstCanonicalJsonHash({
+      revision: body.data.revision,
+      input: body.data.input,
+    });
+    const [existingAdvance] = await tx
+      .select()
+      .from(pstPublicRuntimeSessionAdvancesTable)
+      .where(and(
+        eq(pstPublicRuntimeSessionAdvancesTable.sessionId, session.id),
+        eq(pstPublicRuntimeSessionAdvancesTable.requestId, body.data.requestId),
+      ))
+      .limit(1);
+    if (existingAdvance) {
+      return existingAdvance.requestHash === requestHash
+        ? {
+            kind: "SUCCESS",
+            response: existingAdvance.response as ReturnType<typeof publicRuntimeSessionView>,
+          }
+        : { kind: "IDEMPOTENCY_CONFLICT" };
+    }
 
     let workspace;
     try {
@@ -2900,10 +2923,15 @@ router.post("/pst/public/workspaces/:slug/sessions/:sessionId/advance", async (r
         updatedAt: new Date(),
       })
       .where(eq(pstPublicRuntimeSessionsTable.id, session.id));
-    return {
-      kind: "SUCCESS",
-      response: publicRuntimeSessionView(session.id, revision, result),
-    };
+    const response = publicRuntimeSessionView(session.id, revision, result);
+    await tx.insert(pstPublicRuntimeSessionAdvancesTable).values({
+      id: randomUUID(),
+      sessionId: session.id,
+      requestId: body.data.requestId,
+      requestHash,
+      response,
+    });
+    return { kind: "SUCCESS", response };
   });
 
   if (outcome.kind === "NOT_FOUND") {
@@ -2916,6 +2944,10 @@ router.post("/pst/public/workspaces/:slug/sessions/:sessionId/advance", async (r
   }
   if (outcome.kind === "STALE") {
     res.status(409).json({ error: "Public runtime session revision is stale", revision: outcome.revision });
+    return;
+  }
+  if (outcome.kind === "IDEMPOTENCY_CONFLICT") {
+    res.status(409).json({ error: "Idempotency request ID was reused with different input" });
     return;
   }
   if (outcome.kind === "RELEASE_CHANGED") {

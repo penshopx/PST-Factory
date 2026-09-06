@@ -2217,12 +2217,15 @@ export const AdvancePublicPstRuntimeSessionParams = zod.object({
   "sessionId": zod.coerce.string()
 })
 
+export const advancePublicPstRuntimeSessionBodyRequestIdMax = 128;
+
 export const advancePublicPstRuntimeSessionBodyRevisionMin = 0;
 export const advancePublicPstRuntimeSessionBodyRevisionMultipleOf = 1;
 
 
 
 export const AdvancePublicPstRuntimeSessionBody = zod.object({
+  "requestId": zod.string().min(1).max(advancePublicPstRuntimeSessionBodyRequestIdMax),
   "revision": zod.number().min(advancePublicPstRuntimeSessionBodyRevisionMin).multipleOf(advancePublicPstRuntimeSessionBodyRevisionMultipleOf),
   "input": zod.record(zod.string(), zod.unknown())
 })

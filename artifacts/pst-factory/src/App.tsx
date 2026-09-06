@@ -1265,7 +1265,11 @@ function CustomerWorkspace() {
   const handleAdvance = (input: Record<string, unknown>) => {
     if (!session) return;
     advanceSession.mutate(
-      { slug, sessionId: session.sessionId, data: { revision: session.revision, input } },
+      {
+        slug,
+        sessionId: session.sessionId,
+        data: { requestId: globalThis.crypto.randomUUID(), revision: session.revision, input },
+      },
       {
         onSuccess: (data) => setSession(data)
       }
