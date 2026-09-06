@@ -14,3 +14,4 @@
 - [PST assembly concurrency](pst-assembly-concurrency.md) — Project mutations share one lock; blueprint changes invalidate mutable assembly state from the prior revision.
 - [Public PST runtime sessions](pst-public-runtime-sessions.md) — Customer journeys execute server-side against a pinned immutable release with opaque IDs and revision-guarded advances.
 - [PST denied-access auditing](pst-denied-access-auditing.md) — Cross-owner project probes are durably audited without weakening indistinguishable 404 responses.
+- [Bundled PDF extraction](bundled-pdf-extraction.md) — pdf-parse needs its native canvas dependency declared directly or the bundled API crashes at startup.

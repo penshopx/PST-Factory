@@ -139,6 +139,7 @@ import {
 import { consumeAnalysisQuota } from "../lib/services/ai/quota";
 import { randomUUID } from "node:crypto";
 import { deleteObject, signObjectUrl } from "./storage";
+import { extractPlanningDocument } from "../lib/services/pst/document-extraction";
 
 const router: IRouter = Router();
 
@@ -1604,19 +1605,33 @@ router.post("/pst/projects/:projectId/architect", async (req, res): Promise<void
     res.status(503).json({ error: "Document storage is not configured." });
     return;
   }
-  const architectDocuments = await Promise.all(documents.map(async (document) => {
-    const storagePath = document.objectPath.replace(/^\/objects/, "");
-    const url = await signObjectUrl(`${privateObjectDir}${storagePath}`, "GET");
-    const response = await fetch(url, { signal: AbortSignal.timeout(30_000) });
-    if (!response.ok) {
-      throw new Error(`Planning document download failed with status ${response.status}`);
-    }
-    return {
-      name: document.name,
-      contentType: document.contentType,
-      data: Buffer.from(await response.arrayBuffer()),
-    };
-  }));
+  let architectDocuments;
+  try {
+    let downloadedBytes = 0;
+    architectDocuments = await Promise.all(documents.map(async (document) => {
+      const storagePath = document.objectPath.replace(/^\/objects/, "");
+      const url = await signObjectUrl(`${privateObjectDir}${storagePath}`, "GET");
+      const response = await fetch(url, { signal: AbortSignal.timeout(30_000) });
+      if (!response.ok) {
+        throw new Error(`download failed with status ${response.status}`);
+      }
+      const data = Buffer.from(await response.arrayBuffer());
+      downloadedBytes += data.length;
+      if (downloadedBytes > 20 * 1024 * 1024) {
+        throw new Error("actual downloaded size exceeds the 20 MB analysis limit");
+      }
+      return {
+        name: document.name,
+        text: await extractPlanningDocument(document.name, data),
+      };
+    }));
+  } catch (error) {
+    req.log.warn({ err: error }, "Planning document extraction failed");
+    res.status(422).json({
+      error: `Dokumen tidak dapat dianalisis: ${error instanceof Error ? error.message : "format tidak valid"}`,
+    });
+    return;
+  }
   if (!consumeAnalysisQuota(access.userId)) {
     res.status(429).json({ error: "Batas analisis tercapai. Coba lagi dalam beberapa menit.", retryable: true });
     return;

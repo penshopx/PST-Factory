@@ -1,9 +1,6 @@
-import type { Buffer } from "node:buffer";
-
 export type ArchitectDocument = {
   name: string;
-  contentType: string;
-  data: Buffer;
+  text: string;
 };
 
 export type ArchitectContext = {
@@ -79,14 +76,10 @@ export class OpenAIProvider implements AIProvider {
               context.additionalContext ? `Konteks tambahan: ${context.additionalContext}` : undefined,
               context.pattern ? `Pola: ${context.pattern.name} — ${context.pattern.steps.join(" → ")}` : undefined,
               context.recipe ? `Panduan: ${context.recipe.name} — ${context.recipe.components.join(", ")}` : undefined,
+              ...(context.documents ?? []).map((document) =>
+                `Dokumen "${document.name}":\n${document.text}`),
             ].filter(Boolean).join("\n"),
           },
-          ...(context.documents ?? []).map((document) => ({
-            type: "input_file" as const,
-            filename: document.name,
-            file_data: `data:${document.contentType};base64,${document.data.toString("base64")}`,
-            detail: "low" as const,
-          })),
         ],
       }],
       text: { format: { type: "json_object" } },
