@@ -4,6 +4,7 @@ import { and, desc, eq, exists, ilike, inArray, or, sql, type SQL } from "drizzl
 import { db } from "@workspace/db";
 import {
   pstAssetsTable,
+  pstAnalysisArtifactsTable,
   pstBlueprintsTable,
   pstFactoryEventsTable,
   pstPatternsTable,
@@ -137,7 +138,7 @@ import {
   createPstRuntime,
 } from "@workspace/db/schema";
 import { consumeAnalysisQuota } from "../lib/services/ai/quota";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { deleteObject, resolvePrivateObjectPath, signObjectUrl } from "./storage";
 import { extractPlanningDocument } from "../lib/services/pst/document-extraction";
 
@@ -1620,7 +1621,10 @@ router.post("/pst/projects/:projectId/architect", async (req, res): Promise<void
         throw new Error("actual downloaded size exceeds the 20 MB analysis limit");
       }
       return {
+        documentId: document.id,
         name: document.name,
+        size: data.length,
+        contentSha256: createHash("sha256").update(data).digest("hex"),
         text: await extractPlanningDocument(document.name, data),
       };
     }));
@@ -1652,7 +1656,7 @@ router.post("/pst/projects/:projectId/architect", async (req, res): Promise<void
       recipe: references.recipe
         ? { name: references.recipe.name, components: references.recipe.components }
         : undefined,
-      documents: architectDocuments,
+      documents: architectDocuments.map(({ name, text }) => ({ name, text })),
     });
   } catch (error) {
     req.log.warn({ err: error }, "PST architect analysis failed");
@@ -1672,10 +1676,28 @@ router.post("/pst/projects/:projectId/architect", async (req, res): Promise<void
       ? workflowFromStructure(references.pattern?.steps ?? references.recipe?.components ?? [], workflowSource)
       : defaultWorkflow,
   };
+  const analysisArtifactId = randomUUID();
   const updated = await db.transaction(async (tx) => {
     await tx.execute(sql`select ${pstProjectsTable.id} from ${pstProjectsTable} where ${pstProjectsTable.id} = ${project.id} for update`);
     await tx.execute(sql`select ${pstBlueprintsTable.id} from ${pstBlueprintsTable} where ${pstBlueprintsTable.projectId} = ${project.id} for update`);
-    const [result] = await tx.update(pstBlueprintsTable).set({ ...blueprintProposal, updatedAt: new Date() }).where(eq(pstBlueprintsTable.projectId, project.id)).returning();
+    await tx.insert(pstAnalysisArtifactsTable).values({
+      id: analysisArtifactId,
+      projectId: project.id,
+      createdBy: access.userId,
+      contractVersion: "pst-architect.v1",
+      documents: architectDocuments.map(({ documentId, name, size, contentSha256 }) => ({
+        documentId,
+        name,
+        size,
+        contentSha256,
+      })),
+      result: blueprintProposal,
+    });
+    const [result] = await tx.update(pstBlueprintsTable).set({
+      ...blueprintProposal,
+      analysisArtifactId,
+      updatedAt: new Date(),
+    }).where(eq(pstBlueprintsTable.projectId, project.id)).returning();
     await tx.delete(pstProjectAssembliesTable).where(eq(pstProjectAssembliesTable.projectId, project.id));
     await tx.update(pstProjectsTable).set({ status: "ARCHITECTED", updatedAt: new Date() }).where(eq(pstProjectsTable.id, project.id));
     return result;
@@ -1716,7 +1738,11 @@ router.patch("/pst/projects/:projectId/blueprint", async (req, res): Promise<voi
   const updated = await db.transaction(async (tx) => {
     await tx.execute(sql`select ${pstProjectsTable.id} from ${pstProjectsTable} where ${pstProjectsTable.id} = ${access.project.id} for update`);
     await tx.execute(sql`select ${pstBlueprintsTable.id} from ${pstBlueprintsTable} where ${pstBlueprintsTable.projectId} = ${access.project.id} for update`);
-    const [result] = await tx.update(pstBlueprintsTable).set({ ...body.data, updatedAt: new Date() }).where(eq(pstBlueprintsTable.projectId, access.project.id)).returning();
+    const [result] = await tx.update(pstBlueprintsTable).set({
+      ...body.data,
+      analysisArtifactId: null,
+      updatedAt: new Date(),
+    }).where(eq(pstBlueprintsTable.projectId, access.project.id)).returning();
     if (result) {
       await tx.delete(pstProjectAssembliesTable).where(eq(pstProjectAssembliesTable.projectId, access.project.id));
       await tx.update(pstProjectsTable).set({ status: "BLUEPRINT_READY", updatedAt: new Date() }).where(eq(pstProjectsTable.id, access.project.id));

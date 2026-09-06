@@ -15,3 +15,4 @@
 - [Public PST runtime sessions](pst-public-runtime-sessions.md) — Customer journeys execute server-side against a pinned immutable release with opaque IDs and revision-guarded advances.
 - [PST denied-access auditing](pst-denied-access-auditing.md) — Cross-owner project probes are durably audited without weakening indistinguishable 404 responses.
 - [Bundled PDF extraction](bundled-pdf-extraction.md) — pdf-parse needs its native canvas dependency declared directly or the bundled API crashes at startup.
+- [Document analysis provenance](document-analysis-provenance.md) — Document-backed Blueprints reference immutable content hashes; manual edits clear that provenance.

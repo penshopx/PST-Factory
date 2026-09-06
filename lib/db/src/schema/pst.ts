@@ -72,6 +72,25 @@ export const pstProjectMembersTable = pgTable(
   }),
 );
 
+export type PstAnalysisDocumentManifest = {
+  documentId: string;
+  name: string;
+  size: number;
+  contentSha256: string;
+};
+
+export const pstAnalysisArtifactsTable = pgTable("pst_analysis_artifacts", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id")
+    .notNull()
+    .references(() => pstProjectsTable.id, { onDelete: "cascade" }),
+  createdBy: text("created_by").notNull(),
+  contractVersion: text("contract_version").notNull(),
+  documents: jsonb("documents").$type<PstAnalysisDocumentManifest[]>().notNull(),
+  result: jsonb("result").$type<Record<string, unknown>>().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const pstBlueprintsTable = pgTable("pst_blueprints", {
   id: text("id").primaryKey(),
   projectId: text("project_id")
@@ -89,6 +108,8 @@ export const pstBlueprintsTable = pgTable("pst_blueprints", {
   expectedOutput: text("expected_output").array().notNull(),
   actionPlan: text("action_plan").array().notNull(),
   nextStep: text("next_step").notNull(),
+  analysisArtifactId: text("analysis_artifact_id")
+    .references(() => pstAnalysisArtifactsTable.id, { onDelete: "set null" }),
   version: text("version").notNull().default("v0.1"),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
@@ -280,7 +301,11 @@ export type PstReleaseSnapshot = {
   snapshotHash?: string;
   snapshotHashAlgorithm?: "sha256-canonical-json.v1";
   project: PstReleaseProjectSnapshot;
-  blueprint: Omit<PstBlueprint, "updatedAt"> & { version: string; updatedAt: string };
+  blueprint: Omit<PstBlueprint, "updatedAt" | "analysisArtifactId"> & {
+    analysisArtifactId?: string | null;
+    version: string;
+    updatedAt: string;
+  };
   workflow: WorkflowStep[];
   pattern?: PstReleasePatternSnapshot;
   recipe?: PstReleaseRecipeSnapshot;
