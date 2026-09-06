@@ -19,6 +19,14 @@ function parseObjectPath(path: string) {
   };
 }
 
+export function resolvePrivateObjectPath(objectPath: string) {
+  const privateObjectDir = process.env.PRIVATE_OBJECT_DIR;
+  if (!privateObjectDir) throw new Error("Document storage is not configured");
+  const match = /^\/objects\/uploads\/([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i.exec(objectPath);
+  if (!match) throw new Error("Document object path is invalid");
+  return `${privateObjectDir}/uploads/${match[1]}`;
+}
+
 export async function signObjectUrl(fullPath: string, method: "PUT" | "GET" | "DELETE") {
   const { bucketName, objectName } = parseObjectPath(fullPath);
   const response = await fetch(`${sidecarEndpoint}/object-storage/signed-object-url`, {
@@ -67,7 +75,7 @@ router.post("/storage/uploads/request-url", async (req, res): Promise<void> => {
   try {
     const objectId = randomUUID();
     const objectPath = `/objects/uploads/${objectId}`;
-    const uploadURL = await signObjectUrl(`${privateObjectDir}/uploads/${objectId}`, "PUT");
+    const uploadURL = await signObjectUrl(resolvePrivateObjectPath(objectPath), "PUT");
     res.json(RequestUploadUrlResponse.parse({ uploadURL, objectPath }));
   } catch (error) {
     req.log.error({ err: error }, "Failed to create document upload URL");

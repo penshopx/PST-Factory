@@ -138,7 +138,7 @@ import {
 } from "@workspace/db/schema";
 import { consumeAnalysisQuota } from "../lib/services/ai/quota";
 import { randomUUID } from "node:crypto";
-import { deleteObject, signObjectUrl } from "./storage";
+import { deleteObject, resolvePrivateObjectPath, signObjectUrl } from "./storage";
 import { extractPlanningDocument } from "../lib/services/pst/document-extraction";
 
 const router: IRouter = Router();
@@ -1609,8 +1609,7 @@ router.post("/pst/projects/:projectId/architect", async (req, res): Promise<void
   try {
     let downloadedBytes = 0;
     architectDocuments = await Promise.all(documents.map(async (document) => {
-      const storagePath = document.objectPath.replace(/^\/objects/, "");
-      const url = await signObjectUrl(`${privateObjectDir}${storagePath}`, "GET");
+      const url = await signObjectUrl(resolvePrivateObjectPath(document.objectPath), "GET");
       const response = await fetch(url, { signal: AbortSignal.timeout(30_000) });
       if (!response.ok) {
         throw new Error(`download failed with status ${response.status}`);
@@ -1789,6 +1788,23 @@ router.post("/pst/projects/:projectId/documents", async (req, res): Promise<void
   if (!access) {
     return;
   }
+  let verifiedData: Buffer;
+  try {
+    const url = await signObjectUrl(resolvePrivateObjectPath(body.data.objectPath), "GET");
+    const response = await fetch(url, { signal: AbortSignal.timeout(30_000) });
+    if (!response.ok) throw new Error(`uploaded object returned status ${response.status}`);
+    verifiedData = Buffer.from(await response.arrayBuffer());
+    if (verifiedData.length !== body.data.size) {
+      throw new Error("uploaded object size does not match the declared size");
+    }
+    await extractPlanningDocument(body.data.name, verifiedData);
+  } catch (error) {
+    req.log.warn({ err: error }, "Project document verification failed");
+    res.status(422).json({
+      error: `Dokumen tidak dapat dilampirkan: ${error instanceof Error ? error.message : "objek tidak valid"}`,
+    });
+    return;
+  }
   const [document] = await db.insert(pstProjectDocumentsTable).values({
     id: randomUUID(),
     projectId: access.project.id,
@@ -1830,8 +1846,7 @@ router.get("/pst/projects/:projectId/documents/:documentId/open-url", async (req
     return;
   }
   try {
-    const storagePath = document.objectPath.replace(/^\/objects/, "");
-    const url = await signObjectUrl(`${privateObjectDir}${storagePath}`, "GET");
+    const url = await signObjectUrl(resolvePrivateObjectPath(document.objectPath), "GET");
     res.json(GetPstProjectDocumentOpenUrlResponse.parse({ url }));
   } catch (error) {
     req.log.error({ err: error, documentId: document.id }, "Failed to create document read URL");
@@ -1866,8 +1881,7 @@ router.delete("/pst/projects/:projectId/documents/:documentId", async (req, res)
     return;
   }
   try {
-    const storagePath = document.objectPath.replace(/^\/objects/, "");
-    await deleteObject(`${privateObjectDir}${storagePath}`);
+    await deleteObject(resolvePrivateObjectPath(document.objectPath));
     await db.delete(pstProjectDocumentsTable).where(eq(pstProjectDocumentsTable.id, document.id));
     await addEvent("DOCUMENT_DELETED", `${document.name} was removed from the project.`, access.project.id);
     res.status(204).send();
