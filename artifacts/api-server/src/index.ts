@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { initializePstData } from "./routes/pst";
+import { startPublicRuntimeSessionRetention } from "./lib/services/pst/public-runtime-retention";
 
 const rawPort = process.env["PORT"];
 
@@ -17,6 +18,7 @@ if (Number.isNaN(port) || port <= 0) {
 }
 
 await initializePstData();
+await startPublicRuntimeSessionRetention();
 
 app.listen(port, (err) => {
   if (err) {

@@ -1,4 +1,4 @@
-import { integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { pstProjectsTable, pstReleasesTable } from "./pst";
@@ -27,7 +27,10 @@ export const pstPublicRuntimeSessionsTable = pgTable("pst_public_runtime_session
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()),
-});
+}, (table) => ({
+  terminalRetentionIndex: index("pst_public_runtime_sessions_status_updated_idx")
+    .on(table.status, table.updatedAt),
+}));
 
 export const pstPublicRuntimeSessionAdvancesTable = pgTable(
   "pst_public_runtime_session_advances",
