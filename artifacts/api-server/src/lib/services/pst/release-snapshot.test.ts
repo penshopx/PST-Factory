@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { PstReleaseSnapshot, WorkflowStep } from "@workspace/db";
 import { workflowFromStructure } from "./manufacturing";
-import { compileExecutableRelease } from "./executable-release";
+import {
+  compileExecutableRelease,
+  resolveExecutableRelease,
+} from "./executable-release";
 import {
   materializeCompilerReadySnapshot,
   releaseSnapshotHash,
@@ -268,6 +271,66 @@ test("compiler-ready release materialization is idempotent", () => {
 
   assert.deepEqual(second.snapshot, first.snapshot);
   assert.equal(releaseSnapshotHashMatches(second.snapshot), true);
+});
+
+test("published journey resolves its persisted executable without recompilation", () => {
+  const workflow = workflowFromStructure(
+    ["Questions", "Scoring", "Analysis", "Recommendation"],
+    { type: "pattern", id: "pattern-assessment", name: "Assessment pattern" },
+  );
+  const materialized = materializeCompilerReadySnapshot(modernSnapshot(workflow));
+  assert.equal(materialized.status, "READY");
+  if (materialized.status !== "READY") return;
+  const release = {
+    id: "release-modern",
+    projectId: "project-modern",
+    version: "v1.0",
+    createdAt: new Date("2026-08-29T00:00:00.000Z"),
+  };
+  const compiled = compileExecutableRelease(release, "modern-pst", materialized.snapshot);
+  assert.equal(compiled.status, "COMPILED");
+  if (compiled.status !== "COMPILED") return;
+
+  const resolved = resolveExecutableRelease(
+    release,
+    "modern-pst",
+    materialized.snapshot,
+    compiled.definition,
+  );
+  assert.equal(resolved.status, "COMPILED");
+  if (resolved.status !== "COMPILED") return;
+  assert.equal(resolved.source, "PERSISTED");
+  assert.deepEqual(resolved.definition, compiled.definition);
+});
+
+test("published journey rejects an executable from another release", () => {
+  const workflow = workflowFromStructure(
+    ["Questions", "Scoring", "Analysis", "Recommendation"],
+    { type: "pattern", id: "pattern-assessment", name: "Assessment pattern" },
+  );
+  const materialized = materializeCompilerReadySnapshot(modernSnapshot(workflow));
+  assert.equal(materialized.status, "READY");
+  if (materialized.status !== "READY") return;
+  const release = {
+    id: "release-modern",
+    projectId: "project-modern",
+    version: "v1.0",
+    createdAt: new Date("2026-08-29T00:00:00.000Z"),
+  };
+  const compiled = compileExecutableRelease(release, "modern-pst", materialized.snapshot);
+  assert.equal(compiled.status, "COMPILED");
+  if (compiled.status !== "COMPILED") return;
+
+  const resolved = resolveExecutableRelease(
+    { ...release, id: "another-release" },
+    "modern-pst",
+    materialized.snapshot,
+    compiled.definition,
+  );
+  assert.equal(resolved.status, "BLOCKED");
+  if (resolved.status === "BLOCKED") {
+    assert.equal(resolved.diagnostics[0]?.code, "EXECUTABLE_IDENTITY_MISMATCH");
+  }
 });
 
 test("modern release materialization rejects incomplete authoring configuration", () => {

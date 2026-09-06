@@ -9,6 +9,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import type { ExecutablePstDefinitionV1 } from "./pst-executable";
 
 export const pstProjectsTable = pgTable("pst_projects", {
   id: text("id").primaryKey(),
@@ -298,6 +299,7 @@ export const pstReleasesTable = pgTable(
       .references(() => pstProjectsTable.id, { onDelete: "cascade" }),
     version: text("version").notNull(),
     snapshot: jsonb("snapshot").$type<PstReleaseSnapshot>().notNull(),
+    executableDefinition: jsonb("executable_definition").$type<ExecutablePstDefinitionV1>(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

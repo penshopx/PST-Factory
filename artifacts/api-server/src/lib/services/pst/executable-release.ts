@@ -5,6 +5,7 @@ import {
   prepareCompilerReadyIr,
   pstCompilerVersion,
   validateCanonicalSource,
+  validateExecutablePstDefinitionV1,
   type ExecutablePstDefinitionV1,
   type PstReleaseSnapshot,
 } from "@workspace/db/schema";
@@ -21,6 +22,17 @@ export type ExecutableReleaseResult =
   | {
       status: "COMPILED";
       definition: ExecutablePstDefinitionV1;
+    }
+  | {
+      status: "BLOCKED";
+      diagnostics: Array<{ code: string; path: string; message: string }>;
+    };
+
+export type ResolvedExecutableReleaseResult =
+  | {
+      status: "COMPILED";
+      definition: ExecutablePstDefinitionV1;
+      source: "PERSISTED" | "LEGACY_RECOMPILED";
     }
   | {
       status: "BLOCKED";
@@ -73,4 +85,45 @@ export function compileExecutableRelease(
   return compiled.status === "COMPILED"
     ? { status: "COMPILED", definition: compiled.definition }
     : { status: "BLOCKED", diagnostics: compiled.errors };
+}
+
+export function resolveExecutableRelease(
+  release: PublishedRelease,
+  slug: string,
+  snapshot: PstReleaseSnapshot,
+  persistedDefinition: unknown,
+): ResolvedExecutableReleaseResult {
+  if (persistedDefinition == null) {
+    const legacy = compileExecutableRelease(release, slug, snapshot);
+    return legacy.status === "COMPILED"
+      ? { ...legacy, source: "LEGACY_RECOMPILED" }
+      : legacy;
+  }
+
+  const validation = validateExecutablePstDefinitionV1(persistedDefinition);
+  if (validation.status === "BLOCKED") {
+    return { status: "BLOCKED", diagnostics: validation.errors };
+  }
+  const identity = validation.definition.identity;
+  if (
+    identity.releaseId !== release.id
+    || identity.projectId !== release.projectId
+    || identity.slug !== slug
+    || identity.releaseVersion !== release.version
+    || identity.snapshotHash !== snapshot.snapshotHash
+  ) {
+    return {
+      status: "BLOCKED",
+      diagnostics: [{
+        code: "EXECUTABLE_IDENTITY_MISMATCH",
+        path: "definition.identity",
+        message: "Persisted executable identity does not match its release snapshot.",
+      }],
+    };
+  }
+  return {
+    status: "COMPILED",
+    definition: validation.definition,
+    source: "PERSISTED",
+  };
 }

@@ -122,12 +122,18 @@ import {
   materializeCompilerReadySnapshot,
   resolveReleaseDeclarations,
 } from "../lib/services/pst/release-snapshot";
-import { compileExecutableRelease } from "../lib/services/pst/executable-release";
+import {
+  compileExecutableRelease,
+  resolveExecutableRelease,
+} from "../lib/services/pst/executable-release";
 import {
   persistedRuntimeAdvance,
   publicRuntimeSessionView,
 } from "../lib/services/pst/public-runtime-session";
-import { advancePstRuntime, createPstRuntime } from "@workspace/db/schema";
+import {
+  advancePstRuntime,
+  createPstRuntime,
+} from "@workspace/db/schema";
 import { consumeAnalysisQuota } from "../lib/services/ai/quota";
 import { randomUUID } from "node:crypto";
 import { deleteObject, signObjectUrl } from "./storage";
@@ -484,6 +490,7 @@ async function ensurePublicWorkspaceFixture() {
         projectId: project.id,
         version: publicWorkspaceFixture.version,
         snapshot: candidate.snapshot,
+        executableDefinition: executable.definition,
         createdAt,
       })
       .onConflictDoNothing();
@@ -1254,13 +1261,18 @@ async function publicWorkspace(slug: string, query: PstSelectExecutor = db) {
     );
   }
   const snapshot = release.snapshot;
-  const executable = compileExecutableRelease(release, project.slug, snapshot);
+  const executable = resolveExecutableRelease(
+    release,
+    project.slug,
+    snapshot,
+    release.executableDefinition,
+  );
   if (executable.status === "BLOCKED") {
     const first = executable.diagnostics[0];
     throw new PublicWorkspaceConsistencyError(
       first
-        ? `Published customer workspace cannot be compiled: ${first.code} at ${first.path}.`
-        : "Published customer workspace cannot be compiled.",
+        ? `Published customer workspace has no valid executable: ${first.code} at ${first.path}.`
+        : "Published customer workspace has no valid executable.",
     );
   }
   const publicWorkflow = publicCustomerWorkspaceSteps(snapshot.workflow);
@@ -2421,6 +2433,7 @@ router.post("/pst/projects/:projectId/publish", async (req, res): Promise<void> 
         projectId: lockedProject.id,
         version,
         snapshot: candidate.snapshot,
+        executableDefinition: executable.definition,
         createdAt,
       });
       await tx.update(pstBlueprintsTable)
