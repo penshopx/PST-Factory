@@ -253,6 +253,23 @@ test("modern release materialization is deterministic and compiler-complete", ()
   assert.equal(compiled.status, "COMPILED");
 });
 
+test("compiler-ready release materialization is idempotent", () => {
+  const workflow = workflowFromStructure(
+    ["Questions", "Scoring", "Analysis", "Recommendation"],
+    { type: "pattern", id: "pattern-assessment", name: "Assessment pattern" },
+  );
+  const first = materializeCompilerReadySnapshot(modernSnapshot(workflow));
+  assert.equal(first.status, "READY");
+  if (first.status !== "READY") return;
+
+  const second = materializeCompilerReadySnapshot(first.snapshot);
+  assert.equal(second.status, "READY");
+  if (second.status !== "READY") return;
+
+  assert.deepEqual(second.snapshot, first.snapshot);
+  assert.equal(releaseSnapshotHashMatches(second.snapshot), true);
+});
+
 test("modern release materialization rejects incomplete authoring configuration", () => {
   const source = modernSnapshot([{
     id: "ambiguous",

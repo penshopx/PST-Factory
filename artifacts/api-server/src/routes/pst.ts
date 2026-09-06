@@ -946,10 +946,17 @@ async function releaseSnapshot(
     rules: declarations.rules,
     providers: declarations.providers,
   };
-  return {
+  const authoringSnapshot: PstReleaseSnapshot = {
     ...snapshot,
     snapshotHash: releaseSnapshotHash(snapshot),
   };
+  const materialized = materializeCompilerReadySnapshot(authoringSnapshot);
+  if (materialized.status === "BLOCKED") {
+    throw new PublishRequirementError(
+      `Release is not Compiler-ready: ${materialized.errors.join(" ")}`,
+    );
+  }
+  return materialized.snapshot;
 }
 
 async function getPatternUsage(patternId: string, userId: string) {

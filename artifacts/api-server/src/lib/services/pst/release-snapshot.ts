@@ -161,6 +161,7 @@ export function materializeCompilerReadySnapshot(
 ): CompilerReadySnapshotResult {
   const errors: string[] = [];
   const components = new Map<string, PstReleaseComponentSnapshot>();
+  let hasAuthoredComponents = false;
   const workflow = snapshot.workflow.map((step, index): WorkflowStep => {
     const path = `workflow[${index}].configuration`;
     if (!isRecord(step.configuration)
@@ -171,6 +172,7 @@ export function materializeCompilerReadySnapshot(
     }
     const authoredComponents = step.configuration.authoredComponents;
     if (authoredComponents !== undefined) {
+      hasAuthoredComponents = true;
       if (!Array.isArray(authoredComponents)) {
         errors.push(`${path}.authoredComponents must be an array.`);
       } else {
@@ -196,13 +198,27 @@ export function materializeCompilerReadySnapshot(
       },
     };
   });
+  if (!hasAuthoredComponents) {
+    snapshot.components.forEach((component, index) => {
+      if (!releaseComponent(component)) {
+        errors.push(`components[${index}] is not a complete typed component.`);
+        return;
+      }
+      const existing = components.get(component.id);
+      if (existing && pstCanonicalJsonHash(existing) !== pstCanonicalJsonHash(component)) {
+        errors.push(`components[${index}] conflicts with component ${component.id}.`);
+        return;
+      }
+      components.set(component.id, component);
+    });
+  }
   if (errors.length) return { status: "BLOCKED", errors };
   const { snapshotHash: _snapshotHash, ...base } = snapshot;
   const payload: Omit<PstReleaseSnapshot, "snapshotHash"> = {
     ...base,
     blueprint: { ...base.blueprint, workflow },
     workflow,
-    factoryComponents: base.components,
+    factoryComponents: base.factoryComponents ?? base.components,
     components: [...components.values()].sort((left, right) => left.id.localeCompare(right.id)),
   };
   return {
