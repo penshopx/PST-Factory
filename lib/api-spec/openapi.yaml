@@ -299,6 +299,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PstProductBrief"
+  /pst/projects/{projectId}/product-brief/export:
+    post:
+      operationId: exportPstProductBrief
+      tags: [manufacturing]
+      summary: Export an approved product brief
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PstProductBriefExportInput"
+      responses:
+        "200":
+          description: Server-generated approved Product Brief export
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PstProductBriefExport"
         "404":
           description: Product brief not found
     put:
@@ -1366,6 +1386,18 @@ components:
             blueprintUpdatedAt: { type: string, format: date-time }
             createdAt: { type: string, format: date-time }
             updatedAt: { type: string, format: date-time }
+    PstProductBriefExport:
+      type: object
+      required: [fileName, contentType, content]
+      properties:
+        fileName: { type: string }
+        contentType: { type: string }
+        content: { type: string }
+    PstProductBriefExportInput:
+      type: object
+      required: [format]
+      properties:
+        format: { type: string, enum: [markdown, text, json] }
     ActionPlanOutput:
       type: object
       required: [action_plan]

@@ -1167,6 +1167,24 @@ export const ApprovePstProductBriefResponse = zod.object({
 
 
 /**
+ * @summary Export an approved product brief
+ */
+export const ExportPstProductBriefParams = zod.object({
+  "projectId": zod.coerce.string()
+})
+
+export const ExportPstProductBriefBody = zod.object({
+  "format": zod.enum(['markdown', 'text', 'json'])
+})
+
+export const ExportPstProductBriefResponse = zod.object({
+  "fileName": zod.string(),
+  "contentType": zod.string(),
+  "content": zod.string()
+})
+
+
+/**
  * @summary Persist the active product brief for a PST project
  */
 export const UpsertPstProductBriefParams = zod.object({

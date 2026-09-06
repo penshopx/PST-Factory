@@ -49,6 +49,8 @@ import type {
   PstHelpChatResponse,
   PstPattern,
   PstProductBrief,
+  PstProductBriefExport,
+  PstProductBriefExportInput,
   PstProductBriefInput,
   PstProject,
   PstProjectInput,
@@ -1318,7 +1320,7 @@ export const approvePstProductBrief = async (projectId: string, options?: Parame
 
 
 
-export const getApprovePstProductBriefMutationOptions = <TError = ErrorType<void>,
+export const getApprovePstProductBriefMutationOptions = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approvePstProductBrief>>, TError,{projectId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof approvePstProductBrief>>, TError,{projectId: string}, TContext> => {
 
@@ -1347,12 +1349,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type ApprovePstProductBriefMutationResult = NonNullable<Awaited<ReturnType<typeof approvePstProductBrief>>>
 
-    export type ApprovePstProductBriefMutationError = ErrorType<void>
+    export type ApprovePstProductBriefMutationError = ErrorType<unknown>
 
     /**
  * @summary Approve the current product brief
  */
-export const useApprovePstProductBrief = <TError = ErrorType<void>,
+export const useApprovePstProductBrief = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approvePstProductBrief>>, TError,{projectId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof approvePstProductBrief>>,
@@ -1363,12 +1365,84 @@ export const useApprovePstProductBrief = <TError = ErrorType<void>,
       return useMutation(getApprovePstProductBriefMutationOptions(options));
     }
 
+export const getExportPstProductBriefUrl = (projectId: string,) => {
+
+
+
+
+  return `/api/pst/projects/${projectId}/product-brief/export`
+}
+
+/**
+ * @summary Export an approved product brief
+ */
+export const exportPstProductBrief = async (projectId: string,
+    pstProductBriefExportInput: PstProductBriefExportInput, options?: Parameters<typeof customFetch>[1]): Promise<PstProductBriefExport> => {
+
+  return customFetch<PstProductBriefExport>(getExportPstProductBriefUrl(projectId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pstProductBriefExportInput)
+  }
+);}
+
+
+
+
+
+export const getExportPstProductBriefMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof exportPstProductBrief>>, TError,{projectId: string;data: BodyType<PstProductBriefExportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof exportPstProductBrief>>, TError,{projectId: string;data: BodyType<PstProductBriefExportInput>}, TContext> => {
+
+const mutationKey = ['exportPstProductBrief'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof exportPstProductBrief>>, {projectId: string;data: BodyType<PstProductBriefExportInput>}> = (props) => {
+          const {projectId,data} = props ?? {};
+
+          return  exportPstProductBrief(projectId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ExportPstProductBriefMutationResult = NonNullable<Awaited<ReturnType<typeof exportPstProductBrief>>>
+    export type ExportPstProductBriefMutationBody = BodyType<PstProductBriefExportInput>
+    export type ExportPstProductBriefMutationError = ErrorType<void>
+
+    /**
+ * @summary Export an approved product brief
+ */
+export const useExportPstProductBrief = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof exportPstProductBrief>>, TError,{projectId: string;data: BodyType<PstProductBriefExportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof exportPstProductBrief>>,
+        TError,
+        {projectId: string;data: BodyType<PstProductBriefExportInput>},
+        TContext
+      > => {
+      return useMutation(getExportPstProductBriefMutationOptions(options));
+    }
+
 export const getUpsertPstProductBriefUrl = (projectId: string,) => {
 
 
 
 
-  return `/api/pst/projects/${projectId}/product-brief/approve`
+  return `/api/pst/projects/${projectId}/product-brief/export`
 }
 
 /**

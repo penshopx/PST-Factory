@@ -3,6 +3,7 @@ import {
   useAnalyzePstFramework,
   useApprovePstProductBrief,
   useConvertPstActionPlan,
+  useExportPstProductBrief,
   useGetPstProductBrief,
   useUpsertPstProductBrief,
   type ActionPlanItem,
@@ -195,6 +196,7 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
   const approveBrief = useApprovePstProductBrief({
     mutation: { onSuccess: () => void briefQuery.refetch() },
   });
+  const exportBrief = useExportPstProductBrief();
 
   useEffect(() => {
     setProblemStatement(project.problemStatement);
@@ -305,11 +307,21 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
     window.setTimeout(() => setCopied(false), 1800);
   };
 
-  const copySummary = async () => {
-    if (!summaryMarkdown) return;
-    await navigator.clipboard.writeText(summaryMarkdown);
-    setSummaryCopied(true);
-    window.setTimeout(() => setSummaryCopied(false), 1800);
+  const exportSummary = (format: 'markdown' | 'text' | 'json', copy = false) => {
+    exportBrief.mutate(
+      { projectId: project.id, data: { format } },
+      {
+        onSuccess: async (result) => {
+          if (copy) {
+            await navigator.clipboard.writeText(result.content);
+            setSummaryCopied(true);
+            window.setTimeout(() => setSummaryCopied(false), 1800);
+            return;
+          }
+          downloadFile(result.fileName, result.content, result.contentType);
+        },
+      },
+    );
   };
 
   return (
@@ -722,7 +734,8 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={copySummary}
+                      onClick={() => exportSummary('markdown', true)}
+                      disabled={briefQuery.data?.status !== 'APPROVED' || briefIsStale || exportBrief.isPending}
                       className={summaryCopied ? 'border-emerald-500 bg-emerald-500/10 text-emerald-500' : ''}
                       data-testid="button-copy-executive-summary"
                     >
@@ -732,7 +745,8 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => downloadFile('pst-executive-summary.md', summaryMarkdown, 'text/markdown;charset=utf-8')}
+                      onClick={() => exportSummary('markdown')}
+                      disabled={briefQuery.data?.status !== 'APPROVED' || briefIsStale || exportBrief.isPending}
                       data-testid="button-download-executive-summary-md"
                     >
                       <Download size={14} className="mr-1.5" /> Markdown
@@ -740,7 +754,8 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => downloadFile('pst-executive-summary.txt', summaryMarkdown, 'text/plain;charset=utf-8')}
+                      onClick={() => exportSummary('text')}
+                      disabled={briefQuery.data?.status !== 'APPROVED' || briefIsStale || exportBrief.isPending}
                       data-testid="button-download-executive-summary-txt"
                     >
                       TXT
@@ -748,11 +763,8 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => downloadFile(
-                        'pst-executive-summary.json',
-                        JSON.stringify(executiveSummaryData(project, analysis, blueprint), null, 2),
-                        'application/json;charset=utf-8',
-                      )}
+                      onClick={() => exportSummary('json')}
+                      disabled={briefQuery.data?.status !== 'APPROVED' || briefIsStale || exportBrief.isPending}
                       data-testid="button-download-executive-summary-json"
                     >
                       JSON
@@ -762,6 +774,11 @@ export default function FrameworkAnalyzer({ project, blueprint }: { project: Pst
                 {approveBrief.isError && (
                   <div className="border-b border-destructive/20 bg-destructive/10 px-6 py-3 text-xs text-destructive">
                     {(approveBrief.error as { data?: { error?: string } })?.data?.error ?? 'Product Brief belum dapat disetujui.'}
+                  </div>
+                )}
+                {exportBrief.isError && (
+                  <div className="border-b border-destructive/20 bg-destructive/10 px-6 py-3 text-xs text-destructive">
+                    {(exportBrief.error as { data?: { error?: string } })?.data?.error ?? 'Executive Summary belum dapat diekspor.'}
                   </div>
                 )}
 

@@ -38,6 +38,7 @@ import {
   ArchivePstProjectResponse,
   ApprovePstProductBriefParams,
   ApprovePstProductBriefResponse,
+  AnalyzePstFrameworkResponse,
   ApprovePstProjectParams,
   ApprovePstProjectResponse,
   BuildPstProjectBody,
@@ -58,6 +59,9 @@ import {
   GetPstProjectDocumentOpenUrlResponse,
   DuplicatePstProjectParams,
   DuplicatePstProjectResponse,
+  ExportPstProductBriefBody,
+  ExportPstProductBriefParams,
+  ExportPstProductBriefResponse,
   GetDashboardActivityResponse,
   GetDashboardSummaryResponse,
   GetPstBlueprintParams,
@@ -1828,6 +1832,141 @@ router.post("/pst/projects/:projectId/product-brief/approve", async (req, res): 
   }
   await addEvent("PRODUCT_BRIEF_APPROVED", `${access.project.name} approved its active product brief.`, access.project.id);
   res.json(ApprovePstProductBriefResponse.parse(approval.brief));
+});
+
+router.post("/pst/projects/:projectId/product-brief/export", async (req, res): Promise<void> => {
+  const params = ExportPstProductBriefParams.safeParse(req.params);
+  const body = ExportPstProductBriefBody.safeParse(req.body);
+  if (!params.success || !body.success) {
+    res.status(400).json({ error: !params.success ? params.error.message : body.error?.message ?? "Invalid request body" });
+    return;
+  }
+  const access = await authorizeProject(req, res, params.data.projectId);
+  if (!access) return;
+  const [[brief], [blueprint]] = await Promise.all([
+    db.select().from(pstProductBriefsTable).where(eq(pstProductBriefsTable.projectId, access.project.id)),
+    db.select().from(pstBlueprintsTable).where(eq(pstBlueprintsTable.projectId, access.project.id)),
+  ]);
+  if (!brief || !blueprint) {
+    res.status(404).json({ error: "Product brief or Blueprint not found." });
+    return;
+  }
+  if (brief.status !== "APPROVED") {
+    res.status(409).json({ error: "Setujui Product Brief sebelum mengekspor Executive Summary." });
+    return;
+  }
+  if (brief.blueprintUpdatedAt.getTime() !== blueprint.updatedAt.getTime()) {
+    res.status(409).json({ error: "Product Brief sudah kedaluwarsa. Jalankan analisis dan approval kembali." });
+    return;
+  }
+  const parsedBrief = GetPstProductBriefResponse.parse(brief);
+  const analysis = AnalyzePstFrameworkResponse.parse(parsedBrief.frameworkAnalysis);
+  const selectedProduct = analysis.digital_product_recommendations.find((product) => product.id === brief.selectedProductId);
+  if (!selectedProduct || !brief.actionPlan.length) {
+    res.status(409).json({ error: "Product Brief approved tidak lagi lengkap dan harus diperbarui." });
+    return;
+  }
+  const selectedSolutionIds = new Set(brief.selectedSolutionIds);
+  const selectedSolutions = analysis.recommended_solutions.filter((solution) => selectedSolutionIds.has(solution.id));
+  const exportData = {
+    schemaVersion: "pst-product-brief-export.v1",
+    project: { id: access.project.id, name: access.project.name },
+    approval: {
+      briefId: brief.id,
+      status: brief.status,
+      approvedAt: brief.updatedAt.toISOString(),
+      blueprintId: blueprint.id,
+      blueprintVersion: blueprint.version,
+      blueprintUpdatedAt: blueprint.updatedAt.toISOString(),
+      sourceAnalysisArtifactId: brief.sourceAnalysisArtifactId,
+    },
+    executiveSummary: {
+      problem: analysis.problem_statement,
+      targetUser: access.project.targetUser,
+      desiredOutcome: access.project.desiredOutcome,
+      selectedFramework: analysis.selected_framework,
+      keyInsights: analysis.framework_breakdown,
+      primaryProduct: selectedProduct,
+      selectedSolutions,
+      actionPlan: parsedBrief.actionPlan,
+      sourceBlueprint: {
+        journey: blueprint.journey,
+        expectedOutput: blueprint.expectedOutput,
+        knowledgeRequirements: blueprint.knowledgeRequirements,
+      },
+    },
+  };
+  const markdown = [
+    `# Executive Summary Produk Digital — ${access.project.name}`,
+    "",
+    `> Product Brief ${brief.id} · APPROVED ${brief.updatedAt.toISOString()}`,
+    `> Blueprint ${blueprint.id} · ${blueprint.version} · ${blueprint.updatedAt.toISOString()}`,
+    "",
+    "## Ringkasan Eksekutif",
+    `**Masalah:** ${analysis.problem_statement}`,
+    "",
+    `**Target pengguna:** ${access.project.targetUser}`,
+    "",
+    `**Hasil yang diinginkan:** ${access.project.desiredOutcome}`,
+    "",
+    `**Framework:** ${analysis.selected_framework.name}`,
+    "",
+    analysis.selected_framework.reason,
+    "",
+    "## Produk Utama yang Disetujui",
+    `### ${selectedProduct.title}`,
+    `- **Jenis:** ${selectedProduct.product_type}`,
+    `- **Model pendapatan:** ${selectedProduct.revenue_model}`,
+    `- **Target pembeli:** ${selectedProduct.target_buyer}`,
+    `- **Janji hasil:** ${selectedProduct.product_promise}`,
+    `- **Mengapa cocok:** ${selectedProduct.why_it_fits}`,
+    `- **Validasi pertama:** ${selectedProduct.validation_step}`,
+    "- **Deliverable:**",
+    ...selectedProduct.deliverables.map((item) => `  - ${item}`),
+    "",
+    "## Solusi Terpilih",
+    ...selectedSolutions.flatMap((solution, index) => [
+      `### ${index + 1}. ${solution.title}`,
+      `${solution.description}`,
+      `- Effort: ${solution.effort}`,
+      `- Dampak: ${solution.expectedImpact}`,
+      "",
+    ]),
+    "## Action Plan",
+    ...parsedBrief.actionPlan.flatMap((item, index) => [
+      `${index + 1}. **${item.task_title}**`,
+      `   - ${item.description}`,
+      `   - Prioritas: ${item.priority}`,
+      `   - Timeline: ${item.suggested_timeline}`,
+      `   - Ukuran sukses: ${item.success_metric}`,
+    ]),
+    "",
+    "## Jejak Persetujuan",
+    `- Project ID: ${access.project.id}`,
+    `- Product Brief ID: ${brief.id}`,
+    `- Approved at: ${brief.updatedAt.toISOString()}`,
+    `- Blueprint ID: ${blueprint.id}`,
+    `- Blueprint version: ${blueprint.version}`,
+    `- Blueprint updated at: ${blueprint.updatedAt.toISOString()}`,
+    "",
+  ].join("\n");
+  const format = body.data.format;
+  const content = format === "json"
+    ? JSON.stringify(exportData, null, 2)
+    : format === "text"
+      ? markdown.replace(/^#{1,6}\s+/gm, "").replace(/\*\*/g, "").replace(/^>\s?/gm, "")
+      : markdown;
+  const extension = format === "markdown" ? "md" : format === "text" ? "txt" : "json";
+  const contentType = format === "markdown"
+    ? "text/markdown;charset=utf-8"
+    : format === "text"
+      ? "text/plain;charset=utf-8"
+      : "application/json;charset=utf-8";
+  res.json(ExportPstProductBriefResponse.parse({
+    fileName: `pst-executive-summary-${brief.id}.${extension}`,
+    contentType,
+    content,
+  }));
 });
 
 router.get("/pst/projects/:projectId/blueprint", async (req, res): Promise<void> => {

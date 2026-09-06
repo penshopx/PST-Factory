@@ -745,6 +745,25 @@ export type PstProductBrief = PstProductBriefInput & ({
   updatedAt: string;
 });
 
+export interface PstProductBriefExport {
+  fileName: string;
+  contentType: string;
+  content: string;
+}
+
+export type PstProductBriefExportInputFormat = typeof PstProductBriefExportInputFormat[keyof typeof PstProductBriefExportInputFormat];
+
+
+export const PstProductBriefExportInputFormat = {
+  markdown: 'markdown',
+  text: 'text',
+  json: 'json',
+} as const;
+
+export interface PstProductBriefExportInput {
+  format: PstProductBriefExportInputFormat;
+}
+
 export interface ActionPlanOutput {
   /**
      * @minItems 1
